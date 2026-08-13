@@ -2,7 +2,7 @@
 
 Ứng dụng web quản lý việc đặt và sử dụng một phòng LAB cố định, tài sản trong phòng, quá trình bàn giao và trách nhiệm phát sinh trong thời gian sử dụng.
 
-## Phạm vi
+## Phạm vi (Scope)
 
 Hệ thống hỗ trợ:
 
