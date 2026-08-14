@@ -38,23 +38,34 @@ Sinh viên được di chuyển tự do trong LAB; hệ thống không quản l�
 
 | Vai trò | Trách nhiệm chính |
 | --- | --- |
-| Admin | Quản lý tài khoản, vai trò, trạng thái tài khoản và quyền truy cập hệ thống |
+| Admin | Tiếp nhận email do Mentor cung cấp; tạo hoặc kích hoạt tài khoản; gán, thay đổi và thu hồi vai trò `LAB_MANAGER`, `MENTOR`, `STUDENT` |
 | Lab Manager | Phê duyệt danh sách sinh viên thực tập; giám sát tài sản, kiểm kê và sự cố; duyệt các trường hợp trách nhiệm nghiêm trọng, bảo trì và thanh lý khi cần |
 | Mentor | Trực tiếp quản lý sinh viên thực tập, tài sản, mượn trả, kiểm kê, sự cố, điều tra trách nhiệm, bảo trì và đề xuất thanh lý |
 | Student | Xem tài sản có thể mượn; tự tạo lượt mượn/trả; xem lịch sử sử dụng; báo cáo sự cố; xem thông tin trách nhiệm của chính mình |
 
-`AU-01 Authentication` gồm đăng nhập bằng tài khoản nội bộ, đăng nhập bằng tài khoản Google có đuôi `@fpt.edu.vn`, tự đổi mật khẩu nội bộ và đăng xuất. Google Authentication là dịch vụ xác thực bên ngoài hỗ trợ hệ thống, không được tính là actor hoặc role nghiệp vụ.
+## Xác thực Google và cấp quyền
+
+`AU-01 Authentication` chỉ gồm đăng nhập bằng Google và đăng xuất. Hệ thống không tự đăng ký tài khoản và không có chức năng quên, đặt lại hoặc đổi mật khẩu; mật khẩu do Google quản lý.
+
+- Mentor gửi cho Admin chính xác địa chỉ Google của từng sinh viên cần sử dụng hệ thống.
+- Admin tạo hoặc kích hoạt tài khoản với đúng email đó và gán vai trò `STUDENT`. Sinh viên chỉ đăng nhập được bằng đúng tài khoản đã được cấp; mọi tài khoản Google khác đều bị từ chối.
+- Email đăng nhập phải có đuôi `@fpt.edu.vn`, đã được Google xác minh, trùng khớp chính xác với tài khoản đang ở trạng thái `ACTIVE` trong hệ thống.
+- Mentor và Lab Manager cũng phải được Admin tạo tài khoản trước và gán đúng vai trò `MENTOR` hoặc `LAB_MANAGER`. Hệ thống hỗ trợ nhiều Mentor; mỗi Mentor dùng một tài khoản và email riêng, không dùng chung tài khoản.
+- Người dùng không được tự chọn hoặc tự thay đổi vai trò. Chỉ Admin được cấp, đổi hoặc thu hồi quyền truy cập.
+- Vai trò lưu trong hệ thống quyết định màn hình và chức năng người dùng được phép truy cập; Google chỉ xác minh danh tính, không phải actor hoặc vai trò nghiệp vụ.
 
 ## Luồng nghiệp vụ chính
 
-1. Mentor chuẩn bị và gửi danh sách sinh viên thực tập theo học kỳ.
-2. Lab Manager phê duyệt hoặc từ chối toàn bộ danh sách.
-3. Sinh viên thuộc danh sách đã được duyệt có thể tự tạo lượt mượn tài sản nhỏ mà không cần Mentor duyệt từng lượt; hệ thống kiểm tra học kỳ, khả năng cho mượn và số lượng còn lại.
-4. Mỗi lượt mượn liên kết trực tiếp một sinh viên với một tài sản, có số lượng và hạn trả; Student, Mentor hoặc Lab Manager có thể ghi nhận thao tác theo quyền.
-5. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
-6. Khi phát hiện mất, hỏng, sai số lượng, quá hạn hoặc bất thường, Mentor hoặc Student có thể tạo sự cố.
-7. Mentor điều tra dựa trên lịch sử mượn trả và bằng chứng trước khi kết luận trách nhiệm.
-8. Tài sản hỏng có thể được bảo trì; tài sản không thể sửa có thể được đề xuất thanh lý và chờ Lab Manager phê duyệt.
+1. Mentor gửi cho Admin đúng email Google của sinh viên cần tham gia LAB.
+2. Admin tạo hoặc kích hoạt tài khoản, gán vai trò `STUDENT` và cấp quyền truy cập.
+3. Mentor chuẩn bị và gửi danh sách sinh viên thực tập theo học kỳ.
+4. Lab Manager phê duyệt hoặc từ chối toàn bộ danh sách.
+5. Sinh viên thuộc danh sách đã được duyệt có thể tự tạo lượt mượn tài sản nhỏ mà không cần Mentor duyệt từng lượt; hệ thống kiểm tra học kỳ, khả năng cho mượn và số lượng còn lại.
+6. Mỗi lượt mượn liên kết trực tiếp một sinh viên với một tài sản, có số lượng và hạn trả; Student, Mentor hoặc Lab Manager có thể ghi nhận thao tác theo quyền.
+7. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
+8. Khi phát hiện mất, hỏng, sai số lượng, quá hạn hoặc bất thường, Mentor hoặc Student có thể tạo sự cố.
+9. Mentor điều tra dựa trên lịch sử mượn trả và bằng chứng trước khi kết luận trách nhiệm.
+10. Tài sản hỏng có thể được bảo trì; tài sản không thể sửa có thể được đề xuất thanh lý và chờ Lab Manager phê duyệt.
 
 ## Mô hình tài sản
 
@@ -74,6 +85,8 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 
 ## Quy tắc nghiệp vụ cốt lõi
 
+- Chỉ tài khoản Google đã được Admin cấp trước, đúng email, đúng vai trò và đang ở trạng thái `ACTIVE` mới được đăng nhập.
+- Mỗi người dùng có một tài khoản riêng; hệ thống không tự tạo tài khoản hoặc suy ra vai trò từ tên hay miền email.
 - Chỉ sinh viên thuộc danh sách đã được Lab Manager phê duyệt mới được mượn tài sản trong học kỳ tương ứng.
 - Sinh viên được di chuyển tự do trong LAB; hệ thống không lưu hoặc phân chỗ ngồi.
 - Một sinh viên có thể mượn nhiều tài sản cùng lúc; mỗi lượt mượn chỉ xác định một sinh viên và một tài sản.
