@@ -33,11 +33,7 @@ BEGIN TRY
         CONSTRAINT PK_users PRIMARY KEY (user_id),
         CONSTRAINT UQ_users_email UNIQUE (email),
         CONSTRAINT CK_users_role CHECK (role IN ('ADMIN', 'LAB_MANAGER', 'MENTOR', 'STUDENT')),
-        CONSTRAINT CK_users_status CHECK (status IN ('ACTIVE', 'INACTIVE')),
-        CONSTRAINT CK_users_google_domain CHECK (
-            google_subject IS NULL
-            OR RIGHT(LOWER(email), LEN('@fpt.edu.vn')) = '@fpt.edu.vn'
-        )
+        CONSTRAINT CK_users_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
     );
 
     CREATE UNIQUE INDEX UX_users_google_subject

@@ -121,7 +121,7 @@ Table users {
   full_name varchar(100) [not null]
   email varchar(255) [not null, unique]
   password_hash varchar(255) [note: 'Nullable for Google-only accounts']
-  google_subject varchar(255) [note: 'Unique when present; Google login is restricted to @fpt.edu.vn']
+  google_subject varchar(255) [note: 'Unique when present; Google email domain is unrestricted']
   role user_role [not null]
   status record_status [not null, default: 'ACTIVE']
   created_at datetime2 [not null, default: `SYSUTCDATETIME()`]

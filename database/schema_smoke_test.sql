@@ -9,7 +9,7 @@ BEGIN TRY
     BEGIN TRANSACTION;
 
     DECLARE @token varchar(36) = CONVERT(varchar(36), NEWID());
-    DECLARE @manager_id bigint;
+    DECLARE @admin_id bigint;
     DECLARE @mentor_id bigint;
     DECLARE @student_user_id bigint;
     DECLARE @student_id bigint;
@@ -21,15 +21,15 @@ BEGIN TRY
     DECLARE @incident_id bigint;
 
     INSERT dbo.users (full_name, email, password_hash, role)
-    VALUES (N'LAB Manager', CONCAT('manager-', @token, '@example.test'), 'test-only', 'LAB_MANAGER');
-    SET @manager_id = SCOPE_IDENTITY();
+    VALUES (N'Admin', CONCAT('admin-', @token, '@example.test'), 'test-only', 'ADMIN');
+    SET @admin_id = SCOPE_IDENTITY();
 
     INSERT dbo.users (full_name, email, password_hash, role)
     VALUES (N'Mentor', CONCAT('mentor-', @token, '@example.test'), 'test-only', 'MENTOR');
     SET @mentor_id = SCOPE_IDENTITY();
 
     INSERT dbo.users (full_name, email, google_subject, role)
-    VALUES (N'Student', CONCAT(@token, '@fpt.edu.vn'), @token, 'STUDENT');
+    VALUES (N'Student', CONCAT(@token, '@gmail.com'), @token, 'STUDENT');
     SET @student_user_id = SCOPE_IDENTITY();
 
     INSERT dbo.student_profiles (user_id, student_code)
@@ -43,7 +43,7 @@ BEGIN TRY
     INSERT dbo.lab_usage_requests
         (semester_id, mentor_id, status, approved_by, approved_at)
     VALUES
-        (@semester_id, @mentor_id, 'APPROVED', @manager_id, SYSUTCDATETIME());
+        (@semester_id, @mentor_id, 'APPROVED', @admin_id, SYSUTCDATETIME());
     SET @request_id = SCOPE_IDENTITY();
 
     INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
