@@ -1,2 +1,4 @@
-/** Data access for bookings, assets, incidents, and accounts. */
+/**
+ * Data access for assets, usage, inspections, incidents, and accounts.
+ */
 package fpt.swp391.labtoolequip.repository;

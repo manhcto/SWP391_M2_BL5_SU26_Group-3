@@ -4,12 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>LAB Asset Management</title>
+    <title>LAB Asset Management System</title>
 </head>
 <body>
 <main>
-    <h1>LAB Asset Management</h1>
-    <p>Hệ thống quản lý lịch sử dụng phòng LAB và tài sản.</p>
+    <h1>LAB Asset Management System</h1>
+    <p>Hệ thống quản lý sinh viên thực tập và vòng đời tài sản phòng LAB.</p>
+    <p><a href="${pageContext.request.contextPath}/login">Login</a></p>
+
+    <h2>Role dashboards</h2>
+    <ul>
+        <li><a href="${pageContext.request.contextPath}/admin/dashboard">Admin Dashboard</a></li>
+        <li><a href="${pageContext.request.contextPath}/lab-manager/dashboard">Lab Manager Dashboard</a></li>
+        <li><a href="${pageContext.request.contextPath}/mentor/dashboard">Mentor Dashboard</a></li>
+        <li><a href="${pageContext.request.contextPath}/student/dashboard">Student Dashboard</a></li>
+    </ul>
+
+    <p><a href="${pageContext.request.contextPath}/system/database-status">Check Database Connection</a></p>
 </main>
 </body>
 </html>
