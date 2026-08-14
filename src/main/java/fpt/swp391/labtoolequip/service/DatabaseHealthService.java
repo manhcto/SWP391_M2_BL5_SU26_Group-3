@@ -12,7 +12,6 @@ public class DatabaseHealthService {
 
 	public DatabaseStatus check() throws SQLException {
 		boolean connected = repository.isConnected();
-		return new DatabaseStatus(connected,
-				connected ? "Database connection is available." : "Database did not validate the connection.");
+		return new DatabaseStatus(connected, connected ? "Kết nối database thành công." : "Kết nối database thất bại.");
 	}
 }

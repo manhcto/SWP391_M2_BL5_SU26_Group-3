@@ -21,8 +21,8 @@ public class DatabaseStatusController extends HttpServlet {
 			request.setAttribute("databaseStatus", service.check());
 		} catch (SQLException exception) {
 			getServletContext().log("Database health check failed", exception);
-			request.setAttribute("databaseStatus", new DatabaseStatus(false,
-					"Database connection is unavailable. Check the server and .env settings."));
+			request.setAttribute("databaseStatus",
+					new DatabaseStatus(false, "Kết nối database thất bại. Hãy kiểm tra SQL Server và cấu hình .env."));
 		}
 		request.getRequestDispatcher("/WEB-INF/views/system/database-status.jsp").forward(request, response);
 	}
