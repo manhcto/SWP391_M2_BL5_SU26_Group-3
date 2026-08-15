@@ -19,8 +19,6 @@
         <li><a href="${pageContext.request.contextPath}/mentor/dashboard">Mentor Dashboard</a></li>
         <li><a href="${pageContext.request.contextPath}/student/dashboard">Student Dashboard</a></li>
     </ul>
-
-    <p><a href="${pageContext.request.contextPath}/system/database-status">Check Database Connection</a></p>
 </main>
 </body>
 </html>

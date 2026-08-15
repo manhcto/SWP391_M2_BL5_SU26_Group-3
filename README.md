@@ -116,7 +116,7 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 
 ## Cấu hình cơ sở dữ liệu
 
-Sao chép `.env.example` thành `.env`, sau đó cập nhật thông tin kết nối cục bộ:
+Khai báo các biến môi trường sau trong hệ điều hành hoặc Run Configuration của IntelliJ/Tomcat:
 
 ```dotenv
 DB_URL=jdbc:sqlserver://localhost:1433;databaseName=lab_asset_management;encrypt=true;trustServerCertificate=true
@@ -124,7 +124,7 @@ DB_USERNAME=sa
 DB_PASSWORD=change-me
 ```
 
-`AppConfig` ưu tiên biến môi trường của hệ điều hành. Tệp `.env` chỉ dùng cho phát triển cục bộ và đã được Git bỏ qua.
+`DBConnection` đọc trực tiếp các biến môi trường trên. Có thể dùng Java system properties cùng tên khi chạy cục bộ; tệp `.env` vẫn được Git bỏ qua và chỉ đóng vai trò mẫu cấu hình.
 
 ## Chạy dự án
 
@@ -144,7 +144,6 @@ Linux hoặc macOS:
 
 Mở `http://localhost:8080/labtoolequip/`. Dừng server bằng `Ctrl+C`.
 
-Kiểm tra kết nối SQL Server tại `http://localhost:8080/labtoolequip/system/database-status`.
 
 Chạy kiểm thử và kiểm tra định dạng:
 

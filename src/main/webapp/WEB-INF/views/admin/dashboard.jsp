@@ -6,7 +6,7 @@
 <main>
     <h1>Admin Dashboard</h1>
     <p>Manage users, roles, account status, and system access.</p>
-    <nav><a href="${pageContext.request.contextPath}/">Home</a> · <a href="${pageContext.request.contextPath}/system/database-status">Database Status</a></nav>
+    <nav><a href="${pageContext.request.contextPath}/admin/users">Manage Users</a> · <a href="${pageContext.request.contextPath}/">Home</a></nav>
 </main>
 </body>
 </html>
