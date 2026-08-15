@@ -32,32 +32,33 @@ Sinh viên được di chuyển tự do trong LAB; hệ thống không quản l�
 | FE-10 | Manage Dashboard |
 | AU-01 | Authentication |
 
-`Manage Lab Usage Request` là quy trình Mentor gửi danh sách sinh viên thực tập theo học kỳ để Admin phê duyệt và cấp quyền truy cập. Chức năng này không phải quy trình đặt phòng hoặc đăng ký khung giờ.
+`Manage Lab Usage Request` là quy trình Mentor gửi danh sách sinh viên thực tập theo học kỳ để Lab Manager phê duyệt hoặc từ chối. Chức năng này không phải quy trình đặt phòng hoặc đăng ký khung giờ.
 
 ## Vai trò
 
 | Vai trò | Trách nhiệm chính |
 | --- | --- |
-| Admin | Tiếp nhận và phê duyệt hoặc từ chối danh sách sinh viên do Mentor gửi; tạo hoặc kích hoạt tài khoản; gán, thay đổi và thu hồi vai trò `LAB_MANAGER`, `MENTOR`, `STUDENT` |
-| Lab Manager | Giám sát tài sản, kiểm kê và sự cố; duyệt các trường hợp trách nhiệm nghiêm trọng, bảo trì và thanh lý khi cần |
+| Admin | Quản lý tài khoản; tạo hoặc kích hoạt người dùng; gán, thay đổi và thu hồi vai trò `LAB_MANAGER`, `MENTOR`, `STUDENT` |
+| Lab Manager | Phê duyệt hoặc từ chối danh sách sinh viên do Mentor gửi; giám sát tài sản, kiểm kê và sự cố; duyệt các trường hợp trách nhiệm nghiêm trọng, bảo trì và thanh lý khi cần |
 | Mentor | Trực tiếp quản lý sinh viên thực tập, tài sản, mượn trả, kiểm kê, sự cố, điều tra trách nhiệm, bảo trì và đề xuất thanh lý |
 | Student | Xem tài sản có thể mượn; tự tạo lượt mượn/trả; xem lịch sử sử dụng; báo cáo sự cố; xem thông tin trách nhiệm của chính mình |
 
-## Xác thực Google và cấp quyền
+## Xác thực và cấp quyền
 
-`AU-01 Authentication` chỉ gồm đăng nhập bằng Google và đăng xuất. Hệ thống không tự đăng ký tài khoản và không có chức năng quên, đặt lại hoặc đổi mật khẩu; mật khẩu do Google quản lý.
+Phạm vi `AU-01 Authentication` gồm đăng nhập bằng tài khoản nội bộ, đăng nhập với Google, đổi mật khẩu và đăng xuất. Chức năng yêu cầu đặt lại mật khẩu đã bị loại khỏi phạm vi hiện tại.
 
-- Mentor gửi cho Admin chính xác địa chỉ Google của từng sinh viên cần sử dụng hệ thống.
-- Admin tạo hoặc kích hoạt tài khoản với đúng email đó và gán vai trò `STUDENT`. Sinh viên chỉ đăng nhập được bằng đúng tài khoản đã được cấp; mọi tài khoản Google khác đều bị từ chối.
-- Email đăng nhập không bị giới hạn tên miền, nhưng phải được Google xác minh và trùng khớp chính xác với tài khoản đang ở trạng thái `ACTIVE` trong hệ thống.
-- Mentor và Lab Manager cũng phải được Admin tạo tài khoản trước và gán đúng vai trò `MENTOR` hoặc `LAB_MANAGER`. Hệ thống hỗ trợ nhiều Mentor; mỗi Mentor dùng một tài khoản và email riêng, không dùng chung tài khoản.
-- Người dùng không được tự chọn hoặc tự thay đổi vai trò. Chỉ Admin được cấp, đổi hoặc thu hồi quyền truy cập.
-- Vai trò lưu trong hệ thống quyết định màn hình và chức năng người dùng được phép truy cập; Google chỉ xác minh danh tính, không phải actor hoặc vai trò nghiệp vụ.
+- Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `STUDENT`.
+- Tài khoản nội bộ sử dụng email và mật khẩu đã được băm; người dùng không được tự đăng ký hoặc tự chọn vai trò.
+- Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Đăng nhập Google không tự tạo tài khoản và không quyết định quyền hạn.
+- Khi đăng nhập với Google được triển khai, email Google phải trùng khớp tài khoản đã được tạo trước và đang ở trạng thái `ACTIVE`.
+- Mỗi người dùng có tài khoản riêng. Vai trò lưu trong hệ thống quyết định dashboard và các chức năng được phép truy cập.
+
+> Trạng thái hiện tại: `/login` mới là màn hình email/mật khẩu mẫu và chưa thực hiện xác thực. Google OAuth, đổi mật khẩu và đăng xuất sẽ được triển khai ở phase sau.
 
 ## Luồng nghiệp vụ chính
 
-1. Mentor chuẩn bị và gửi cho Admin danh sách sinh viên thực tập theo học kỳ, kèm đúng email Google của từng sinh viên.
-2. Admin phê duyệt hoặc từ chối toàn bộ danh sách.
+1. Mentor chuẩn bị và gửi cho Lab Manager danh sách sinh viên thực tập theo học kỳ.
+2. Lab Manager phê duyệt hoặc từ chối toàn bộ danh sách.
 3. Với danh sách đã duyệt, Admin tạo hoặc kích hoạt tài khoản, gán vai trò `STUDENT` và cấp quyền truy cập.
 4. Sinh viên được duyệt có thể tự tạo lượt mượn tài sản nhỏ mà không cần Mentor duyệt từng lượt; hệ thống kiểm tra học kỳ, khả năng cho mượn và số lượng còn lại.
 5. Mỗi lượt mượn liên kết trực tiếp một sinh viên với một tài sản, có số lượng và hạn trả; Student, Mentor hoặc Lab Manager có thể ghi nhận thao tác theo quyền.
@@ -84,9 +85,9 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 
 ## Quy tắc nghiệp vụ cốt lõi
 
-- Chỉ tài khoản Google đã được Admin cấp trước, đúng email, đúng vai trò và đang ở trạng thái `ACTIVE` mới được đăng nhập.
+- Chỉ tài khoản đã được Admin cấp trước, đúng email, đúng vai trò và đang ở trạng thái `ACTIVE` mới được đăng nhập bằng phương thức được hệ thống hỗ trợ.
 - Mỗi người dùng có một tài khoản riêng; hệ thống không tự tạo tài khoản hoặc suy ra vai trò từ tên hay miền email.
-- Chỉ sinh viên thuộc danh sách đã được Admin phê duyệt và cấp quyền mới được đăng nhập và mượn tài sản trong học kỳ tương ứng.
+- Chỉ sinh viên thuộc danh sách đã được Lab Manager phê duyệt và được Admin cấp tài khoản mới được đăng nhập và mượn tài sản trong học kỳ tương ứng.
 - Sinh viên được di chuyển tự do trong LAB; hệ thống không lưu hoặc phân chỗ ngồi.
 - Một sinh viên có thể mượn nhiều tài sản cùng lúc; mỗi lượt mượn chỉ xác định một sinh viên và một tài sản.
 - Tài sản theo mã riêng chỉ có một người đang mượn tại một thời điểm; tổng số lượng đang mượn của tài sản theo số lượng không được vượt quá tồn kho.
@@ -98,15 +99,32 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 - Student chỉ được truy cập dữ liệu riêng của mình về sử dụng tài sản, sự cố và trách nhiệm.
 - Tài sản đã thanh lý không được sử dụng hoặc cho mượn lại.
 
+## Trạng thái triển khai hiện tại
+
+Đã triển khai:
+
+- Schema SQL Server gồm 14 bảng nghiệp vụ và các model Java tương ứng.
+- Kết nối SQL Server qua `DBConnection` và biến môi trường.
+- FE-01 Manage User ở mức MVC/JDBC cơ bản: `UserController`, `UserDAO` và các JSP danh sách, chi tiết, thêm, sửa.
+- Controller và JSP khung cho dashboard của Admin, Lab Manager, Mentor và Student.
+- Mentor Dashboard responsive; dữ liệu trên dashboard hiện là dữ liệu trình diễn.
+
+Chưa triển khai đầy đủ:
+
+- Xác thực thật, Google OAuth, phân quyền request, đổi mật khẩu và đăng xuất.
+- DAO, Controller và JSP nghiệp vụ cho FE-02 đến FE-09.
+- Dữ liệu động cho các dashboard và kiểm thử tự động; `src/test` hiện chỉ có file giữ package.
+
 ## Công nghệ
 
 - Java 17
 - Jakarta EE Web 10
-- JSP và JSTL
-- Microsoft SQL Server
+- JSP, JSTL và Jakarta Servlet
+- JDBC với Microsoft SQL Server
+- BCrypt cho mật khẩu tài khoản nội bộ
 - Maven Wrapper
 - Apache Tomcat 10.1 qua Cargo Maven plugin
-- JUnit 5
+- JUnit 5 (đã cấu hình, chưa có test case)
 
 ## Yêu cầu môi trường
 
@@ -124,7 +142,7 @@ DB_USERNAME=sa
 DB_PASSWORD=change-me
 ```
 
-`DBConnection` đọc trực tiếp các biến môi trường trên. Có thể dùng Java system properties cùng tên khi chạy cục bộ; tệp `.env` vẫn được Git bỏ qua và chỉ đóng vai trò mẫu cấu hình.
+`DBConnection` đọc trực tiếp các biến môi trường trên. Có thể dùng Java system properties cùng tên khi chạy cục bộ. Ứng dụng không tự đọc tệp `.env`; `.env.example` chỉ là mẫu cấu hình và `.env` đã được Git bỏ qua.
 
 ## Chạy dự án
 
@@ -144,34 +162,45 @@ Linux hoặc macOS:
 
 Mở `http://localhost:8080/labtoolequip/`. Dừng server bằng `Ctrl+C`.
 
-
-Chạy kiểm thử và kiểm tra định dạng:
+Nếu cổng `8080` đang được sử dụng:
 
 ```powershell
-.\mvnw.cmd test
+.\mvnw.cmd "-Dcargo.servlet.port=8090" cargo:run
+```
+
+Chạy build và kiểm tra định dạng:
+
+```powershell
+.\mvnw.cmd clean package
 .\mvnw.cmd spotless:check
 ```
 
 ## Cấu trúc dự án
 
 ```text
+database/
+├── schema.sql                 # Script tạo schema SQL Server
+├── schema.dbml                # Mô hình database dạng DBML
+└── schema_smoke_test.sql      # Script kiểm tra nhanh schema
 src/
 ├── main/
 │   ├── java/fpt/swp391/labtoolequip/
-│   │   ├── config/       # Cấu hình ứng dụng
-│   │   ├── controller/   # Servlet theo Auth, Admin, Lab Manager, Mentor, Student và System
-│   │   ├── model/        # Entity và value object nghiệp vụ
-│   │   ├── repository/   # Truy cập dữ liệu
-│   │   └── service/      # Use case và quy tắc nghiệp vụ
+│   │   ├── common/            # DBConnection và thành phần dùng chung
+│   │   ├── controller/        # Servlet theo Auth, Admin, Lab Manager, Mentor, Student
+│   │   ├── dao/               # Truy cập dữ liệu bằng JDBC
+│   │   └── model/             # Model tương ứng các bảng nghiệp vụ
 │   ├── resources/META-INF/
-│   │   ├── beans.xml
-│   │   └── persistence.xml
+│   │   ├── beans.xml          # Descriptor CDI rỗng từ bộ khung
+│   │   └── persistence.xml    # Descriptor JPA rỗng, hiện chưa được sử dụng
 │   └── webapp/
+│       ├── assets/
+│       │   ├── css/           # Stylesheet giao diện
+│       │   └── images/        # Logo và hình ảnh tĩnh
 │       ├── WEB-INF/
-│       │   ├── views/    # JSP theo Auth, Admin, Lab Manager, Mentor, Student và System
+│       │   ├── views/         # JSP theo Auth, Admin, Lab Manager, Mentor, Student
 │       │   └── web.xml
 │       └── index.jsp
-└── test/java/fpt/swp391/labtoolequip/
+└── test/java/fpt/swp391/labtoolequip/  # Khung test, chưa có test case
 ```
 
-Đây là bộ khung ban đầu. Các lớp chỉ được bổ sung khi triển khai use case cụ thể để tránh tạo abstraction chưa cần thiết.
+Dự án hiện theo MVC với Servlet/JSP và DAO dùng JDBC. Chỉ bổ sung DAO, Controller và JSP khi bắt đầu triển khai use case tương ứng.
