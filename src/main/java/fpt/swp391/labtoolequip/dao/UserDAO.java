@@ -66,6 +66,17 @@ public class UserDAO {
 		}
 	}
 
+	public Optional<User> findByEmail(String email) throws SQLException {
+		String sql = SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, email);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
+			}
+		}
+	}
+
 	public long create(User user) throws SQLException {
 		String insertUser = """
 				INSERT INTO dbo.users (full_name, email, password_hash, role, status)

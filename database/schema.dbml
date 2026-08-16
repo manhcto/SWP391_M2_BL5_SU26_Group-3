@@ -150,10 +150,18 @@ Table semesters {
   updated_at datetime2 [not null, default: `SYSUTCDATETIME()`]
 }
 
+Table lab_time_slots {
+  slot_id tinyint [pk, note: 'Fixed values 1 through 4']
+  slot_name varchar(20) [not null, unique]
+  start_time time [not null]
+  end_time time [not null]
+}
+
 Table lab_usage_requests {
   request_id bigint [pk, increment]
   semester_id bigint [not null]
   mentor_id bigint [not null]
+  group_name nvarchar(100) [not null]
   status request_status [not null, default: 'PENDING', note: 'Approval applies to the whole student list']
   request_note nvarchar(max)
   approved_by bigint
@@ -167,6 +175,17 @@ Table lab_usage_requests {
     semester_id
     mentor_id
     status
+  }
+}
+
+Table lab_usage_request_slots {
+  request_id bigint [not null]
+  day_of_week tinyint [not null, note: 'Vietnamese weekday number: 2=Monday through 7=Saturday']
+  slot_id tinyint [not null]
+
+  indexes {
+    (request_id, day_of_week, slot_id) [pk]
+    (day_of_week, slot_id)
   }
 }
 
@@ -382,6 +401,8 @@ Ref: student_profiles.user_id > users.user_id
 Ref: lab_usage_requests.semester_id > semesters.semester_id
 Ref: lab_usage_requests.mentor_id > users.user_id
 Ref: lab_usage_requests.approved_by > users.user_id
+Ref: lab_usage_request_slots.request_id > lab_usage_requests.request_id [delete: cascade]
+Ref: lab_usage_request_slots.slot_id > lab_time_slots.slot_id
 Ref: lab_usage_request_students.(request_id, semester_id) > lab_usage_requests.(request_id, semester_id)
 Ref: lab_usage_request_students.student_id > student_profiles.student_id
 Ref: assets.category_id > asset_categories.category_id

@@ -2,9 +2,17 @@ package fpt.swp391.labtoolequip.common;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class DBConnection {
+	// ponytail: local demo credentials; replace with a managed data source before
+	// deployment.
+	private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=lab_asset_management;encrypt=true;trustServerCertificate=true";
+	private static final String USERNAME = "minhanh";
+	private static final String PASSWORD = "123";
+
 	static {
 		try {
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -13,27 +21,17 @@ public class DBConnection {
 		}
 	}
 
-	private final String url = requiredSetting("DB_URL");
-	private final String userId = requiredSetting("DB_USERNAME");
-	private final String password = requiredSetting("DB_PASSWORD");
-
 	public Connection getConnection() throws SQLException {
-		return DriverManager.getConnection(url, userId, password);
-	}
-
-	private static String requiredSetting(String name) {
-		String value = System.getenv(name);
-		if (value == null || value.isBlank()) {
-			value = System.getProperty(name);
-		}
-		if (value == null || value.isBlank()) {
-			throw new IllegalStateException("Thiếu cấu hình " + name + ".");
-		}
-		return value;
+		return DriverManager.getConnection(URL, USERNAME, PASSWORD);
 	}
 
 	public static void main(String[] args) {
-		try (Connection connection = new DBConnection().getConnection()) {
+		try (Connection connection = new DBConnection().getConnection();
+				Statement statement = connection.createStatement();
+				ResultSet result = statement.executeQuery("SELECT 1")) {
+			if (!result.next() || result.getInt(1) != 1) {
+				throw new SQLException("Database không phản hồi truy vấn kiểm tra.");
+			}
 			System.out.println("Kết nối tới cơ sở dữ liệu LAB Asset THÀNH CÔNG!");
 		} catch (Exception exception) {
 			System.out.println("Kết nối THẤT BẠI: " + exception.getMessage());

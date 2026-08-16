@@ -41,10 +41,13 @@ BEGIN TRY
     SET @semester_id = SCOPE_IDENTITY();
 
     INSERT dbo.lab_usage_requests
-        (semester_id, mentor_id, status, approved_by, approved_at)
+        (semester_id, mentor_id, group_name, status, approved_by, approved_at)
     VALUES
-        (@semester_id, @mentor_id, 'APPROVED', @admin_id, SYSUTCDATETIME());
+        (@semester_id, @mentor_id, N'Smoke Group', 'APPROVED', @admin_id, SYSUTCDATETIME());
     SET @request_id = SCOPE_IDENTITY();
+
+    INSERT dbo.lab_usage_request_slots (request_id, day_of_week, slot_id)
+    VALUES (@request_id, 2, 1), (@request_id, 4, 3);
 
     INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
     VALUES (@request_id, @semester_id, @student_id);
@@ -90,6 +93,13 @@ BEGIN TRY
           AND i.asset_id = @asset_id
           AND au.semester_id = @semester_id
           AND au.quantity = 2
+          AND EXISTS (
+              SELECT 1
+              FROM dbo.lab_usage_request_slots rs
+              WHERE rs.request_id = @request_id
+                AND rs.day_of_week = 2
+                AND rs.slot_id = 1
+          )
     )
         THROW 51000, 'Core asset-to-student traceability check failed.', 1;
 
