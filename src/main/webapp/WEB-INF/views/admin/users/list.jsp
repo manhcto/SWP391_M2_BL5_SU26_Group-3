@@ -88,10 +88,10 @@
                         <div class="empty-box">
                             <div class="empty-box-icon"><svg><use href="#i-users"/></svg></div>
                             <h3>Chưa có dữ liệu người dùng</h3>
-                            <p>Danh sách tài khoản sinh viên, mentor, quản lý lab đang trống. Bạn có thể thêm đơn lẻ hoặc dán danh sách import từ Excel.</p>
-                            <div style="display:flex; gap:10px; margin-top: 8px;">
-                                <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/import">+ Import Danh Sách Sinh Viên</a>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users/add">+ Thêm Người Dùng Đơn Lẻ</a>
+                            <p>Danh sách tài khoản sinh viên, mentor và quản lý lab đang trống.<br>Bạn có thể tải lên danh sách từ file Excel hoặc tạo tài khoản mới.</p>
+                            <div style="display:flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px;">
+                                <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/import"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-upload"/></svg>+ Batch Import Excel</a>
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users/add"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-plus"/></svg>+ Thêm Người Dùng</a>
                             </div>
                         </div>
                     </c:when>
