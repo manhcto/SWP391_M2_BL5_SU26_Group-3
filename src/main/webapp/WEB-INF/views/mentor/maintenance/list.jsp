@@ -19,7 +19,7 @@
             <div class="topbar-actions">
                 <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search proposals..." aria-label="Search"></label>
                 <button class="icon-button notification" type="button" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span>2</span></button>
-                <div class="top-profile"><div class="avatar">ME</div><span>Mentor Preview</span></div>
+                <div class="top-profile"><div class="avatar">ME</div><span><c:out value="${currentUser.fullName}"/></span></div>
             </div>
         </header>
 

@@ -149,6 +149,26 @@ public class LabUsageRequestDAO {
 		}
 	}
 
+	public List<LabUsageRequest> findApprovedSchedule(long mentorId) throws SQLException {
+		String sql = SELECT_REQUEST + """
+				WHERE r.status = 'APPROVED' AND se.status = 'ACTIVE' AND r.mentor_id = ?
+				ORDER BY r.request_id
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, mentorId);
+			try (ResultSet result = statement.executeQuery()) {
+				List<LabUsageRequest> requests = new ArrayList<>();
+				while (result.next()) {
+					LabUsageRequest request = mapRequest(result);
+					request.setSlots(findSlots(connection, request.getRequestId()));
+					requests.add(request);
+				}
+				return requests;
+			}
+		}
+	}
+
 	public Optional<LabUsageRequest> findByIdForMentor(long requestId, long mentorId) throws SQLException {
 		String sql = SELECT_REQUEST + "WHERE r.request_id = ? AND r.mentor_id = ?";
 		try (Connection connection = dbConnection.getConnection();

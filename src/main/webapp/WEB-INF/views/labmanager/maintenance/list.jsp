@@ -19,7 +19,7 @@
             <div class="topbar-actions">
                 <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search maintenance..." aria-label="Search"></label>
                 <button class="icon-button notification" type="button" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span>3</span></button>
-                <div class="top-profile"><div class="avatar">LM</div><span>Quang Dung</span></div>
+                <div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div>
             </div>
         </header>
 

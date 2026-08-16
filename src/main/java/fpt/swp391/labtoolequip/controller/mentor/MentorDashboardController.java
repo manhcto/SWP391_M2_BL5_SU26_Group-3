@@ -1,5 +1,6 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
+import fpt.swp391.labtoolequip.common.AuthenticationSupport;
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,9 +18,10 @@ public class MentorDashboardController extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			request.setAttribute("approvedRequests", labUsageRequestDAO.findApprovedSchedule());
+			request.setAttribute("approvedRequests",
+					labUsageRequestDAO.findApprovedSchedule(AuthenticationSupport.currentUserId(request)));
 		} catch (SQLException exception) {
-			getServletContext().log("Approved Mentor schedule is unavailable in preview mode.", exception);
+			getServletContext().log("Approved Mentor schedule is unavailable.", exception);
 			request.setAttribute("approvedRequests", java.util.List.of());
 		}
 		request.getRequestDispatcher("/WEB-INF/views/mentor/dashboard.jsp").forward(request, response);

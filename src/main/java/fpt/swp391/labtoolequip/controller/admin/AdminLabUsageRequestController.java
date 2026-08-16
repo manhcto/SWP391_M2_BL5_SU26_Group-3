@@ -1,7 +1,7 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
+import fpt.swp391.labtoolequip.common.AuthenticationSupport;
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
-import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.LabUsageRequest;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -21,7 +21,6 @@ public class AdminLabUsageRequestController extends HttpServlet {
 	private static final Set<String> STATUSES = Set.of("PENDING", "APPROVED", "REJECTED");
 
 	private final LabUsageRequestDAO requestDAO = new LabUsageRequestDAO();
-	private final UserDAO userDAO = new UserDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -61,8 +60,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		}
 
 		try {
-			long adminId = userDAO.findFirstActiveAdminId()
-					.orElseThrow(() -> new SQLException("Chưa có tài khoản Admin ACTIVE để duyệt request."));
+			long adminId = AuthenticationSupport.currentUserId(request);
 			if (!requestDAO.decidePending(requestId, adminId, decision, trim(request.getParameter("approvalNote")))) {
 				response.sendError(HttpServletResponse.SC_CONFLICT, "Request không còn ở trạng thái PENDING.");
 				return;

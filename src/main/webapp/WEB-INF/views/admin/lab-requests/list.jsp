@@ -17,7 +17,7 @@
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Lab Usage Requests</h1><p>Review Mentor requests before granting student access</p></div></div>
-            <div class="top-profile"><div class="avatar">AD</div><span>Administrator</span></div>
+            <div class="top-profile"><div class="avatar">AD</div><span><c:out value="${currentUser.fullName}"/></span></div>
         </header>
         <section class="request-page">
             <div class="page-title-row"><div><h2>Approval queue</h2><p>Student accounts are created or activated only after approval.</p></div></div>

@@ -1,8 +1,8 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
+import fpt.swp391.labtoolequip.common.AuthenticationSupport;
 import fpt.swp391.labtoolequip.common.LabUsageRequestExcelReader;
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
-import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.LabUsageRequest;
 import fpt.swp391.labtoolequip.model.LabUsageRequestSlot;
 import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
@@ -40,7 +40,6 @@ public class MentorLabUsageRequestController extends HttpServlet {
 	private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
 	private final LabUsageRequestDAO requestDAO = new LabUsageRequestDAO();
-	private final UserDAO userDAO = new UserDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -99,11 +98,8 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			status = "";
 		}
 		Long semesterId = optionalId(request.getParameter("semesterId"));
-		var previewMentorId = userDAO.findFirstActiveMentorId();
 		request.setAttribute("requests",
-				previewMentorId.isPresent()
-						? requestDAO.findByMentor(previewMentorId.getAsLong(), keyword, status, semesterId)
-						: List.of());
+				requestDAO.findByMentor(AuthenticationSupport.currentUserId(request), keyword, status, semesterId));
 		request.setAttribute("semesters", requestDAO.findOpenSemesters());
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
@@ -384,9 +380,8 @@ public class MentorLabUsageRequestController extends HttpServlet {
 		}
 	}
 
-	private long mentorId(HttpServletRequest request) throws SQLException {
-		return userDAO.findFirstActiveMentorId()
-				.orElseThrow(() -> new SQLException("Chưa có tài khoản Mentor ACTIVE để sở hữu request."));
+	private long mentorId(HttpServletRequest request) {
+		return AuthenticationSupport.currentUserId(request);
 	}
 
 	private String csrfToken(HttpServletRequest request) {

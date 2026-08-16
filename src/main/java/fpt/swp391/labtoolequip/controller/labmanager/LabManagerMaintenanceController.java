@@ -1,5 +1,6 @@
 package fpt.swp391.labtoolequip.controller.labmanager;
 
+import fpt.swp391.labtoolequip.common.AuthenticationSupport;
 import fpt.swp391.labtoolequip.dao.AssetDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
@@ -113,7 +114,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 		m.setAssetId(assetId);
 		m.setDescription(description);
 		m.setQuantity(quantity);
-		m.setRequestedBy(3L); // Default Lab Manager user ID for now
+		m.setRequestedBy(AuthenticationSupport.currentUserId(request));
 
 		long createdId = maintenanceDAO.create(m);
 		// Update asset status to MAINTENANCE
@@ -128,7 +129,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 		String decision = request.getParameter("decision"); // APPROVED or REJECTED
 		String note = request.getParameter("approvalNote");
 
-		maintenanceDAO.approveOrReject(id, decision, 3L, note);
+		maintenanceDAO.approveOrReject(id, decision, AuthenticationSupport.currentUserId(request), note);
 
 		if ("APPROVED".equals(decision)) {
 			// Find asset to set to MAINTENANCE status

@@ -50,10 +50,9 @@ Phạm vi `AU-01 Authentication` gồm đăng nhập bằng tài khoản nội b
 - Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `STUDENT`.
 - Tài khoản nội bộ sử dụng email và mật khẩu đã được băm; người dùng không được tự đăng ký hoặc tự chọn vai trò. Khi Mentor gửi request, hệ thống chỉ lưu bản chụp mã sinh viên, họ tên và email trong request, chưa tạo tài khoản.
 - Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Hệ thống chấp nhận mọi miền email do Google xác minh.
-- Khi đăng nhập với Google được triển khai, email phải trùng chính xác email sinh viên trong một Lab Usage Request đã được Admin duyệt. Chỉ sinh viên có quyền trong học kỳ đang hoạt động mới được mượn tài sản.
-- Mỗi người dùng có tài khoản riêng. Vai trò lưu trong hệ thống quyết định dashboard và các chức năng được phép truy cập.
-
-> Trạng thái preview giao diện: chưa yêu cầu đăng nhập. URL gốc `/` tạm trả về 404; `/login` và `/logout` chuyển đến Mentor Dashboard, còn các URL `/mentor/*` mở trực tiếp mà không nạp hoặc kiểm tra tài khoản. Cần bật lại xác thực và thay trang khởi đầu trước khi triển khai thật.
+- Khi đăng nhập với Google, email đã được Google xác minh phải trùng chính xác một tài khoản `ACTIVE` trong User List. Vì tài khoản Student chỉ được tạo sau khi Admin duyệt Lab Usage Request, sinh viên chưa được duyệt không thể đăng nhập.
+- Mỗi người dùng có tài khoản riêng. Vai trò lưu trong hệ thống quyết định dashboard mở đầu sau khi đăng nhập: `ADMIN`, `LAB_MANAGER`, `MENTOR` hoặc `STUDENT`.
+- Trong giai đoạn phát triển hiện tại, hệ thống chỉ yêu cầu đã đăng nhập và **chưa khóa truy cập chéo theo role**, để nhóm có thể mở các URL của role khác khi xây giao diện. Phân quyền cứng sẽ được bật sau.
 
 ## Luồng nghiệp vụ chính
 
@@ -142,13 +141,14 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 - Schema SQL Server gồm 16 bảng nghiệp vụ và các model Java tương ứng.
 - Kết nối SQL Server trực tiếp bằng cấu hình local trong `DBConnection`.
 - FE-01 Manage User ở mức MVC/JDBC cơ bản: `UserController`, `UserDAO` và các JSP danh sách, chi tiết, thêm, sửa.
-- FE-03 phía Mentor: đăng nhập demo, sidebar dùng chung, List/Add/View/Edit/Delete request, nhiều slot mỗi tuần và import Excel hai sheet `Students`/`Slots`.
+- AU-01: đăng nhập email/mật khẩu BCrypt, Google Authentication, session, chuyển dashboard theo role và đăng xuất dùng chung.
+- FE-03 phía Mentor: sidebar dùng chung, List/Add/View/Edit/Delete request, nhiều slot mỗi tuần và import Excel hai sheet `Students`/`Slots`.
 - Controller và JSP khung cho dashboard của Admin, Lab Manager, Mentor và Student.
 - Mentor Dashboard responsive; dữ liệu trên dashboard hiện là dữ liệu trình diễn.
 
 Chưa triển khai đầy đủ:
 
-- Đăng nhập email/mật khẩu, Google OAuth và đổi mật khẩu đang tạm tắt để test giao diện Mentor.
+- Đổi mật khẩu và phân quyền chặn truy cập chéo theo role.
 - DAO, Controller và JSP nghiệp vụ cho FE-02, FE-04 đến FE-09.
 - Dữ liệu động cho các dashboard và kiểm thử tự động của các module còn lại. FE-03 đã có test cho chức năng đọc file Excel.
 
@@ -184,6 +184,28 @@ sqlcmd -S localhost -d lab_asset_management -U sa -P "<password>" -C -i database
 Database mới có thể tạo trực tiếp bằng `database/schema.sql`. Migration bổ sung `group_name`, bốn khung giờ cố định, bảng slot lặp theo tuần và học kỳ mẫu `FA26`; không tự tạo tài khoản Mentor và không xóa dữ liệu hiện có.
 
 ## Chạy dự án
+
+### Cấu hình Google Authentication
+
+Google Client ID là mã định danh công khai, không phải mật khẩu và không cần file `.env`. Tạo OAuth 2.0 Web Client trong Google Cloud, khai báo:
+
+- Authorized JavaScript origin: `http://localhost:8080`
+- Authorized redirect URI khi chạy Cargo: `http://localhost:8080/labtoolequip/login/google`
+- Nếu IntelliJ deploy ứng dụng ở root context: `http://localhost:8080/login/google`
+
+Truyền Client ID bằng Java system property khi chạy:
+
+```powershell
+.\mvnw.cmd "-Dgoogle.clientId=YOUR_CLIENT_ID.apps.googleusercontent.com" cargo:run
+```
+
+Trong IntelliJ/Tomcat có thể thêm VM option tương đương:
+
+```text
+-Dgoogle.clientId=YOUR_CLIENT_ID.apps.googleusercontent.com
+```
+
+Nếu chưa cấu hình, đăng nhập email/mật khẩu vẫn hoạt động và nút Google hiển thị trạng thái chưa cấu hình.
 
 Windows:
 

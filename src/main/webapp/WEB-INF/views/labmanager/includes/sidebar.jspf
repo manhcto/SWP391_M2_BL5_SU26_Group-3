@@ -12,6 +12,7 @@
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
 </svg>
 
 <aside class="sidebar" id="sidebar">
@@ -32,7 +33,8 @@
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-trash"/></svg><span>Disposal</span></a>
     </nav>
     <div class="sidebar-footer">
-        <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong>Lab Manager</strong><span><i></i> Online</span></div></div>
+        <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${currentUser.role}"/></span></div></div>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Log out</span></button></form>
     </div>
 </aside>
 <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>

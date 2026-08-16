@@ -16,6 +16,7 @@
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
 </svg>
 
 <aside class="sidebar" id="sidebar">
@@ -36,7 +37,8 @@
         <a class="nav-link" href="#"><svg><use href="#i-trash"/></svg><span>Disposal</span></a>
     </nav>
     <div class="sidebar-footer">
-        <div class="profile-card"><div class="avatar avatar-lg">ME</div><div class="profile-copy"><strong>Mentor Preview</strong><span><i></i> No authentication</span></div></div>
+        <div class="profile-card"><div class="avatar avatar-lg">ME</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${currentUser.role}"/></span></div></div>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Log out</span></button></form>
     </div>
 </aside>
 <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>

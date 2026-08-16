@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 
 public class UserDAO {
 	private static final String SELECT_USER = """
@@ -80,21 +79,18 @@ public class UserDAO {
 		}
 	}
 
-	public OptionalLong findFirstActiveMentorId() throws SQLException {
-		String sql = "SELECT TOP (1) user_id FROM dbo.users WHERE role = 'MENTOR' AND status = 'ACTIVE' ORDER BY user_id";
+	public boolean linkGoogleSubject(long userId, String googleSubject) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET google_subject = ?, updated_at = SYSUTCDATETIME()
+				WHERE user_id = ? AND (google_subject IS NULL OR google_subject = ?)
+				""";
 		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection.prepareStatement(sql);
-				ResultSet result = statement.executeQuery()) {
-			return result.next() ? OptionalLong.of(result.getLong("user_id")) : OptionalLong.empty();
-		}
-	}
-
-	public OptionalLong findFirstActiveAdminId() throws SQLException {
-		String sql = "SELECT TOP (1) user_id FROM dbo.users WHERE role = 'ADMIN' AND status = 'ACTIVE' ORDER BY user_id";
-		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection.prepareStatement(sql);
-				ResultSet result = statement.executeQuery()) {
-			return result.next() ? OptionalLong.of(result.getLong("user_id")) : OptionalLong.empty();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, googleSubject);
+			statement.setLong(2, userId);
+			statement.setString(3, googleSubject);
+			return statement.executeUpdate() == 1;
 		}
 	}
 

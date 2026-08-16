@@ -16,11 +16,11 @@
 
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Mentor Dashboard</h1><p>Preview mode — authentication is temporarily disabled</p></div></div>
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Mentor Dashboard</h1><p>Manage lab schedules, students and usage requests</p></div></div>
             <div class="topbar-actions">
                 <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search assets, students, requests..." aria-label="Search"></label>
                 <button class="icon-button notification" type="button" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span>3</span></button>
-                <div class="top-profile"><div class="avatar">ME</div><span>Mentor Preview</span><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></div>
+                <div class="top-profile"><div class="avatar">ME</div><span><c:out value="${currentUser.fullName}"/></span><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></div>
             </div>
         </header>
 

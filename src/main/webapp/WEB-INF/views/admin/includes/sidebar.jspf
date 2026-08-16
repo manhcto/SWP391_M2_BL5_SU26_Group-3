@@ -10,6 +10,7 @@
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></symbol>
     <symbol id="i-file-excel" viewBox="0 0 24 24"><path d="M6 2h9l4 4v16H6zM14 2v5h5M9 11l6 6m0-6-6 6"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
 </svg>
 
 <aside class="sidebar" id="sidebar">
@@ -23,7 +24,8 @@
         <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/lab-requests"><svg><use href="#i-clipboard"/></svg><span>Lab Usage Requests</span></a>
     </nav>
     <div class="sidebar-footer">
-        <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong>Administrator</strong><span><i></i> Online</span></div></div>
+        <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${currentUser.role}"/></span></div></div>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Log out</span></button></form>
     </div>
 </aside>
 <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>

@@ -66,7 +66,7 @@
             <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1><c:choose><c:when test="${formMode == 'import'}">Batch Import Accounts from Excel</c:when><c:when test="${formMode == 'edit'}">Edit User Role & Status (#USR-${user.userId})</c:when><c:otherwise>Add New User Account</c:otherwise></c:choose></h1><p>Admin manages accounts for Student, Mentor, and Lab Manager</p></div></div>
             <div class="topbar-actions">
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users">‹ Back to Users List</a>
-                <div class="top-profile"><div class="avatar">AD</div><span>Administrator</span></div>
+                <div class="top-profile"><div class="avatar">AD</div><span><c:out value="${currentUser.fullName}"/></span></div>
             </div>
         </header>
 

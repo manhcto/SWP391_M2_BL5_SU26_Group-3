@@ -15,7 +15,7 @@
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Admin Dashboard</h1><p>Manage system accounts and access roles</p></div></div>
-            <div class="topbar-actions"><div class="top-profile"><div class="avatar">AD</div><span>Administrator</span></div></div>
+            <div class="topbar-actions"><div class="top-profile"><div class="avatar">AD</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
         </header>
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">ADMIN PORTAL</p><h2>System administration</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/admin/lab-requests"><svg><use href="#i-clipboard"/></svg>Review requests</a></div>
