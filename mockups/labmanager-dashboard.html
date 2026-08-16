@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lab Manager Dashboard | LAB Asset</title>
+    <link rel="stylesheet" href="assets/css/mentor-dashboard.css">
+</head>
+<body>
+<svg class="svg-sprite" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 9h6M9 13h6M9 17h4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5v9l-9 5-9-5V8Z"/><path d="M12 13v9"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></symbol>
+    <symbol id="i-inspect" viewBox="0 0 24 24"><path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7M9 3h6v4H9zM8 11h4M8 15h3"/><circle cx="17" cy="16" r="4"/><path d="m20 19 2 2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.7 2.4 17.2A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.8L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5L4 17l3 3 7.7-8.3a4 4 0 0 0 5-5L17.4 9 15 6.6l2.3-2.3a4 4 0 0 0-2.6 2Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+</svg>
+<div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+        <a class="brand" href="labmanager-dashboard.html" aria-label="LAB Asset home">
+            <span class="brand-mark"><img src="assets/images/fpt-university-logo.png" alt="FPT University"></span>
+            <span><strong>LAB ASSET</strong><small>LAB MANAGER PORTAL</small></span>
+        </a>
+        <nav class="side-nav"><a class="nav-link active" href="labmanager-dashboard.html" aria-current="page"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a><a class="nav-link" href="labmanager-requests.html"><svg><use href="#i-clipboard"/></svg><span>Lab Requests</span><span class="nav-count">6</span></a><a class="nav-link" href="labmanager-students.html"><svg><use href="#i-users"/></svg><span>Students</span></a><a class="nav-link" href="labmanager-assets.html"><svg><use href="#i-box"/></svg><span>Assets</span></a><a class="nav-link" href="labmanager-asset-usage.html"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a><a class="nav-link" href="labmanager-inspections.html"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a><a class="nav-link" href="labmanager-incidents.html"><svg><use href="#i-alert"/></svg><span>Incidents</span><span class="nav-dot"></span></a><a class="nav-link" href="labmanager-responsibilities.html"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a><a class="nav-link" href="labmanager-maintenance.html"><svg><use href="#i-wrench"/></svg><span>Maintenance</span><span class="nav-count">3</span></a><a class="nav-link" href="labmanager-disposal.html"><svg><use href="#i-trash"/></svg><span>Disposal</span><span class="nav-count">2</span></a><a class="nav-link" href="labmanager-semesters.html"><svg><use href="#i-clock"/></svg><span>Semesters</span></a><a class="nav-link" href="labmanager-profile.html"><svg><use href="#i-users"/></svg><span>My Profile</span></a></nav>
+        <div class="sidebar-footer">
+            <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong>Pham Quang Dung</strong><span><i></i> Online</span></div><svg class="chevron-down" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></div>
+            <a class="sign-out" href="index.html"><svg><use href="#i-logout"/></svg><span>Sign out</span></a>
+        </div>
+    </aside>
+    <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>Good morning, Dung Pham</h1><p>Lab facilities, requests approval & asset lifecycle supervision</p></div></div>
+            <div class="topbar-actions">
+                <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search..." aria-label="Search"></label>
+                <button class="icon-button notification" type="button" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span>3</span></button>
+                <div class="top-profile"><div class="avatar">LM</div><span>Quang Dung</span><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></div>
+            </div>
+        </header>
+        <section class="content-area">
+
+            <div class="content-heading"><div><p class="eyebrow">Sunday, 16 August</p><h2>Lab Manager overview</h2></div><a class="primary-button" href="labmanager-requests.html"><svg><use href="#i-clipboard"/></svg>Approve requests</a></div>
+            <section class="stats-grid">
+                <article class="stat-card stat-gold"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong>6</strong><span>Pending approvals</span><small><svg><use href="#i-clock"/></svg>Requests waiting</small></div></article>
+                <article class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong>342</strong><span>Total lab assets</span><small><svg><use href="#i-trend"/></svg>86 currently in use</small></div></article>
+                <article class="stat-card stat-green"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong>132</strong><span>Active students</span><small><svg><use href="#i-trend"/></svg>Fall 2026 Term</small></div></article>
+                <article class="stat-card stat-red"><div class="stat-icon"><svg><use href="#i-alert"/></svg></div><div><strong>5</strong><span>Action required</span><small><i></i>3 maint, 2 disposal</small></div></article>
+            </section>
+            <section class="dashboard-grid">
+                <article class="panel schedule-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-clipboard"/></svg></span><h3>Pending Lab Usage Requests (FE-03)</h3></div><a href="labmanager-requests.html">View all requests <svg><use href="#i-chevron"/></svg></a></header>
+                    <div class="table-scroll">
+                        <table><thead><tr><th>Request ID</th><th>Mentor</th><th>Semester</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>#REQ-2026-001</strong></td><td><span class="student"><i>MA</i>Nguyen Minh Anh</span></td><td>FA26</td><td>12 students</td><td><span class="status review">PENDING</span></td><td><a href="labmanager-requests.html" class="btn-secondary" style="height:22px; padding:0 6px; font-size:8px;">Review</a></td></tr>
+                            <tr><td><strong>#REQ-2026-002</strong></td><td><span class="student"><i>TH</i>Tran Van Hung</span></td><td>FA26</td><td>18 students</td><td><span class="status review">PENDING</span></td><td><a href="labmanager-requests.html" class="btn-secondary" style="height:22px; padding:0 6px; font-size:8px;">Review</a></td></tr>
+                            <tr><td><strong>#REQ-2026-003</strong></td><td><span class="student"><i>LH</i>Le Thi Huong</span></td><td>FA26</td><td>8 students</td><td><span class="status review">PENDING</span></td><td><a href="labmanager-requests.html" class="btn-secondary" style="height:22px; padding:0 6px; font-size:8px;">Review</a></td></tr>
+                        </tbody></table>
+                    </div>
+                </article>
+                <article class="panel attention-panel" id="attention">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-bell"/></svg></span><h3>Manager alerts</h3></div><a href="labmanager-incidents.html">View all</a></header>
+                    <div class="attention-list">
+                        <a href="labmanager-requests.html" class="attention-item"><span class="attention-icon gold"><svg><use href="#i-clipboard"/></svg></span><span class="attention-copy"><b>6 lab usage requests awaiting approval</b><small>Submitted by Mentors for FA26</small></span><span class="severity medium">Medium</span><svg class="item-arrow"><use href="#i-chevron"/></svg></a>
+                        <a href="labmanager-maintenance.html" class="attention-item"><span class="attention-icon blue"><svg><use href="#i-wrench"/></svg></span><span class="attention-copy"><b>3 maintenance approvals needed</b><small>Estimated cost: 3,450,000 VND</small></span><span class="severity high">High</span><svg class="item-arrow"><use href="#i-chevron"/></svg></a>
+                        <a href="labmanager-disposal.html" class="attention-item"><span class="attention-icon red"><svg><use href="#i-trash"/></svg></span><span class="attention-copy"><b>2 asset disposal proposals pending</b><small>Unrepairable oscilloscopes</small></span><span class="severity medium">Action</span><svg class="item-arrow"><use href="#i-chevron"/></svg></a>
+                        <a href="labmanager-inspections.html" class="attention-item"><span class="attention-icon green" style="background:#e9f5ee; color:#188255;"><svg><use href="#i-inspect"/></svg></span><span class="attention-copy"><b>Mid-term inspection schedule ready</b><small>14 rooms scheduled next week</small></span><span class="severity low">Info</span><svg class="item-arrow"><use href="#i-chevron"/></svg></a>
+                    </div>
+                </article>
+            </section>
+            <section class="bottom-grid">
+                <article class="panel health-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Asset distribution</h3></div></header>
+                    <div class="health-content">
+                        <div class="donut" style="background: conic-gradient(#188255 0 76%, #2869b5 76% 90%, #e2aa3d 90% 96%, #df5050 96%);"><div><strong>342</strong><span>Assets</span></div></div>
+                        <dl class="health-legend">
+                            <div><dt><i style="background:#188255;"></i>Available</dt><dd>260 (76%)</dd></div>
+                            <div><dt><i style="background:#2869b5;"></i>In Use</dt><dd>86 (25%)</dd></div>
+                            <div><dt><i style="background:#e2aa3d;"></i>Maint</dt><dd>14 (4%)</dd></div>
+                            <div><dt><i style="background:#df5050;"></i>Disposal</dt><dd>5 (1%)</dd></div>
+                        </dl>
+                    </div>
+                </article>
+                <article class="panel activity-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-clock"/></svg></span><h3>Recent approval activity</h3></div><a href="labmanager-asset-usage.html">View all <svg><use href="#i-chevron"/></svg></a></header>
+                    <div class="table-scroll">
+                        <table><thead><tr><th>Operation</th><th>Asset / Subject</th><th>Requested By</th><th>Time</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr><td>Lab Request Approved</td><td>IoT Capstone Group 02</td><td>Nguyen Minh Anh</td><td>Today, 09:15</td><td><span class="status returned">Approved</span></td></tr>
+                            <tr><td>Maintenance Approved</td><td>3D Printer Ender 3 (#AST-0089)</td><td>Nguyen Minh Anh</td><td>Yesterday, 14:00</td><td><span class="status in-use">In Repair</span></td></tr>
+                            <tr><td>Disposal Approved</td><td>Soldering Iron Kit (#AST-0012)</td><td>Tran Van Hung</td><td>14/08/2026</td><td><span class="status returned">Disposed</span></td></tr>
+                        </tbody></table>
+                    </div>
+                </article>
+            </section>
+        </section>
+    </main>
+</div>
+<script>
+    const menuButton = document.getElementById('menuButton');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (menuButton && overlay) {
+        const closeMenu = () => { document.body.classList.remove('nav-open'); menuButton.setAttribute('aria-expanded', 'false'); };
+        menuButton.addEventListener('click', () => { const open = document.body.classList.toggle('nav-open'); menuButton.setAttribute('aria-expanded', String(open)); });
+        overlay.addEventListener('click', closeMenu);
+    }
+</script>
+</body>
+</html>
