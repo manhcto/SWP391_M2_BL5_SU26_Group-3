@@ -21,30 +21,15 @@ public class MaintenanceRecord {
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
-	public MaintenanceRecord() {
-	}
+	// Transient display fields for JOIN queries
+	private String assetName;
+	private String assetCode;
+	private String requesterName;
+	private String approverName;
 
-	public MaintenanceRecord(Long maintenanceId, Long assetId, Long incidentId, Integer quantity, Long requestedBy,
-			String description, LocalDateTime requestedAt, String status, Long approvedBy, LocalDateTime approvedAt,
-			String approvalNote, LocalDateTime repairStartedAt, LocalDateTime repairCompletedAt, String repairResult,
-			String note, LocalDateTime createdAt, LocalDateTime updatedAt) {
-		this.maintenanceId = maintenanceId;
-		this.assetId = assetId;
-		this.incidentId = incidentId;
-		this.quantity = quantity;
-		this.requestedBy = requestedBy;
-		this.description = description;
-		this.requestedAt = requestedAt;
-		this.status = status;
-		this.approvedBy = approvedBy;
-		this.approvedAt = approvedAt;
-		this.approvalNote = approvalNote;
-		this.repairStartedAt = repairStartedAt;
-		this.repairCompletedAt = repairCompletedAt;
-		this.repairResult = repairResult;
-		this.note = note;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
+	public MaintenanceRecord() {
+		this.quantity = 1;
+		this.status = "PENDING";
 	}
 
 	public Long getMaintenanceId() {
@@ -181,5 +166,37 @@ public class MaintenanceRecord {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getAssetName() {
+		return assetName;
+	}
+
+	public void setAssetName(String assetName) {
+		this.assetName = assetName;
+	}
+
+	public String getAssetCode() {
+		return assetCode;
+	}
+
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+
+	public String getRequesterName() {
+		return requesterName;
+	}
+
+	public void setRequesterName(String requesterName) {
+		this.requesterName = requesterName;
+	}
+
+	public String getApproverName() {
+		return approverName;
+	}
+
+	public void setApproverName(String approverName) {
+		this.approverName = approverName;
 	}
 }
