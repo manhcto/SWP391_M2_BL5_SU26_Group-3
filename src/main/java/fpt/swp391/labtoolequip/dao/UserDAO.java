@@ -69,7 +69,7 @@ public class UserDAO {
 	}
 
 	public Optional<User> findByEmail(String email) throws SQLException {
-		String sql = SELECT_USER + "WHERE u.email = ?";
+		String sql = SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, valueOrEmpty(email));

@@ -6,7 +6,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,7 +36,6 @@ public class DBConnection {
 	private static void loadDotEnv() {
 		File envFile = new File(".env");
 		if (!envFile.exists()) {
-			// Thử tìm ở thư mục cha hoặc working dir
 			envFile = new File(System.getProperty("user.dir"), ".env");
 		}
 		if (envFile.exists()) {
@@ -71,7 +72,12 @@ public class DBConnection {
 	}
 
 	public static void main(String[] args) {
-		try (Connection connection = new DBConnection().getConnection()) {
+		try (Connection connection = new DBConnection().getConnection();
+				Statement statement = connection.createStatement();
+				ResultSet result = statement.executeQuery("SELECT 1")) {
+			if (!result.next() || result.getInt(1) != 1) {
+				throw new SQLException("Database không phản hồi truy vấn kiểm tra.");
+			}
 			System.out.println("Kết nối tới cơ sở dữ liệu LAB Asset THÀNH CÔNG!");
 		} catch (Exception exception) {
 			System.out.println("Kết nối THẤT BẠI: " + exception.getMessage());
