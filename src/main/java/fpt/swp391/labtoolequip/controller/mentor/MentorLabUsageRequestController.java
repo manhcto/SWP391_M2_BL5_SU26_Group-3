@@ -2,10 +2,10 @@ package fpt.swp391.labtoolequip.controller.mentor;
 
 import fpt.swp391.labtoolequip.common.LabUsageRequestExcelReader;
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
+import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.LabUsageRequest;
 import fpt.swp391.labtoolequip.model.LabUsageRequestSlot;
 import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
-import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -40,6 +40,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 	private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
 	private final LabUsageRequestDAO requestDAO = new LabUsageRequestDAO();
+	private final UserDAO userDAO = new UserDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -98,7 +99,11 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			status = "";
 		}
 		Long semesterId = optionalId(request.getParameter("semesterId"));
-		request.setAttribute("requests", requestDAO.findByMentor(mentorId(request), keyword, status, semesterId));
+		var previewMentorId = userDAO.findFirstActiveMentorId();
+		request.setAttribute("requests",
+				previewMentorId.isPresent()
+						? requestDAO.findByMentor(previewMentorId.getAsLong(), keyword, status, semesterId)
+						: List.of());
 		request.setAttribute("semesters", requestDAO.findOpenSemesters());
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
@@ -379,8 +384,9 @@ public class MentorLabUsageRequestController extends HttpServlet {
 		}
 	}
 
-	private long mentorId(HttpServletRequest request) {
-		return ((User) request.getSession().getAttribute("currentUser")).getUserId();
+	private long mentorId(HttpServletRequest request) throws SQLException {
+		return userDAO.findFirstActiveMentorId()
+				.orElseThrow(() -> new SQLException("Chưa có tài khoản Mentor ACTIVE để sở hữu request."));
 	}
 
 	private String csrfToken(HttpServletRequest request) {

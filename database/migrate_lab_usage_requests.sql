@@ -58,11 +58,37 @@ BEGIN TRY
             ON dbo.lab_usage_request_slots (day_of_week, slot_id);
     END;
 
-    IF NOT EXISTS (SELECT 1 FROM dbo.users WHERE LOWER(email) = 'minhanh@gmail.com')
-        INSERT dbo.users (full_name, email, password_hash, role, status)
-        VALUES (N'Nguyễn Minh Anh', 'minhanh@gmail.com',
-            '$2a$10$ni/PZ5fY40J5I2f.AJx24OseK6h/8wbYvnqRhj9uoGZfAztXP2LXW',
-            'MENTOR', 'ACTIVE');
+    IF OBJECT_ID(N'dbo.lab_usage_request_student_entries', N'U') IS NULL
+    BEGIN
+        CREATE TABLE dbo.lab_usage_request_student_entries (
+            request_id bigint NOT NULL,
+            semester_id bigint NOT NULL,
+            student_code varchar(30) NOT NULL,
+            full_name nvarchar(100) NOT NULL,
+            email varchar(255) NOT NULL,
+            added_at datetime2(0) NOT NULL
+                CONSTRAINT DF_lab_usage_request_student_entries_added_at DEFAULT (SYSUTCDATETIME()),
+            CONSTRAINT PK_lab_usage_request_student_entries PRIMARY KEY (request_id, student_code),
+            CONSTRAINT UQ_lab_usage_request_student_entries_request_email UNIQUE (request_id, email),
+            CONSTRAINT FK_lab_usage_request_student_entries_request FOREIGN KEY (request_id, semester_id)
+                REFERENCES dbo.lab_usage_requests(request_id, semester_id) ON DELETE CASCADE
+        );
+        CREATE INDEX IX_lab_usage_request_student_entries_semester
+            ON dbo.lab_usage_request_student_entries (semester_id);
+    END;
+
+    INSERT dbo.lab_usage_request_student_entries
+           (request_id, semester_id, student_code, full_name, email, added_at)
+    SELECT approved.request_id, approved.semester_id, sp.student_code, u.full_name, u.email, approved.added_at
+    FROM dbo.lab_usage_request_students approved
+    JOIN dbo.student_profiles sp ON sp.student_id = approved.student_id
+    JOIN dbo.users u ON u.user_id = sp.user_id
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM dbo.lab_usage_request_student_entries entry
+        WHERE entry.request_id = approved.request_id
+          AND (entry.student_code = sp.student_code OR LOWER(entry.email) = LOWER(u.email))
+    );
 
     IF NOT EXISTS (SELECT 1 FROM dbo.semesters WHERE code = 'FA26')
         INSERT dbo.semesters (code, name, start_date, end_date, status)

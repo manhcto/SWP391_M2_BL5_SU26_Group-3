@@ -2,6 +2,7 @@ package fpt.swp391.labtoolequip.controller.mentor;
 
 import fpt.swp391.labtoolequip.dao.AssetDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
+import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -20,6 +21,7 @@ public class MentorMaintenanceController extends HttpServlet {
 
 	private final MaintenanceDAO maintenanceDAO = new MaintenanceDAO();
 	private final AssetDAO assetDAO = new AssetDAO();
+	private final UserDAO userDAO = new UserDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -54,8 +56,10 @@ public class MentorMaintenanceController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		String keyword = request.getParameter("keyword");
 		String status = request.getParameter("status");
-		long mentorId = 2L; // Default Mentor user ID for demo/mentor session
-		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(mentorId, keyword, status);
+		var previewMentorId = userDAO.findFirstActiveMentorId();
+		List<MaintenanceRecord> records = previewMentorId.isPresent()
+				? maintenanceDAO.findByRequester(previewMentorId.getAsLong(), keyword, status)
+				: List.of();
 		request.setAttribute("records", records);
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
@@ -93,10 +97,15 @@ public class MentorMaintenanceController extends HttpServlet {
 		m.setAssetId(assetId);
 		m.setDescription(description);
 		m.setQuantity(quantity);
-		m.setRequestedBy(2L); // Mentor user ID
+		m.setRequestedBy(mentorId());
 
 		maintenanceDAO.create(m);
 		response.sendRedirect(request.getContextPath() + "/mentor/maintenance?success=submitted");
+	}
+
+	private long mentorId() throws SQLException {
+		return userDAO.findFirstActiveMentorId()
+				.orElseThrow(() -> new SQLException("Chưa có tài khoản Mentor ACTIVE để sở hữu maintenance request."));
 	}
 
 	private long requireId(HttpServletRequest request, HttpServletResponse response) throws IOException {

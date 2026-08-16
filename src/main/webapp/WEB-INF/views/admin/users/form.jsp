@@ -57,33 +57,9 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-<svg class="svg-sprite" aria-hidden="true">
-    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
-    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5L4 17l3 3 7.7-8.3a4 4 0 0 0 5-5L17.4 9 15 6.6l2.3-2.3a4 4 0 0 0-2.6 2Z"/></symbol>
-    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></symbol>
-    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
-    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
-    <symbol id="i-file-excel" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="17"/><line x1="16" y1="13" x2="8" y2="17"/></symbol>
-</svg>
+<c:set var="activeMenu" value="users" scope="request"/>
 <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-        <a class="brand" href="${pageContext.request.contextPath}/admin/dashboard" aria-label="LAB Asset home">
-            <span class="brand-mark"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"></span>
-            <span><strong>LAB ASSET</strong><small>ADMIN PORTAL</small></span>
-        </a>
-        <nav class="side-nav">
-            <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
-            <a class="nav-link active" href="${pageContext.request.contextPath}/admin/users" aria-current="page"><svg><use href="#i-users"/></svg><span>User Management</span></a>
-            <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-wrench"/></svg><span>Database Status</span></a>
-            <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-users"/></svg><span>My Profile</span></a>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong>System Admin</strong><span><i></i> Online (Superuser)</span></div></div>
-            <a class="sign-out" href="${pageContext.request.contextPath}/login"><svg><use href="#i-logout"/></svg><span>Sign out</span></a>
-        </div>
-    </aside>
-    <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>
+    <%@ include file="../includes/sidebar.jspf"%>
 
     <main class="main-content">
         <header class="topbar">

@@ -18,6 +18,8 @@ public class LabUsageRequest {
 	private LocalDateTime updatedAt;
 	private String semesterCode;
 	private String semesterName;
+	private String mentorName;
+	private String mentorEmail;
 	private int studentCount;
 	private String scheduleSummary;
 	private List<LabUsageRequestSlot> slots = new ArrayList<>();
@@ -143,6 +145,22 @@ public class LabUsageRequest {
 
 	public void setSemesterName(String semesterName) {
 		this.semesterName = semesterName;
+	}
+
+	public String getMentorName() {
+		return mentorName;
+	}
+
+	public void setMentorName(String mentorName) {
+		this.mentorName = mentorName;
+	}
+
+	public String getMentorEmail() {
+		return mentorEmail;
+	}
+
+	public void setMentorEmail(String mentorEmail) {
+		this.mentorEmail = mentorEmail;
 	}
 
 	public int getStudentCount() {

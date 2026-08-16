@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 public class UserDAO {
 	private static final String SELECT_USER = """
@@ -76,6 +77,24 @@ public class UserDAO {
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
 			}
+		}
+	}
+
+	public OptionalLong findFirstActiveMentorId() throws SQLException {
+		String sql = "SELECT TOP (1) user_id FROM dbo.users WHERE role = 'MENTOR' AND status = 'ACTIVE' ORDER BY user_id";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			return result.next() ? OptionalLong.of(result.getLong("user_id")) : OptionalLong.empty();
+		}
+	}
+
+	public OptionalLong findFirstActiveAdminId() throws SQLException {
+		String sql = "SELECT TOP (1) user_id FROM dbo.users WHERE role = 'ADMIN' AND status = 'ACTIVE' ORDER BY user_id";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			return result.next() ? OptionalLong.of(result.getLong("user_id")) : OptionalLong.empty();
 		}
 	}
 

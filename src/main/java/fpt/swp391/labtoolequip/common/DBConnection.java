@@ -7,8 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DBConnection {
-	// ponytail: local demo credentials; replace with a managed data source before
-	// deployment.
+
 	private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=lab_asset_management;encrypt=true;trustServerCertificate=true";
 	private static final String USERNAME = "minhanh";
 	private static final String PASSWORD = "123";

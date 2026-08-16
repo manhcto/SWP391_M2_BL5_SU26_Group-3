@@ -48,18 +48,18 @@ Sinh viên được di chuyển tự do trong LAB; hệ thống không quản l�
 Phạm vi `AU-01 Authentication` gồm đăng nhập bằng tài khoản nội bộ, đăng nhập với Google, đổi mật khẩu và đăng xuất. Chức năng yêu cầu đặt lại mật khẩu đã bị loại khỏi phạm vi hiện tại.
 
 - Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `STUDENT`.
-- Tài khoản nội bộ sử dụng email và mật khẩu đã được băm; người dùng không được tự đăng ký hoặc tự chọn vai trò. Khi Mentor gửi request, hệ thống chỉ tạo trước tài khoản `STUDENT` ở trạng thái `INACTIVE` nếu email chưa tồn tại.
+- Tài khoản nội bộ sử dụng email và mật khẩu đã được băm; người dùng không được tự đăng ký hoặc tự chọn vai trò. Khi Mentor gửi request, hệ thống chỉ lưu bản chụp mã sinh viên, họ tên và email trong request, chưa tạo tài khoản.
 - Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Hệ thống chấp nhận mọi miền email do Google xác minh.
 - Khi đăng nhập với Google được triển khai, email phải trùng chính xác email sinh viên trong một Lab Usage Request đã được Admin duyệt. Chỉ sinh viên có quyền trong học kỳ đang hoạt động mới được mượn tài sản.
 - Mỗi người dùng có tài khoản riêng. Vai trò lưu trong hệ thống quyết định dashboard và các chức năng được phép truy cập.
 
-> Trạng thái demo giao diện: chưa yêu cầu đăng nhập. URL gốc `/` tạm trả về 404; `/login` và `/logout` chuyển đến Mentor Dashboard, còn các URL `/mentor/*` tự dùng tài khoản `minhanh@gmail.com`. Cần bật lại xác thực và thay trang khởi đầu trước khi triển khai thật.
+> Trạng thái preview giao diện: chưa yêu cầu đăng nhập. URL gốc `/` tạm trả về 404; `/login` và `/logout` chuyển đến Mentor Dashboard, còn các URL `/mentor/*` mở trực tiếp mà không nạp hoặc kiểm tra tài khoản. Cần bật lại xác thực và thay trang khởi đầu trước khi triển khai thật.
 
 ## Luồng nghiệp vụ chính
 
 1. Mentor nhập thủ công hoặc import Excel danh sách sinh viên, nhóm và các slot học lặp lại hằng tuần theo học kỳ rồi gửi cho Admin.
-2. Hệ thống tạo trước tài khoản sinh viên mới ở trạng thái `INACTIVE`; Admin phê duyệt hoặc từ chối toàn bộ request.
-3. Với request đã duyệt, Admin kích hoạt tài khoản `STUDENT`; email đã được Google xác minh là khóa đối chiếu quyền truy cập.
+2. Admin xem toàn bộ request tại `/admin/lab-requests` và phê duyệt hoặc từ chối cả danh sách.
+3. Chỉ khi `APPROVED`, hệ thống mới tạo hoặc kích hoạt đồng thời tài khoản `STUDENT` và hồ sơ sinh viên trong cùng transaction; nếu `REJECTED` thì không thêm user. Email đã được Google xác minh là khóa đối chiếu quyền truy cập.
 4. Sinh viên được duyệt có thể tự tạo lượt mượn tài sản nhỏ mà không cần Mentor duyệt từng lượt; hệ thống kiểm tra học kỳ, khả năng cho mượn và số lượng còn lại.
 5. Mỗi lượt mượn liên kết trực tiếp một sinh viên với một tài sản, có số lượng và hạn trả; Student, Mentor hoặc Lab Manager có thể ghi nhận thao tác theo quyền.
 6. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
@@ -94,7 +94,14 @@ Tệp Excel phải có đúng hai sheet:
 | `Students` | `Student Code`, `Full Name`, `Email` |
 | `Slots` | `Day Of Week`, `Slot Number` |
 
-Có thể tải file mẫu ngay tại màn Add/Edit. Email được chuẩn hóa về chữ thường và phải duy nhất trong request; nếu email đã thuộc vai trò khác hoặc không khớp mã sinh viên hiện có thì request bị từ chối lưu.
+Có thể tải file mẫu ngay tại màn Add/Edit. Email được chuẩn hóa về chữ thường, mã sinh viên và email phải duy nhất trong request; xung đột với tài khoản hiện có được kiểm tra khi Admin duyệt.
+
+## Manage Lab Usage Request phía Admin
+
+Admin truy cập `/admin/lab-requests` từ sidebar để lọc, xem lịch và danh sách sinh viên rồi duyệt toàn bộ request. Thao tác duyệt dùng `POST` và khóa request đang `PENDING`:
+
+- `APPROVED`: tạo mới hoặc kích hoạt các tài khoản `STUDENT`, liên kết hồ sơ sinh viên và cập nhật request trong cùng một transaction. Bất kỳ xung đột email/mã sinh viên nào cũng làm rollback toàn bộ.
+- `REJECTED`: chỉ lưu trạng thái và ghi chú từ chối; không tạo, kích hoạt hoặc thêm sinh viên vào Manage Users.
 
 ## Mô hình tài sản
 
@@ -115,7 +122,7 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 ## Quy tắc nghiệp vụ cốt lõi
 
 - Chỉ tài khoản đã được Admin cấp trước, đúng email, đúng vai trò và đang ở trạng thái `ACTIVE` mới được đăng nhập bằng phương thức được hệ thống hỗ trợ.
-- Mỗi người dùng có một tài khoản riêng. Hệ thống không suy ra vai trò từ tên hoặc miền email; tài khoản Student mới chỉ được tạo `INACTIVE` từ danh sách Mentor gửi và vẫn cần Admin phê duyệt, kích hoạt.
+- Mỗi người dùng có một tài khoản riêng. Hệ thống không suy ra vai trò từ tên hoặc miền email; dữ liệu sinh viên trong request `PENDING` chưa phải tài khoản và chỉ được thêm vào User List sau khi Admin duyệt.
 - Chỉ sinh viên có email thuộc danh sách đã được Admin phê duyệt và được kích hoạt mới được truy cập và mượn tài sản trong học kỳ tương ứng.
 - Sinh viên được di chuyển tự do trong LAB; hệ thống không lưu hoặc phân chỗ ngồi.
 - Một sinh viên có thể mượn nhiều tài sản cùng lúc; mỗi lượt mượn chỉ xác định một sinh viên và một tài sản.
@@ -142,7 +149,7 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 Chưa triển khai đầy đủ:
 
 - Đăng nhập email/mật khẩu, Google OAuth và đổi mật khẩu đang tạm tắt để test giao diện Mentor.
-- Màn Admin phê duyệt FE-03 và DAO, Controller, JSP nghiệp vụ cho FE-02, FE-04 đến FE-09.
+- DAO, Controller và JSP nghiệp vụ cho FE-02, FE-04 đến FE-09.
 - Dữ liệu động cho các dashboard và kiểm thử tự động của các module còn lại. FE-03 đã có test cho chức năng đọc file Excel.
 
 ## Công nghệ
@@ -174,7 +181,7 @@ Với database đã tạo từ phiên bản cũ, chạy migration an toàn sau t
 sqlcmd -S localhost -d lab_asset_management -U sa -P "<password>" -C -i database/migrate_lab_usage_requests.sql
 ```
 
-Database mới có thể tạo trực tiếp bằng `database/schema.sql`. Migration bổ sung `group_name`, bốn khung giờ cố định, bảng slot lặp theo tuần, học kỳ mẫu `FA26` và Mentor demo; không xóa dữ liệu hiện có.
+Database mới có thể tạo trực tiếp bằng `database/schema.sql`. Migration bổ sung `group_name`, bốn khung giờ cố định, bảng slot lặp theo tuần và học kỳ mẫu `FA26`; không tự tạo tài khoản Mentor và không xóa dữ liệu hiện có.
 
 ## Chạy dự án
 

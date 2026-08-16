@@ -22,7 +22,8 @@ public class LabUsageRequestDAO {
 			SELECT r.request_id, r.semester_id, r.mentor_id, r.group_name, r.status,
 			       r.request_note, r.approved_by, r.approved_at, r.approval_note,
 			       r.created_at, r.updated_at, se.code AS semester_code, se.name AS semester_name,
-			       (SELECT COUNT(*) FROM dbo.lab_usage_request_students rs
+			       mentor.full_name AS mentor_name, mentor.email AS mentor_email,
+			       (SELECT COUNT(*) FROM dbo.lab_usage_request_student_entries rs
 			        WHERE rs.request_id = r.request_id) AS student_count,
 			       COALESCE((
 			           SELECT STRING_AGG(CONCAT(N'Thứ ', x.day_of_week, N' · Slot ', x.slot_id), N', ')
@@ -32,6 +33,7 @@ public class LabUsageRequestDAO {
 			       ), N'—') AS schedule_summary
 			FROM dbo.lab_usage_requests r
 			JOIN dbo.semesters se ON se.semester_id = r.semester_id
+			JOIN dbo.users mentor ON mentor.user_id = r.mentor_id
 			""";
 
 	private final DBConnection dbConnection = new DBConnection();
@@ -68,14 +70,73 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	public List<LabUsageRequest> findApprovedScheduleByMentor(long mentorId) throws SQLException {
+	public List<LabUsageRequest> findAll(String keyword, String status, Long semesterId) throws SQLException {
 		String sql = SELECT_REQUEST + """
-				WHERE r.mentor_id = ? AND r.status = 'APPROVED' AND se.status = 'ACTIVE'
+				WHERE (? = '' OR r.group_name LIKE ? OR se.code LIKE ? OR se.name LIKE ?
+				       OR mentor.full_name LIKE ? OR mentor.email LIKE ?)
+				  AND (? = '' OR r.status = ?)
+				  AND (? IS NULL OR r.semester_id = ?)
+				ORDER BY CASE WHEN r.status = 'PENDING' THEN 0 ELSE 1 END,
+				         r.created_at DESC, r.request_id DESC
+				""";
+		String search = keyword == null ? "" : keyword.trim();
+		String statusFilter = status == null ? "" : status.trim().toUpperCase();
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, search);
+			for (int index = 2; index <= 6; index++) {
+				statement.setString(index, "%" + search + "%");
+			}
+			statement.setString(7, statusFilter);
+			statement.setString(8, statusFilter);
+			setNullableLong(statement, 9, semesterId);
+			setNullableLong(statement, 10, semesterId);
+			try (ResultSet result = statement.executeQuery()) {
+				List<LabUsageRequest> requests = new ArrayList<>();
+				while (result.next()) {
+					requests.add(mapRequest(result));
+				}
+				return requests;
+			}
+		}
+	}
+
+	public Optional<LabUsageRequest> findById(long requestId) throws SQLException {
+		String sql = SELECT_REQUEST + "WHERE r.request_id = ?";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, requestId);
+			try (ResultSet result = statement.executeQuery()) {
+				if (!result.next()) {
+					return Optional.empty();
+				}
+				LabUsageRequest request = mapRequest(result);
+				request.setSlots(findSlots(connection, requestId));
+				request.setStudents(findStudents(connection, requestId));
+				return Optional.of(request);
+			}
+		}
+	}
+
+	public int countByStatus(String status) throws SQLException {
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection
+						.prepareStatement("SELECT COUNT(*) FROM dbo.lab_usage_requests WHERE status = ?")) {
+			statement.setString(1, status);
+			try (ResultSet result = statement.executeQuery()) {
+				result.next();
+				return result.getInt(1);
+			}
+		}
+	}
+
+	public List<LabUsageRequest> findApprovedSchedule() throws SQLException {
+		String sql = SELECT_REQUEST + """
+				WHERE r.status = 'APPROVED' AND se.status = 'ACTIVE'
 				ORDER BY r.request_id
 				""";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.setLong(1, mentorId);
 			try (ResultSet result = statement.executeQuery()) {
 				List<LabUsageRequest> requests = new ArrayList<>();
 				while (result.next()) {
@@ -180,6 +241,11 @@ public class LabUsageRequestDAO {
 					return false;
 				}
 				try (PreparedStatement statement = connection
+						.prepareStatement("DELETE dbo.lab_usage_request_student_entries WHERE request_id = ?")) {
+					statement.setLong(1, request.getRequestId());
+					statement.executeUpdate();
+				}
+				try (PreparedStatement statement = connection
 						.prepareStatement("DELETE dbo.lab_usage_request_students WHERE request_id = ?")) {
 					statement.setLong(1, request.getRequestId());
 					statement.executeUpdate();
@@ -217,11 +283,20 @@ public class LabUsageRequestDAO {
 					return false;
 				}
 				String deleteStudents = """
-						DELETE rs FROM dbo.lab_usage_request_students rs
+						DELETE rs FROM dbo.lab_usage_request_student_entries rs
 						JOIN dbo.lab_usage_requests r ON r.request_id = rs.request_id
 						WHERE r.request_id = ? AND r.mentor_id = ? AND r.status = 'PENDING'
 						""";
 				try (PreparedStatement statement = connection.prepareStatement(deleteStudents)) {
+					statement.setLong(1, requestId);
+					statement.setLong(2, mentorId);
+					statement.executeUpdate();
+				}
+				try (PreparedStatement statement = connection.prepareStatement("""
+						DELETE approved FROM dbo.lab_usage_request_students approved
+						JOIN dbo.lab_usage_requests r ON r.request_id = approved.request_id
+						WHERE r.request_id = ? AND r.mentor_id = ? AND r.status = 'PENDING'
+						""")) {
 					statement.setLong(1, requestId);
 					statement.setLong(2, mentorId);
 					statement.executeUpdate();
@@ -239,6 +314,87 @@ public class LabUsageRequestDAO {
 			} catch (SQLException exception) {
 				connection.rollback();
 				throw exception;
+			}
+		}
+	}
+
+	public boolean decidePending(long requestId, long adminId, String decision, String approvalNote)
+			throws SQLException {
+		if (!"APPROVED".equals(decision) && !"REJECTED".equals(decision)) {
+			throw new SQLException("Quyết định duyệt không hợp lệ.");
+		}
+		try (Connection connection = dbConnection.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				if (!isActiveAdmin(connection, adminId)) {
+					throw new SQLException("Không có tài khoản Admin ACTIVE để duyệt request.");
+				}
+				if (!lockPendingForDecision(connection, requestId)) {
+					connection.rollback();
+					return false;
+				}
+				if ("APPROVED".equals(decision)) {
+					for (LabUsageRequestStudent student : findStudents(connection, requestId)) {
+						long studentId = activateStudent(connection, student);
+						try (PreparedStatement statement = connection.prepareStatement("""
+								INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
+								SELECT ?, ?, ?
+								WHERE NOT EXISTS (
+								    SELECT 1 FROM dbo.lab_usage_request_students
+								    WHERE request_id = ? AND student_id = ?
+								)
+								""")) {
+							statement.setLong(1, requestId);
+							statement.setLong(2, student.getSemesterId());
+							statement.setLong(3, studentId);
+							statement.setLong(4, requestId);
+							statement.setLong(5, studentId);
+							statement.executeUpdate();
+						}
+					}
+				}
+				try (PreparedStatement statement = connection.prepareStatement("""
+						UPDATE dbo.lab_usage_requests
+						SET status = ?, approved_by = ?, approved_at = SYSUTCDATETIME(),
+						    approval_note = ?, updated_at = SYSUTCDATETIME()
+						WHERE request_id = ? AND status = 'PENDING'
+						""")) {
+					statement.setString(1, decision);
+					statement.setLong(2, adminId);
+					statement.setString(3, emptyToNull(approvalNote));
+					statement.setLong(4, requestId);
+					if (statement.executeUpdate() != 1) {
+						throw new SQLException("Request không còn ở trạng thái PENDING.");
+					}
+				}
+				connection.commit();
+				return true;
+			} catch (SQLException exception) {
+				connection.rollback();
+				throw exception;
+			}
+		}
+	}
+
+	private boolean isActiveAdmin(Connection connection, long adminId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.users WHERE user_id = ? AND role = 'ADMIN' AND status = 'ACTIVE'")) {
+			statement.setLong(1, adminId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
+	private boolean lockPendingForDecision(Connection connection, long requestId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT request_id
+				FROM dbo.lab_usage_requests WITH (UPDLOCK, HOLDLOCK)
+				WHERE request_id = ? AND status = 'PENDING'
+				""")) {
+			statement.setLong(1, requestId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
 			}
 		}
 	}
@@ -274,80 +430,118 @@ public class LabUsageRequestDAO {
 	private void insertStudents(Connection connection, long requestId, long semesterId,
 			List<LabUsageRequestStudent> students) throws SQLException {
 		String sql = """
-				INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
-				VALUES (?, ?, ?)
+				INSERT dbo.lab_usage_request_student_entries
+				       (request_id, semester_id, student_code, full_name, email)
+				VALUES (?, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			for (LabUsageRequestStudent student : students) {
-				long studentId = findOrCreateInactiveStudent(connection, student);
 				statement.setLong(1, requestId);
 				statement.setLong(2, semesterId);
-				statement.setLong(3, studentId);
+				statement.setString(3, student.getStudentCode().trim());
+				statement.setString(4, student.getFullName().trim());
+				statement.setString(5, student.getEmail().trim().toLowerCase());
 				statement.addBatch();
 			}
 			statement.executeBatch();
 		}
 	}
 
-	private long findOrCreateInactiveStudent(Connection connection, LabUsageRequestStudent student)
-			throws SQLException {
-		String find = """
+	private long activateStudent(Connection connection, LabUsageRequestStudent student) throws SQLException {
+		Long userId = null;
+		Long studentId = null;
+		String existingCode = null;
+		try (PreparedStatement statement = connection.prepareStatement("""
 				SELECT u.user_id, u.role, sp.student_id, sp.student_code
-				FROM dbo.users u
+				FROM dbo.users u WITH (UPDLOCK, HOLDLOCK)
 				LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
 				WHERE LOWER(u.email) = LOWER(?)
-				""";
-		try (PreparedStatement statement = connection.prepareStatement(find)) {
+				""")) {
 			statement.setString(1, student.getEmail());
 			try (ResultSet result = statement.executeQuery()) {
 				if (result.next()) {
 					if (!"STUDENT".equals(result.getString("role"))) {
 						throw new SQLException("Email " + student.getEmail() + " đã thuộc một vai trò khác.");
 					}
-					long studentId = result.getLong("student_id");
-					if (result.wasNull()) {
-						return insertStudentProfile(connection, result.getLong("user_id"), student);
-					}
-					if (!student.getStudentCode().equalsIgnoreCase(result.getString("student_code"))) {
-						throw new SQLException("Email " + student.getEmail() + " không khớp mã sinh viên hiện có.");
-					}
-					return studentId;
+					userId = result.getLong("user_id");
+					studentId = nullableLong(result, "student_id");
+					existingCode = result.getString("student_code");
 				}
 			}
 		}
 
-		long userId;
-		try (PreparedStatement statement = connection.prepareStatement("""
-				INSERT dbo.users (full_name, email, role, status)
-				VALUES (?, ?, 'STUDENT', 'INACTIVE')
-				""", Statement.RETURN_GENERATED_KEYS)) {
-			statement.setString(1, student.getFullName());
-			statement.setString(2, student.getEmail().toLowerCase());
-			statement.executeUpdate();
-			try (ResultSet keys = statement.getGeneratedKeys()) {
-				if (!keys.next()) {
-					throw new SQLException("Không tạo được tài khoản sinh viên.");
+		if (studentId != null && !student.getStudentCode().equalsIgnoreCase(existingCode)) {
+			throw new SQLException("Email " + student.getEmail() + " không khớp mã sinh viên hiện có.");
+		}
+		ensureStudentCodeAvailable(connection, student.getStudentCode(), userId);
+
+		if (userId == null) {
+			try (PreparedStatement statement = connection.prepareStatement("""
+					INSERT dbo.users (full_name, email, role, status)
+					VALUES (?, ?, 'STUDENT', 'ACTIVE')
+					""", Statement.RETURN_GENERATED_KEYS)) {
+				statement.setString(1, student.getFullName());
+				statement.setString(2, student.getEmail().toLowerCase());
+				statement.executeUpdate();
+				try (ResultSet keys = statement.getGeneratedKeys()) {
+					if (!keys.next()) {
+						throw new SQLException("Không tạo được tài khoản sinh viên.");
+					}
+					userId = keys.getLong(1);
 				}
-				userId = keys.getLong(1);
+			}
+		} else {
+			try (PreparedStatement statement = connection.prepareStatement("""
+					UPDATE dbo.users
+					SET full_name = ?, status = 'ACTIVE', updated_at = SYSUTCDATETIME()
+					WHERE user_id = ?
+					""")) {
+				statement.setString(1, student.getFullName());
+				statement.setLong(2, userId);
+				statement.executeUpdate();
 			}
 		}
-		return insertStudentProfile(connection, userId, student);
+
+		if (studentId == null) {
+			try (PreparedStatement statement = connection.prepareStatement("""
+					INSERT dbo.student_profiles (user_id, student_code, status)
+					VALUES (?, ?, 'ACTIVE')
+					""", Statement.RETURN_GENERATED_KEYS)) {
+				statement.setLong(1, userId);
+				statement.setString(2, student.getStudentCode());
+				statement.executeUpdate();
+				try (ResultSet keys = statement.getGeneratedKeys()) {
+					if (!keys.next()) {
+						throw new SQLException("Không tạo được hồ sơ sinh viên.");
+					}
+					studentId = keys.getLong(1);
+				}
+			}
+		} else {
+			try (PreparedStatement statement = connection.prepareStatement("""
+					UPDATE dbo.student_profiles
+					SET status = 'ACTIVE', updated_at = SYSUTCDATETIME()
+					WHERE student_id = ?
+					""")) {
+				statement.setLong(1, studentId);
+				statement.executeUpdate();
+			}
+		}
+		return studentId;
 	}
 
-	private long insertStudentProfile(Connection connection, long userId, LabUsageRequestStudent student)
+	private void ensureStudentCodeAvailable(Connection connection, String studentCode, Long userId)
 			throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement("""
-				INSERT dbo.student_profiles (user_id, student_code, status)
-				VALUES (?, ?, 'INACTIVE')
-				""", Statement.RETURN_GENERATED_KEYS)) {
-			statement.setLong(1, userId);
-			statement.setString(2, student.getStudentCode());
-			statement.executeUpdate();
-			try (ResultSet keys = statement.getGeneratedKeys()) {
-				if (!keys.next()) {
-					throw new SQLException("Không tạo được hồ sơ sinh viên.");
+				SELECT sp.user_id
+				FROM dbo.student_profiles sp WITH (UPDLOCK, HOLDLOCK)
+				WHERE UPPER(sp.student_code) = UPPER(?)
+				""")) {
+			statement.setString(1, studentCode);
+			try (ResultSet result = statement.executeQuery()) {
+				if (result.next() && (userId == null || result.getLong("user_id") != userId)) {
+					throw new SQLException("Mã sinh viên " + studentCode + " đã thuộc tài khoản khác.");
 				}
-				return keys.getLong(1);
 			}
 		}
 	}
@@ -380,13 +574,15 @@ public class LabUsageRequestDAO {
 
 	private List<LabUsageRequestStudent> findStudents(Connection connection, long requestId) throws SQLException {
 		String sql = """
-				SELECT rs.request_id, rs.semester_id, rs.student_id, rs.added_at,
-				       sp.student_code, u.full_name, u.email
-				FROM dbo.lab_usage_request_students rs
-				JOIN dbo.student_profiles sp ON sp.student_id = rs.student_id
-				JOIN dbo.users u ON u.user_id = sp.user_id
+				SELECT rs.request_id, rs.semester_id, approved.student_id, rs.added_at,
+				       rs.student_code, rs.full_name, rs.email
+				FROM dbo.lab_usage_request_student_entries rs
+				LEFT JOIN dbo.users u ON LOWER(u.email) = LOWER(rs.email) AND u.role = 'STUDENT'
+				LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+				LEFT JOIN dbo.lab_usage_request_students approved
+				       ON approved.request_id = rs.request_id AND approved.student_id = sp.student_id
 				WHERE rs.request_id = ?
-				ORDER BY sp.student_code
+				ORDER BY rs.student_code
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, requestId);
@@ -396,7 +592,7 @@ public class LabUsageRequestDAO {
 					LabUsageRequestStudent student = new LabUsageRequestStudent();
 					student.setRequestId(result.getLong("request_id"));
 					student.setSemesterId(result.getLong("semester_id"));
-					student.setStudentId(result.getLong("student_id"));
+					student.setStudentId(nullableLong(result, "student_id"));
 					student.setStudentCode(result.getString("student_code"));
 					student.setFullName(result.getString("full_name"));
 					student.setEmail(result.getString("email"));
@@ -423,6 +619,8 @@ public class LabUsageRequestDAO {
 		request.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
 		request.setSemesterCode(result.getString("semester_code"));
 		request.setSemesterName(result.getString("semester_name"));
+		request.setMentorName(result.getString("mentor_name"));
+		request.setMentorEmail(result.getString("mentor_email"));
 		request.setStudentCount(result.getInt("student_count"));
 		request.setScheduleSummary(result.getString("schedule_summary"));
 		return request;

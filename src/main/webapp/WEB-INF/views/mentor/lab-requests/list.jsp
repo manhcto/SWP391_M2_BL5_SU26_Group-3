@@ -17,7 +17,7 @@
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Lab Usage Requests</h1><p>Manage weekly lab access requests for your student groups</p></div></div>
-            <div class="top-profile"><div class="avatar">MA</div><span><c:out value="${sessionScope.currentUser.fullName}"/></span></div>
+            <div class="top-profile"><div class="avatar">ME</div><span>Mentor Preview</span></div>
         </header>
         <section class="request-page">
             <div class="page-title-row"><div><h2>My requests</h2><p>Only pending requests can be edited or deleted.</p></div><a class="primary-button" href="${pageContext.request.contextPath}/mentor/lab-requests/add"><svg><use href="#i-plus"/></svg>Add request</a></div>

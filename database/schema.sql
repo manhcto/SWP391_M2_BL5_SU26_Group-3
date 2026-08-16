@@ -148,6 +148,22 @@ BEGIN TRY
     CREATE INDEX IX_lab_usage_request_students_semester ON dbo.lab_usage_request_students (semester_id);
     CREATE INDEX IX_lab_usage_request_students_student ON dbo.lab_usage_request_students (student_id);
 
+    CREATE TABLE dbo.lab_usage_request_student_entries (
+        request_id bigint NOT NULL,
+        semester_id bigint NOT NULL,
+        student_code varchar(30) NOT NULL,
+        full_name nvarchar(100) NOT NULL,
+        email varchar(255) NOT NULL,
+        added_at datetime2(0) NOT NULL CONSTRAINT DF_lab_usage_request_student_entries_added_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_lab_usage_request_student_entries PRIMARY KEY (request_id, student_code),
+        CONSTRAINT UQ_lab_usage_request_student_entries_request_email UNIQUE (request_id, email),
+        CONSTRAINT FK_lab_usage_request_student_entries_request FOREIGN KEY (request_id, semester_id)
+            REFERENCES dbo.lab_usage_requests(request_id, semester_id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IX_lab_usage_request_student_entries_semester
+        ON dbo.lab_usage_request_student_entries (semester_id);
+
     CREATE TABLE dbo.asset_categories (
         category_id bigint IDENTITY(1,1) NOT NULL,
         category_name nvarchar(100) NOT NULL,
@@ -456,11 +472,6 @@ BEGIN TRY
     CREATE INDEX IX_disposal_records_asset ON dbo.disposal_records (asset_id);
     CREATE INDEX IX_disposal_records_maintenance ON dbo.disposal_records (maintenance_id) WHERE maintenance_id IS NOT NULL;
     CREATE INDEX IX_disposal_records_status ON dbo.disposal_records (status);
-
-    INSERT dbo.users (full_name, email, password_hash, role, status)
-    VALUES (N'Nguyễn Minh Anh', 'minhanh@gmail.com',
-        '$2a$10$ni/PZ5fY40J5I2f.AJx24OseK6h/8wbYvnqRhj9uoGZfAztXP2LXW',
-        'MENTOR', 'ACTIVE');
 
     INSERT dbo.semesters (code, name, start_date, end_date, status)
     VALUES ('FA26', N'Fall 2026', '2026-08-01', '2026-12-31', 'ACTIVE');

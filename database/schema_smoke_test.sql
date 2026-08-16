@@ -49,6 +49,13 @@ BEGIN TRY
     INSERT dbo.lab_usage_request_slots (request_id, day_of_week, slot_id)
     VALUES (@request_id, 2, 1), (@request_id, 4, 3);
 
+    INSERT dbo.lab_usage_request_student_entries
+        (request_id, semester_id, student_code, full_name, email)
+    SELECT @request_id, @semester_id, sp.student_code, u.full_name, u.email
+    FROM dbo.student_profiles sp
+    JOIN dbo.users u ON u.user_id = sp.user_id
+    WHERE sp.student_id = @student_id;
+
     INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
     VALUES (@request_id, @semester_id, @student_id);
 

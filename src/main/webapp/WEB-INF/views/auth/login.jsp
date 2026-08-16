@@ -6,7 +6,7 @@
 <main>
     <h1>Login</h1>
     <p>${message}</p>
-    <p><small>Demo Mentor: minhanh@gmail.com / 123</small></p>
+    <p><small>Authentication will be connected in a later phase.</small></p>
     <form method="post" action="${pageContext.request.contextPath}/login">
         <p><label>Email<br><input type="email" name="email" value="${email}" autocomplete="username" required></label></p>
         <p><label>Password<br><input type="password" name="password" autocomplete="current-password" required></label></p>

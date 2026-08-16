@@ -203,6 +203,21 @@ Table lab_usage_request_students {
   }
 }
 
+Table lab_usage_request_student_entries {
+  request_id bigint [not null]
+  semester_id bigint [not null]
+  student_code varchar(30) [not null]
+  full_name nvarchar(100) [not null]
+  email varchar(255) [not null]
+  added_at datetime2 [not null, default: `SYSUTCDATETIME()`]
+
+  indexes {
+    (request_id, student_code) [pk]
+    (request_id, email) [unique]
+    semester_id
+  }
+}
+
 Table asset_categories {
   category_id bigint [pk, increment]
   category_name nvarchar(100) [not null, unique, note: 'Examples: projector, TV remote, desk, chair, cabinet, IoT, electronics']
@@ -405,6 +420,7 @@ Ref: lab_usage_request_slots.request_id > lab_usage_requests.request_id [delete:
 Ref: lab_usage_request_slots.slot_id > lab_time_slots.slot_id
 Ref: lab_usage_request_students.(request_id, semester_id) > lab_usage_requests.(request_id, semester_id)
 Ref: lab_usage_request_students.student_id > student_profiles.student_id
+Ref: lab_usage_request_student_entries.(request_id, semester_id) > lab_usage_requests.(request_id, semester_id)
 Ref: assets.category_id > asset_categories.category_id
 Ref: asset_usages.(request_id, semester_id, student_id) > lab_usage_request_students.(request_id, semester_id, student_id)
 Ref: asset_usages.asset_id > assets.asset_id
