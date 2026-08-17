@@ -66,6 +66,31 @@ public class UserDAO {
 		}
 	}
 
+	public Optional<User> findByEmail(String email) throws SQLException {
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection
+						.prepareStatement(SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)")) {
+			statement.setString(1, email);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
+			}
+		}
+	}
+
+	public boolean bindGoogleSubject(long userId, String subject) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET google_subject = ?, updated_at = SYSUTCDATETIME()
+				WHERE user_id = ? AND google_subject IS NULL
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, subject);
+			statement.setLong(2, userId);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
 	public long create(User user) throws SQLException {
 		String insertUser = """
 				INSERT INTO dbo.users (full_name, email, password_hash, role, status)
