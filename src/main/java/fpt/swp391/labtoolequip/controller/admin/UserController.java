@@ -129,21 +129,23 @@ public class UserController extends HttpServlet {
 	private void createUser(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		User user = extractUser(request);
-		List<String> errors = validate(user, true, request.getParameter("password"));
+		String rawPassword = trim(request.getParameter("password"));
 
-		// Tự động sinh Email FPT nếu người dùng chưa nhập
-		if (user.getEmail() == null || user.getEmail().isBlank()) {
-			boolean isIntern = "INTERN".equals(user.getRole());
-			String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(), isIntern);
-			user.setEmail(autoEmail);
+		// Tự động sinh Email FPT nếu là INTERN và chưa nhập email
+		if ("INTERN".equals(user.getRole())) {
+			if (user.getEmail() == null || user.getEmail().isBlank()) {
+				String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(), true);
+				user.setEmail(autoEmail);
+			}
 		}
+
+		List<String> errors = validate(user, true, rawPassword);
 
 		if (!errors.isEmpty()) {
 			forwardWithErrors(request, response, user, errors, "add");
 			return;
 		}
 
-		String rawPassword = trim(request.getParameter("password"));
 		if (!rawPassword.isEmpty()) {
 			user.setPasswordHash(BCrypt.hashpw(rawPassword, BCrypt.gensalt()));
 		}
@@ -233,9 +235,36 @@ public class UserController extends HttpServlet {
 		if (!STATUSES.contains(user.getStatus())) {
 			errors.add("Trạng thái không hợp lệ.");
 		}
-		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
-			errors.add("Mã intern là bắt buộc đối với intern.");
+
+		// Validate Email
+		if (user.getEmail().isEmpty()) {
+			errors.add("Email không được để trống.");
+		} else {
+			if ("INTERN".equals(user.getRole())) {
+				if (!user.getEmail().toLowerCase().endsWith("@fpt.edu.vn")) {
+					errors.add("Email của sinh viên thực tập (Intern) bắt buộc phải có định dạng @fpt.edu.vn.");
+				}
+			} else {
+				// MENTOR / LAB_MANAGER / ADMIN: chấp nhận email thường (@gmail.com, v.v.)
+				if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
+					errors.add("Email không đúng định dạng hợp lệ.");
+				}
+			}
 		}
+
+		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
+			errors.add("Mã sinh viên là bắt buộc đối với sinh viên thực tập (Intern).");
+		}
+
+		// Validate Password khi tạo mới
+		if (isAdd) {
+			if (rawPassword == null || rawPassword.trim().isEmpty()) {
+				errors.add("Mật khẩu khởi tạo không được để trống.");
+			} else if (rawPassword.trim().length() < 6) {
+				errors.add("Mật khẩu phải có tối thiểu 6 ký tự.");
+			}
+		}
+
 		return errors;
 	}
 

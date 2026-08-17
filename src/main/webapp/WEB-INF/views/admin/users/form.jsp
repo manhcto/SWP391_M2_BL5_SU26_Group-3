@@ -121,9 +121,9 @@
                             <div class="form-group">
                                 <label>Vai trò cần tạo (Role) *</label>
                                 <select class="form-control" name="role" id="roleSelect" onchange="toggleStudentFields()">
-                                    <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Intern</option>
-                                    <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR (2) - Giảng viên hướng dẫn</option>
-                                    <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER (3) - Cán bộ quản lý Lab</option>
+                                    <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Sinh viên thực tập</option>
+                                    <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR - Giảng viên hướng dẫn</option>
+                                    <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER - Quản lý Lab</option>
                                 </select>
                             </div>
 
@@ -133,8 +133,13 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Email (@fpt.edu.vn) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên)</small></label>
-                                <input class="form-control" type="email" name="email" value="<c:out value='${user.email}'/>" placeholder="e.g. anhnmse160123@fpt.edu.vn">
+                                <label id="emailLabel">Email (@fpt.edu.vn) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên)</small></label>
+                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" placeholder="e.g. anhnmse160123@fpt.edu.vn">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Mật khẩu khởi tạo (Password) *</label>
+                                <input class="form-control" type="password" name="password" required placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)...">
                             </div>
 
                             <div class="form-group" id="majorGroup">
@@ -175,9 +180,20 @@
         const scGroup = document.getElementById('studentCodeGroup');
         const mjGroup = document.getElementById('majorGroup');
         const chGroup = document.getElementById('cohortGroup');
+        const emailLabel = document.getElementById('emailLabel');
+        const emailInput = document.getElementById('emailInput');
+
         if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
         if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
         if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
+
+        if (isIntern) {
+            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên + Mã SV)</small>';
+            if (emailInput) emailInput.placeholder = 'e.g. anhnmse160123@fpt.edu.vn';
+        } else {
+            if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / Email đăng nhập) *';
+            if (emailInput) emailInput.placeholder = 'e.g. mentor@gmail.com hoặc manager@gmail.com';
+        }
     }
     toggleStudentFields();
 </script>
