@@ -53,8 +53,8 @@
             <div class="content-heading">
                 <div><p class="eyebrow">DIRECTORY</p><h2>All Managed Users (${users.size()})</h2></div>
                 <div style="display:flex; align-items: center; gap: 10px;">
-                    <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users/import"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-upload"/></svg>+ Batch Import Students</a>
-                    <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/add"><svg><use href="#i-plus"/></svg>+ Add New User</a>
+                    <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users/import"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-upload"/></svg>Batch Import Excel</a>
+                    <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/add"><svg><use href="#i-plus"/></svg>Add New User</a>
                 </div>
             </div>
 
@@ -90,8 +90,8 @@
                             <h3>Chưa có dữ liệu người dùng</h3>
                             <p>Danh sách tài khoản sinh viên, mentor và quản lý lab đang trống.<br>Bạn có thể tải lên danh sách từ file Excel hoặc tạo tài khoản mới.</p>
                             <div style="display:flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px;">
-                                <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/import"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-upload"/></svg>+ Batch Import Excel</a>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users/add"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-plus"/></svg>+ Thêm Người Dùng</a>
+                                <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/import"><svg style="width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2;"><use href="#i-upload"/></svg>Batch Import Excel</a>
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users/add"><svg><use href="#i-plus"/></svg>Thêm Người Dùng</a>
                             </div>
                         </div>
                     </c:when>

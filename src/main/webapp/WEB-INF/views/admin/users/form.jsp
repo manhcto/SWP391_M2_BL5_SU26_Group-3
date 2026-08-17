@@ -420,7 +420,7 @@
             }
 
             if (dataRows.length === 0) {
-                showImportError('⚠️ Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại file của bạn.');
+                showImportError('Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại file của bạn.');
                 return;
             }
 
@@ -455,27 +455,27 @@
             // Kiểm tra tính tương thích giữa file tải lên và tab vai trò được chọn
             if (currentSelectedRole === 'STUDENT' && detectedType !== 'STUDENT') {
                 if (detectedType === 'MENTOR') {
-                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (gồm Họ tên, Email và Bộ môn, không có Mã sinh viên). Vui lòng chọn tab Giảng viên (Mentor) hoặc tải file đúng danh sách Sinh viên.');
+                    showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (gồm Họ tên, Email và Bộ môn, không có Mã sinh viên). Vui lòng chọn tab Giảng viên (Mentor) hoặc tải file đúng danh sách Sinh viên.');
                 } else {
-                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ gồm Họ tên và Email, không có Mã sinh viên). Vui lòng chọn tab Quản lý Lab (Lab Manager) hoặc tải file đúng danh sách Sinh viên.');
+                    showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ gồm Họ tên và Email, không có Mã sinh viên). Vui lòng chọn tab Quản lý Lab (Lab Manager) hoặc tải file đúng danh sách Sinh viên.');
                 }
                 return;
             }
 
             if (currentSelectedRole === 'MENTOR' && detectedType !== 'MENTOR') {
                 if (detectedType === 'STUDENT') {
-                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Giảng viên. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Giảng viên (3 cột: Họ tên, Email, Bộ môn).');
+                    showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Giảng viên. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Giảng viên (3 cột: Họ tên, Email, Bộ môn).');
                 } else {
-                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ có 2 cột Họ tên và Email, thiếu cột Bộ môn / Khoa của Giảng viên). Vui lòng chọn tab Quản lý Lab hoặc tải đúng file danh sách Giảng viên.');
+                    showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ có 2 cột Họ tên và Email, thiếu cột Bộ môn / Khoa của Giảng viên). Vui lòng chọn tab Quản lý Lab hoặc tải đúng file danh sách Giảng viên.');
                 }
                 return;
             }
 
             if (currentSelectedRole === 'LAB_MANAGER' && detectedType !== 'LAB_MANAGER') {
                 if (detectedType === 'STUDENT') {
-                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Quản lý Lab.');
+                    showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Quản lý Lab.');
                 } else {
-                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (có kèm cột Bộ môn / Khoa) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Giảng viên (Mentor) hoặc tải đúng file danh sách Quản lý Lab (2 cột: Họ tên, Email).');
+                    showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (có kèm cột Bộ môn / Khoa) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Giảng viên (Mentor) hoặc tải đúng file danh sách Quản lý Lab (2 cột: Họ tên, Email).');
                 }
                 return;
             }
@@ -539,7 +539,7 @@
             }
 
             if (parsedUsers.length === 0) {
-                showImportError('⚠️ Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại file của bạn.');
+                showImportError('Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại file của bạn.');
                 return;
             }
 
