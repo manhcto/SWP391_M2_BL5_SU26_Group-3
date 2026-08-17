@@ -422,19 +422,30 @@
                     if (!email) email = generateFptEmail(fullName, code, true);
                     parsedUsers.push({ fullName, code, email, major, cohort });
                     linesForServer.push(fullName + ',' + code + ',' + email + ',' + major + ',' + cohort + ',' + currentSelectedRole);
-                } else {
+                } else if (currentSelectedRole === 'MENTOR') {
                     let col1Text = col1;
                     if (col1Text.includes('@')) {
                         email = col1Text;
-                        major = String(row[2] || 'Department / Staff').trim();
+                        major = String(row[2] || 'Software Engineering').trim();
                     } else {
-                        major = col1Text || 'Department / Staff';
+                        major = col1Text || 'Software Engineering';
                         let col2Text = String(row[2] || '').trim();
                         email = col2Text.includes('@') ? col2Text : generateFptEmail(fullName, '', false);
                     }
                     if (!email) email = generateFptEmail(fullName, '', false);
-                    parsedUsers.push({ fullName, code: major, email, major, cohort: '' });
+                    parsedUsers.push({ fullName, code: '', email, major, cohort: '' });
                     linesForServer.push(fullName + ',' + email + ',' + major + ',,' + currentSelectedRole);
+                } else {
+                    // LAB_MANAGER: Chỉ cần Họ tên & Email FPT
+                    if (col1.includes('@')) {
+                        email = col1;
+                    } else {
+                        let col2Text = String(row[2] || '').trim();
+                        email = col2Text.includes('@') ? col2Text : generateFptEmail(fullName, '', false);
+                    }
+                    if (!email) email = generateFptEmail(fullName, '', false);
+                    parsedUsers.push({ fullName, code: '', email, major: '', cohort: '' });
+                    linesForServer.push(fullName + ',' + email + ',,,' + currentSelectedRole);
                 }
             }
 
@@ -447,8 +458,10 @@
             const thead = document.getElementById('previewThead');
             if (isStudent) {
                 thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Mã SV</th><th>Email FPT (từ file)</th><th>Chuyên ngành</th><th>Khóa</th></tr>';
+            } else if (currentSelectedRole === 'MENTOR') {
+                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Email FPT (từ file)</th><th>Bộ môn / Khoa</th><th>Vai trò</th></tr>';
             } else {
-                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Email FPT (từ file)</th><th>Đơn vị / Phòng phụ trách</th><th>Vai trò</th></tr>';
+                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Email FPT (từ file)</th><th>Vai trò</th></tr>';
             }
 
             // Render Preview Tbody
@@ -463,12 +476,17 @@
                         '<td><span style="color:#188255; font-weight:600;">' + u.email + '</span></td>' +
                         '<td>' + u.major + '</td>' +
                         '<td>' + u.cohort + '</td>';
+                } else if (currentSelectedRole === 'MENTOR') {
+                    tr.innerHTML = '<td>' + (idx + 1) + '</td>' +
+                        '<td><b>' + u.fullName + '</b></td>' +
+                        '<td><span style="color:#188255; font-weight:600;">' + u.email + '</span></td>' +
+                        '<td>' + (u.major || 'Software Engineering') + '</td>' +
+                        '<td><span class="badge" style="background:#e8f4ec; color:#188255; font-weight:700;">MENTOR</span></td>';
                 } else {
                     tr.innerHTML = '<td>' + (idx + 1) + '</td>' +
                         '<td><b>' + u.fullName + '</b></td>' +
                         '<td><span style="color:#188255; font-weight:600;">' + u.email + '</span></td>' +
-                        '<td>' + (u.code || 'Faculty / Staff') + '</td>' +
-                        '<td><span class="badge" style="background:#e8f4ec; color:#188255; font-weight:700;">' + currentSelectedRole + '</span></td>';
+                        '<td><span class="badge" style="background:#e8f4ec; color:#188255; font-weight:700;">LAB_MANAGER</span></td>';
                 }
                 tbody.appendChild(tr);
             });
@@ -503,9 +521,9 @@
                 "Trần Văn Đức,ductv@fpt.edu.vn,Information Assurance";
             fileName = "danh_sach_giang_vien_mentor_mau.csv";
         } else {
-            csvContent = "Họ và tên,Email FPT,Phòng Lab / Cơ sở phụ trách\n" +
-                "Phạm Quang Dung,dungpq@fpt.edu.vn,Lab IoT & Robotics (Tòa Alpha 204)\n" +
-                "Hoàng Văn Tuấn,tuanhv@fpt.edu.vn,Lab AI & Big Data (Tòa Beta 301)";
+            csvContent = "Họ và tên,Email FPT\n" +
+                "Phạm Quang Dung,dungpq@fpt.edu.vn\n" +
+                "Hoàng Văn Tuấn,tuanhv@fpt.edu.vn";
             fileName = "danh_sach_quan_ly_lab_mau.csv";
         }
         
