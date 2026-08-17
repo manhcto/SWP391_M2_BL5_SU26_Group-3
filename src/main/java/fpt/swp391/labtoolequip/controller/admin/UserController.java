@@ -256,10 +256,11 @@ public class UserController extends HttpServlet {
 			errors.add("Mã sinh viên là bắt buộc đối với sinh viên thực tập (Intern).");
 		}
 
-		// Validate Password khi tạo mới
-		if (isAdd) {
+		// Validate Password khi tạo mới (Chỉ bắt buộc đối với Mentor và Lab Manager;
+		// Intern đăng nhập qua Google OAuth)
+		if (isAdd && !"INTERN".equals(user.getRole())) {
 			if (rawPassword == null || rawPassword.trim().isEmpty()) {
-				errors.add("Mật khẩu khởi tạo không được để trống.");
+				errors.add("Mật khẩu khởi tạo không được để trống đối với Giảng viên và Quản lý Lab.");
 			} else if (rawPassword.trim().length() < 6) {
 				errors.add("Mật khẩu phải có tối thiểu 6 ký tự.");
 			}
