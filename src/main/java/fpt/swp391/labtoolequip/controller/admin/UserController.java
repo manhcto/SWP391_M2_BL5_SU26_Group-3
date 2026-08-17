@@ -131,10 +131,15 @@ public class UserController extends HttpServlet {
 		User user = extractUser(request);
 		String rawPassword = trim(request.getParameter("password"));
 
-		// Tự động sinh Email FPT nếu là INTERN và chưa nhập email
+		// Tự động sinh Email FPT nếu để trống email
 		if ("INTERN".equals(user.getRole())) {
 			if (user.getEmail() == null || user.getEmail().isBlank()) {
 				String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(), true);
+				user.setEmail(autoEmail);
+			}
+		} else if ("MENTOR".equals(user.getRole())) {
+			if (user.getEmail() == null || user.getEmail().isBlank()) {
+				String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), "", false);
 				user.setEmail(autoEmail);
 			}
 		}

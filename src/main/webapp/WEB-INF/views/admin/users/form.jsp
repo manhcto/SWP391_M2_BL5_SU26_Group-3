@@ -198,9 +198,12 @@
         if (isIntern) {
             if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên + Mã SV)</small>';
             if (emailInput) emailInput.placeholder = 'e.g. anhnmse160123@fpt.edu.vn';
+        } else if (roleSelect.value === 'MENTOR') {
+            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn / @gmail.com) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên)</small> *';
+            if (emailInput) emailInput.placeholder = 'e.g. anhnm@fpt.edu.vn hoặc mentor@gmail.com';
         } else {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / Email đăng nhập) *';
-            if (emailInput) emailInput.placeholder = 'e.g. mentor@gmail.com hoặc manager@gmail.com';
+            if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / @fpt.edu.vn) *';
+            if (emailInput) emailInput.placeholder = 'e.g. manager@gmail.com hoặc manager@fpt.edu.vn';
         }
     }
     toggleStudentFields();
