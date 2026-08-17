@@ -15,7 +15,7 @@
 
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>User Management (FE-01)</h1><p>Create accounts, assign roles, activate approved student lists</p></div></div>
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>User Management (FE-01)</h1><p>Create accounts, assign roles, activate approved intern lists</p></div></div>
             <div class="topbar-actions">
                 <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search users..." aria-label="Search"></label>
                 <button class="icon-button notification" type="button" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span>3</span></button>
@@ -42,7 +42,7 @@
                     <input class="form-control" type="search" name="keyword" value="<c:out value='${keyword}'/>" placeholder="Search name, roll, email..." style="width: 240px;">
                     <select class="form-control" name="role">
                         <option value="">All Roles (3)</option>
-                        <option value="STUDENT" ${selectedRole == 'STUDENT' ? 'selected' : ''}>Student (1)</option>
+                        <option value="INTERN" ${selectedRole == 'INTERN' ? 'selected' : ''}>Intern</option>
                         <option value="MENTOR" ${selectedRole == 'MENTOR' ? 'selected' : ''}>Mentor (2)</option>
                         <option value="LAB_MANAGER" ${selectedRole == 'LAB_MANAGER' ? 'selected' : ''}>Lab Manager (3)</option>
                     </select>
@@ -91,8 +91,8 @@
                                         <td><c:out value="${u.email}"/></td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${u.role == 'STUDENT'}">
-                                                    <span class="badge badge-green">STUDENT</span>
+                                                <c:when test="${u.role == 'INTERN'}">
+                                                    <span class="badge badge-green">INTERN</span>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <select class="form-control" style="height: 28px; font-size: 11px; padding: 0 8px; width: 140px; font-weight: 700; border-color: #bce1ce; background: #f4f9f6; color: #188255; cursor: pointer;" onchange="if(confirm('Chuyển đổi vai trò của người dùng sang ' + this.value + '?')) { location.href='${pageContext.request.contextPath}/admin/users/change-role?id=${u.userId}&role=' + this.value; } else { this.value='${u.role}'; }">

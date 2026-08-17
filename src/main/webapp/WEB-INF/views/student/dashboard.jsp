@@ -1,15 +1,3 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core"%>
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Student Dashboard</title></head>
-<body>
-<main>
-    <h1>Student Dashboard</h1>
-    <p>Signed in as <strong><c:out value="${currentUser.fullName}"/></strong> (<c:out value="${currentUser.email}"/>).</p>
-    <p>Borrow assets and view your usage history, reported incidents, and responsibility records.</p>
-    <nav><a href="${pageContext.request.contextPath}/mentor/dashboard">Open Mentor UI</a> · <a href="${pageContext.request.contextPath}/admin/dashboard">Open Admin UI</a> · <a href="${pageContext.request.contextPath}/lab-manager/dashboard">Open Lab Manager UI</a></nav>
-    <form method="post" action="${pageContext.request.contextPath}/logout"><button type="submit">Log out</button></form>
-</main>
-</body>
-</html>
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Intern Dashboard | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css"></head><body><div class="app-shell"><main class="content"><div class="page-heading"><div><p class="eyebrow">INTERN PORTAL</p><h1>Welcome, <c:out value="${sessionScope.fullName}"/></h1><p>Use approved lab access to borrow and return assets.</p></div><div class="actions"><a class="button primary" href="${pageContext.request.contextPath}/intern/usages">My asset usage</a><form method="post" action="${pageContext.request.contextPath}/logout"><button class="button" type="submit">Sign out</button></form></div></div></main></div></body></html>

@@ -1,7 +1,14 @@
 /*
   LAB Asset Management System - Microsoft SQL Server
-  Creates lab_asset_management when it does not exist, then creates the schema.
-  Timestamps are stored in UTC.
+  Standalone database script for the intern-list workflow.
+
+  Rules represented here:
+  - One mentor manages the lab.
+  - One intern list is submitted per semester.
+  - The list contains intern code, name, Gmail and cohort.
+  - There are no lab slots or schedules.
+  - The list can be edited/deleted while PENDING and is immutable after approval.
+  - Demo accounts use password: 123
 */
 
 USE [master];
@@ -32,7 +39,7 @@ BEGIN TRY
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_users_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_users PRIMARY KEY (user_id),
         CONSTRAINT UQ_users_email UNIQUE (email),
-        CONSTRAINT CK_users_role CHECK (role IN ('ADMIN', 'LAB_MANAGER', 'MENTOR', 'STUDENT')),
+        CONSTRAINT CK_users_role CHECK (role IN ('ADMIN', 'LAB_MANAGER', 'MENTOR', 'INTERN')),
         CONSTRAINT CK_users_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
     );
 
@@ -71,24 +78,6 @@ BEGIN TRY
         CONSTRAINT CK_semesters_dates CHECK (start_date <= end_date)
     );
 
-    CREATE TABLE dbo.lab_time_slots (
-        slot_id tinyint NOT NULL,
-        slot_name varchar(20) NOT NULL,
-        start_time time(0) NOT NULL,
-        end_time time(0) NOT NULL,
-        CONSTRAINT PK_lab_time_slots PRIMARY KEY (slot_id),
-        CONSTRAINT UQ_lab_time_slots_name UNIQUE (slot_name),
-        CONSTRAINT CK_lab_time_slots_id CHECK (slot_id BETWEEN 1 AND 4),
-        CONSTRAINT CK_lab_time_slots_time CHECK (start_time < end_time)
-    );
-
-    INSERT dbo.lab_time_slots (slot_id, slot_name, start_time, end_time)
-    VALUES
-        (1, 'SLOT_1', '07:30', '09:50'),
-        (2, 'SLOT_2', '10:00', '12:20'),
-        (3, 'SLOT_3', '12:50', '15:10'),
-        (4, 'SLOT_4', '15:20', '17:30');
-
     CREATE TABLE dbo.lab_usage_requests (
         request_id bigint IDENTITY(1,1) NOT NULL,
         semester_id bigint NOT NULL,
@@ -103,6 +92,7 @@ BEGIN TRY
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_lab_usage_requests_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_lab_usage_requests PRIMARY KEY (request_id),
         CONSTRAINT UQ_lab_usage_requests_id_semester UNIQUE (request_id, semester_id),
+        CONSTRAINT UQ_lab_usage_requests_semester UNIQUE (semester_id),
         CONSTRAINT FK_lab_usage_requests_semester FOREIGN KEY (semester_id) REFERENCES dbo.semesters(semester_id),
         CONSTRAINT FK_lab_usage_requests_mentor FOREIGN KEY (mentor_id) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_lab_usage_requests_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
@@ -117,21 +107,6 @@ BEGIN TRY
     CREATE INDEX IX_lab_usage_requests_mentor ON dbo.lab_usage_requests (mentor_id);
     CREATE INDEX IX_lab_usage_requests_status ON dbo.lab_usage_requests (status);
 
-    CREATE TABLE dbo.lab_usage_request_slots (
-        request_id bigint NOT NULL,
-        day_of_week tinyint NOT NULL,
-        slot_id tinyint NOT NULL,
-        CONSTRAINT PK_lab_usage_request_slots PRIMARY KEY (request_id, day_of_week, slot_id),
-        CONSTRAINT FK_lab_usage_request_slots_request FOREIGN KEY (request_id)
-            REFERENCES dbo.lab_usage_requests(request_id) ON DELETE CASCADE,
-        CONSTRAINT FK_lab_usage_request_slots_slot FOREIGN KEY (slot_id)
-            REFERENCES dbo.lab_time_slots(slot_id),
-        CONSTRAINT CK_lab_usage_request_slots_day CHECK (day_of_week BETWEEN 2 AND 7)
-    );
-
-    CREATE INDEX IX_lab_usage_request_slots_schedule
-        ON dbo.lab_usage_request_slots (day_of_week, slot_id);
-
     CREATE TABLE dbo.lab_usage_request_students (
         request_id bigint NOT NULL,
         semester_id bigint NOT NULL,
@@ -140,6 +115,8 @@ BEGIN TRY
         CONSTRAINT PK_lab_usage_request_students PRIMARY KEY (request_id, student_id),
         CONSTRAINT UQ_lab_usage_request_students_request_semester_student
             UNIQUE (request_id, semester_id, student_id),
+        CONSTRAINT UQ_lab_usage_request_students_semester_student
+            UNIQUE (semester_id, student_id),
         CONSTRAINT FK_lab_usage_request_students_request FOREIGN KEY (request_id, semester_id)
             REFERENCES dbo.lab_usage_requests(request_id, semester_id),
         CONSTRAINT FK_lab_usage_request_students_student FOREIGN KEY (student_id) REFERENCES dbo.student_profiles(student_id)
@@ -154,9 +131,12 @@ BEGIN TRY
         student_code varchar(30) NOT NULL,
         full_name nvarchar(100) NOT NULL,
         email varchar(255) NOT NULL,
+        cohort varchar(30) NOT NULL,
         added_at datetime2(0) NOT NULL CONSTRAINT DF_lab_usage_request_student_entries_added_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_lab_usage_request_student_entries PRIMARY KEY (request_id, student_code),
         CONSTRAINT UQ_lab_usage_request_student_entries_request_email UNIQUE (request_id, email),
+        CONSTRAINT UQ_lab_usage_request_student_entries_semester_code UNIQUE (semester_id, student_code),
+        CONSTRAINT UQ_lab_usage_request_student_entries_semester_email UNIQUE (semester_id, email),
         CONSTRAINT FK_lab_usage_request_student_entries_request FOREIGN KEY (request_id, semester_id)
             REFERENCES dbo.lab_usage_requests(request_id, semester_id) ON DELETE CASCADE
     );
@@ -209,8 +189,6 @@ BEGIN TRY
     CREATE INDEX IX_assets_category ON dbo.assets (category_id);
     CREATE INDEX IX_assets_status ON dbo.assets (status);
 
-    -- The borrowing service must use one transaction to verify that the request is APPROVED,
-    -- the asset is borrowable and AVAILABLE, and active quantities do not exceed total_quantity.
     CREATE TABLE dbo.asset_usages (
         asset_usage_id bigint IDENTITY(1,1) NOT NULL,
         request_id bigint NOT NULL,
@@ -483,3 +461,100 @@ BEGIN CATCH
         ROLLBACK TRANSACTION;
     THROW;
 END CATCH;
+GO
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    DECLARE @admin_id bigint;
+    DECLARE @manager_id bigint;
+    DECLARE @mentor_id bigint;
+    DECLARE @intern_one_user_id bigint;
+    DECLARE @intern_two_user_id bigint;
+    DECLARE @intern_one_id bigint;
+    DECLARE @intern_two_id bigint;
+    DECLARE @semester_id bigint;
+    DECLARE @request_id bigint;
+    DECLARE @category_id bigint;
+    DECLARE @password_hash varchar(255) = '$2a$10$c4PNSNs0bJn0drrJzAxThu4TBztls3COfVZA.W33b0BL6cquNIS.C';
+
+    INSERT dbo.users (full_name, email, password_hash, role, status)
+    VALUES
+        (N'Demo Admin', 'admin@gmail.com', @password_hash, 'ADMIN', 'ACTIVE'),
+        (N'Demo Lab Manager', 'manager@gmail.com', @password_hash, 'LAB_MANAGER', 'ACTIVE'),
+        (N'Demo Mentor', 'mentor@gmail.com', @password_hash, 'MENTOR', 'ACTIVE'),
+        (N'Demo Intern 1', 'intern@gmail.com', @password_hash, 'INTERN', 'ACTIVE'),
+        (N'Demo Intern 2', 'intern2@gmail.com', @password_hash, 'INTERN', 'ACTIVE');
+
+    SELECT @admin_id = user_id FROM dbo.users WHERE email = 'admin@gmail.com';
+    SELECT @manager_id = user_id FROM dbo.users WHERE email = 'manager@gmail.com';
+    SELECT @mentor_id = user_id FROM dbo.users WHERE email = 'mentor@gmail.com';
+    SELECT @intern_one_user_id = user_id FROM dbo.users WHERE email = 'intern@gmail.com';
+    SELECT @intern_two_user_id = user_id FROM dbo.users WHERE email = 'intern2@gmail.com';
+
+    INSERT dbo.student_profiles (user_id, student_code, major, cohort, status)
+    VALUES
+        (@intern_one_user_id, 'INTERN001', NULL, 'K17', 'ACTIVE'),
+        (@intern_two_user_id, 'INTERN002', NULL, 'K17', 'ACTIVE');
+
+    SELECT @intern_one_id = student_id
+    FROM dbo.student_profiles
+    WHERE student_code = 'INTERN001';
+
+    SELECT @intern_two_id = student_id
+    FROM dbo.student_profiles
+    WHERE student_code = 'INTERN002';
+
+    SELECT @semester_id = semester_id
+    FROM dbo.semesters
+    WHERE code = 'FA26';
+
+    INSERT dbo.lab_usage_requests
+        (semester_id, mentor_id, group_name, status, request_note, approved_by, approved_at, approval_note)
+    VALUES
+        (@semester_id, @mentor_id, N'FA26 Intern List', 'APPROVED',
+         N'Initial intern list for the lab in Fall 2026.', @admin_id, SYSUTCDATETIME(),
+         N'Approved as one list for the semester.');
+
+    SET @request_id = SCOPE_IDENTITY();
+
+    INSERT dbo.lab_usage_request_student_entries
+        (request_id, semester_id, student_code, full_name, email, cohort)
+    VALUES
+        (@request_id, @semester_id, 'INTERN001', N'Demo Intern 1', 'intern@gmail.com', 'K17'),
+        (@request_id, @semester_id, 'INTERN002', N'Demo Intern 2', 'intern2@gmail.com', 'K17');
+
+    INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
+    VALUES
+        (@request_id, @semester_id, @intern_one_id),
+        (@request_id, @semester_id, @intern_two_id);
+
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'General Lab Equipment', N'Demo category for initial database setup.', 'ACTIVE');
+
+    SET @category_id = SCOPE_IDENTITY();
+
+    INSERT dbo.assets
+        (asset_code, asset_name, category_id, tracking_mode, serial_number, total_quantity,
+         condition, status, is_borrowable, storage_location, description)
+    VALUES
+        ('DEMO-MULTIMETER-001', N'Digital Multimeter', @category_id, 'SERIALIZED',
+         'DEMO-SN-001', 1, 'GOOD', 'AVAILABLE', 1, N'Lab cabinet A1', N'Demo asset.');
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO
+
+SELECT
+    u.full_name,
+    u.email,
+    u.role,
+    '123' AS demo_password
+FROM dbo.users AS u
+ORDER BY u.user_id;
+GO

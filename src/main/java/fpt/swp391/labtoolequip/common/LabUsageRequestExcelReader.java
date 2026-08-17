@@ -1,6 +1,5 @@
 package fpt.swp391.labtoolequip.common;
 
-import fpt.swp391.labtoolequip.model.LabUsageRequestSlot;
 import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
 import jakarta.servlet.http.Part;
 import java.io.InputStream;
@@ -19,7 +18,7 @@ public final class LabUsageRequestExcelReader {
 
 	public static ImportData read(Part part) throws IOException {
 		if (part == null || part.getSize() == 0) {
-			return new ImportData(List.of(), List.of());
+			return new ImportData(List.of());
 		}
 		return read(part.getInputStream(), part.getSubmittedFileName());
 	}
@@ -29,12 +28,14 @@ public final class LabUsageRequestExcelReader {
 			throw new IOException("File import phải có định dạng .xlsx.");
 		}
 		try (Workbook workbook = WorkbookFactory.create(input)) {
-			Sheet studentsSheet = workbook.getSheet("Students");
-			Sheet slotsSheet = workbook.getSheet("Slots");
-			if (studentsSheet == null || slotsSheet == null) {
-				throw new IOException("Excel phải có hai sheet tên Students và Slots.");
+			Sheet internsSheet = workbook.getSheet("Interns");
+			if (internsSheet == null) {
+				internsSheet = workbook.getSheet("Students");
 			}
-			return new ImportData(readStudents(studentsSheet), readSlots(slotsSheet));
+			if (internsSheet == null) {
+				throw new IOException("Excel phải có sheet tên Interns.");
+			}
+			return new ImportData(readStudents(internsSheet));
 		} catch (RuntimeException exception) {
 			throw new IOException("Không thể đọc file Excel.", exception);
 		}
@@ -51,60 +52,27 @@ public final class LabUsageRequestExcelReader {
 			String code = cell(formatter, row, 0);
 			String name = cell(formatter, row, 1);
 			String email = cell(formatter, row, 2);
-			if (code.isBlank() && name.isBlank() && email.isBlank()) {
+			String cohort = cell(formatter, row, 3);
+			if (code.isBlank() && name.isBlank() && email.isBlank() && cohort.isBlank()) {
 				continue;
 			}
-			if (code.isBlank() || name.isBlank() || email.isBlank()) {
-				throw new IOException("Sheet Students thiếu dữ liệu tại dòng " + (index + 1) + ".");
+			if (code.isBlank() || name.isBlank() || email.isBlank() || cohort.isBlank()) {
+				throw new IOException("Sheet Interns thiếu dữ liệu tại dòng " + (index + 1) + ".");
 			}
 			LabUsageRequestStudent student = new LabUsageRequestStudent();
 			student.setStudentCode(code);
 			student.setFullName(name);
 			student.setEmail(email);
+			student.setCohort(cohort);
 			students.add(student);
 		}
 		return students;
-	}
-
-	private static List<LabUsageRequestSlot> readSlots(Sheet sheet) throws IOException {
-		DataFormatter formatter = new DataFormatter();
-		List<LabUsageRequestSlot> slots = new ArrayList<>();
-		for (int index = 1; index <= sheet.getLastRowNum(); index++) {
-			Row row = sheet.getRow(index);
-			if (row == null) {
-				continue;
-			}
-			String dayText = cell(formatter, row, 0);
-			String slotText = cell(formatter, row, 1);
-			if (dayText.isBlank() && slotText.isBlank()) {
-				continue;
-			}
-			int day = numberIn(dayText);
-			int slotId = numberIn(slotText);
-			if (day < 2 || day > 7 || slotId < 1 || slotId > 4) {
-				throw new IOException("Sheet Slots không hợp lệ tại dòng " + (index + 1) + ".");
-			}
-			LabUsageRequestSlot slot = new LabUsageRequestSlot();
-			slot.setDayOfWeek(day);
-			slot.setSlotId(slotId);
-			slots.add(slot);
-		}
-		return slots;
 	}
 
 	private static String cell(DataFormatter formatter, Row row, int index) {
 		return formatter.formatCellValue(row.getCell(index)).trim();
 	}
 
-	private static int numberIn(String value) {
-		String digits = value.replaceAll("\\D+", "");
-		try {
-			return digits.isEmpty() ? -1 : Integer.parseInt(digits);
-		} catch (NumberFormatException exception) {
-			return -1;
-		}
-	}
-
-	public record ImportData(List<LabUsageRequestStudent> students, List<LabUsageRequestSlot> slots) {
+	public record ImportData(List<LabUsageRequestStudent> students) {
 	}
 }

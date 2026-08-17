@@ -1,10 +1,9 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
-import fpt.swp391.labtoolequip.common.AuthenticationSupport;
+import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.common.LabUsageRequestExcelReader;
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
 import fpt.swp391.labtoolequip.model.LabUsageRequest;
-import fpt.swp391.labtoolequip.model.LabUsageRequestSlot;
 import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -16,11 +15,9 @@ import jakarta.servlet.http.Part;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -29,8 +26,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-@WebServlet({"/mentor/lab-requests", "/mentor/lab-requests/view", "/mentor/lab-requests/add",
-		"/mentor/lab-requests/edit", "/mentor/lab-requests/delete", "/mentor/lab-requests/template"})
+@WebServlet({"/mentor/interns", "/mentor/interns/view", "/mentor/interns/add", "/mentor/interns/edit",
+		"/mentor/interns/delete", "/mentor/interns/template", "/mentor/lab-requests",
+		"/mentor/lab-requests/view", "/mentor/lab-requests/add", "/mentor/lab-requests/edit",
+		"/mentor/lab-requests/delete", "/mentor/lab-requests/template"})
 @MultipartConfig(maxFileSize = 5 * 1024 * 1024)
 public class MentorLabUsageRequestController extends HttpServlet {
 	private static final String LIST_VIEW = "/WEB-INF/views/mentor/lab-requests/list.jsp";
@@ -45,7 +44,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			switch (request.getServletPath()) {
+			switch (canonicalPath(request)) {
 				case "/mentor/lab-requests/view" -> showDetail(request, response);
 				case "/mentor/lab-requests/add" -> showAddForm(request, response);
 				case "/mentor/lab-requests/edit" -> showEditForm(request, response);
@@ -65,24 +64,25 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token.");
 			return;
 		}
+		String path = canonicalPath(request);
 		try {
-			switch (request.getServletPath()) {
+			switch (path) {
 				case "/mentor/lab-requests/add" -> create(request, response);
 				case "/mentor/lab-requests/edit" -> update(request, response);
 				case "/mentor/lab-requests/delete" -> delete(request, response);
 				default -> response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			}
 		} catch (SQLException exception) {
-			getServletContext().log("Manage Lab Usage Request failed", exception);
+			getServletContext().log("Manage intern list failed", exception);
 			request.setAttribute("databaseError", databaseMessage(exception));
-			if ("/mentor/lab-requests/delete".equals(request.getServletPath())) {
-				response.sendRedirect(request.getContextPath() + "/mentor/lab-requests?error=delete");
+			if ("/mentor/lab-requests/delete".equals(path)) {
+				response.sendRedirect(request.getContextPath() + "/mentor/interns?error=delete");
 			} else {
 				LabUsageRequest labRequest = readFormWithoutExcel(request);
-				String mode = "/mentor/lab-requests/edit".equals(request.getServletPath()) ? "edit" : "add";
 				labRequest.setRequestId(optionalId(request.getParameter("id")));
 				try {
-					forwardForm(request, response, labRequest, mode, List.of());
+					forwardForm(request, response, labRequest,
+							"/mentor/lab-requests/edit".equals(path) ? "edit" : "add", List.of());
 				} catch (SQLException loadingException) {
 					handleDatabaseError(response, loadingException);
 				}
@@ -98,8 +98,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			status = "";
 		}
 		Long semesterId = optionalId(request.getParameter("semesterId"));
-		request.setAttribute("requests",
-				requestDAO.findByMentor(AuthenticationSupport.currentUserId(request), keyword, status, semesterId));
+		request.setAttribute("requests", requestDAO.findByMentor(AuthSession.userId(request), keyword, status, semesterId));
 		request.setAttribute("semesters", requestDAO.findOpenSemesters());
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
@@ -146,7 +145,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!"PENDING".equals(labRequest.getStatus())) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ request PENDING mới được chỉnh sửa.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ danh sách PENDING mới được chỉnh sửa.");
 			return;
 		}
 		request.setAttribute("labRequest", labRequest);
@@ -171,7 +170,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		long requestId = requestDAO.create(labRequest);
-		response.sendRedirect(request.getContextPath() + "/mentor/lab-requests/view?id=" + requestId + "&created=1");
+		response.sendRedirect(request.getContextPath() + "/mentor/interns/view?id=" + requestId + "&created=1");
 	}
 
 	private void update(HttpServletRequest request, HttpServletResponse response)
@@ -197,10 +196,10 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!requestDAO.updatePending(labRequest)) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Request không còn ở trạng thái PENDING.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái PENDING.");
 			return;
 		}
-		response.sendRedirect(request.getContextPath() + "/mentor/lab-requests/view?id=" + requestId + "&updated=1");
+		response.sendRedirect(request.getContextPath() + "/mentor/interns/view?id=" + requestId + "&updated=1");
 	}
 
 	private void delete(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {
@@ -209,10 +208,10 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!requestDAO.deletePending(requestId, mentorId(request))) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ request PENDING mới được xóa.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ danh sách PENDING mới được xóa.");
 			return;
 		}
-		response.sendRedirect(request.getContextPath() + "/mentor/lab-requests?deleted=1");
+		response.sendRedirect(request.getContextPath() + "/mentor/interns?deleted=1");
 	}
 
 	private LabUsageRequest readForm(HttpServletRequest request, boolean includeExcel)
@@ -222,7 +221,6 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			Part excel = request.getPart("excelFile");
 			LabUsageRequestExcelReader.ImportData imported = LabUsageRequestExcelReader.read(excel);
 			labRequest.setStudents(mergeStudents(labRequest.getStudents(), imported.students()));
-			labRequest.setSlots(mergeSlots(labRequest.getSlots(), imported.slots()));
 		}
 		return labRequest;
 	}
@@ -233,112 +231,82 @@ public class MentorLabUsageRequestController extends HttpServlet {
 		labRequest.setGroupName(trim(request.getParameter("groupName")));
 		labRequest.setRequestNote(trim(request.getParameter("requestNote")));
 		labRequest.setStudents(readManualStudents(request));
-		labRequest.setSlots(readSelectedSlots(request));
 		return labRequest;
 	}
 
 	private List<LabUsageRequestStudent> readManualStudents(HttpServletRequest request) {
-		String[] codes = request.getParameterValues("studentCode");
-		String[] names = request.getParameterValues("studentName");
-		String[] emails = request.getParameterValues("studentEmail");
-		int size = Math.max(length(codes), Math.max(length(names), length(emails)));
-		List<LabUsageRequestStudent> students = new ArrayList<>();
+		String[] codes = parameters(request, "internCode", "studentCode");
+		String[] names = parameters(request, "internName", "studentName");
+		String[] emails = parameters(request, "internEmail", "studentEmail");
+		String[] cohorts = parameters(request, "cohort", "studentCohort");
+		int size = Math.max(Math.max(length(codes), length(names)), Math.max(length(emails), length(cohorts)));
+		List<LabUsageRequestStudent> interns = new ArrayList<>();
 		for (int index = 0; index < size; index++) {
 			String code = valueAt(codes, index);
 			String name = valueAt(names, index);
 			String email = valueAt(emails, index).toLowerCase(Locale.ROOT);
-			if (code.isBlank() && name.isBlank() && email.isBlank()) {
+			String cohort = valueAt(cohorts, index);
+			if (code.isBlank() && name.isBlank() && email.isBlank() && cohort.isBlank()) {
 				continue;
 			}
-			LabUsageRequestStudent student = new LabUsageRequestStudent();
-			student.setStudentCode(code);
-			student.setFullName(name);
-			student.setEmail(email);
-			students.add(student);
+			LabUsageRequestStudent intern = new LabUsageRequestStudent();
+			intern.setStudentCode(code);
+			intern.setFullName(name);
+			intern.setEmail(email);
+			intern.setCohort(cohort);
+			interns.add(intern);
 		}
-		return students;
-	}
-
-	private List<LabUsageRequestSlot> readSelectedSlots(HttpServletRequest request) {
-		String[] selected = request.getParameterValues("slots");
-		List<LabUsageRequestSlot> slots = new ArrayList<>();
-		if (selected == null) {
-			return slots;
-		}
-		for (String value : selected) {
-			String[] parts = value.split("-");
-			if (parts.length != 2) {
-				continue;
-			}
-			try {
-				LabUsageRequestSlot slot = new LabUsageRequestSlot();
-				slot.setDayOfWeek(Integer.parseInt(parts[0]));
-				slot.setSlotId(Integer.parseInt(parts[1]));
-				slots.add(slot);
-			} catch (NumberFormatException ignored) {
-				// Validation below rejects an empty/invalid schedule.
-			}
-		}
-		return mergeSlots(List.of(), slots);
+		return interns;
 	}
 
 	private List<LabUsageRequestStudent> mergeStudents(List<LabUsageRequestStudent> first,
 			List<LabUsageRequestStudent> second) {
-		Map<String, LabUsageRequestStudent> merged = new LinkedHashMap<>();
-		for (LabUsageRequestStudent student : first) {
-			merged.put(student.getEmail().toLowerCase(Locale.ROOT), student);
+		List<LabUsageRequestStudent> merged = new ArrayList<>(first);
+		Set<String> emails = new LinkedHashSet<>();
+		for (LabUsageRequestStudent intern : first) {
+			emails.add(intern.getEmail().toLowerCase(Locale.ROOT));
 		}
-		for (LabUsageRequestStudent student : second) {
-			student.setEmail(student.getEmail().toLowerCase(Locale.ROOT));
-			merged.putIfAbsent(student.getEmail(), student);
+		for (LabUsageRequestStudent intern : second) {
+			intern.setEmail(intern.getEmail().toLowerCase(Locale.ROOT));
+			if (emails.add(intern.getEmail())) {
+				merged.add(intern);
+			}
 		}
-		return new ArrayList<>(merged.values());
-	}
-
-	private List<LabUsageRequestSlot> mergeSlots(List<LabUsageRequestSlot> first, List<LabUsageRequestSlot> second) {
-		Map<String, LabUsageRequestSlot> merged = new LinkedHashMap<>();
-		for (LabUsageRequestSlot slot : first) {
-			merged.put(slot.getKey(), slot);
-		}
-		for (LabUsageRequestSlot slot : second) {
-			merged.putIfAbsent(slot.getKey(), slot);
-		}
-		return new ArrayList<>(merged.values());
+		return merged;
 	}
 
 	private List<String> validate(LabUsageRequest request) throws SQLException {
 		List<String> errors = new ArrayList<>();
 		if (request.getSemesterId() == null || requestDAO.findOpenSemesters().stream()
-				.noneMatch(s -> s.getSemesterId().equals(request.getSemesterId()))) {
+				.noneMatch(semester -> semester.getSemesterId().equals(request.getSemesterId()))) {
 			errors.add("Vui lòng chọn học kỳ đang hoạt động hoặc sắp diễn ra.");
 		}
-		if (request.getGroupName().isBlank() || request.getGroupName().length() > 100) {
-			errors.add("Tên nhóm là bắt buộc và không được vượt quá 100 ký tự.");
-		}
-		if (request.getSlots().isEmpty()) {
-			errors.add("Vui lòng chọn ít nhất một slot học.");
+		if (request.getGroupName() == null || request.getGroupName().isBlank()
+				|| request.getGroupName().length() > 100) {
+			errors.add("Tên danh sách là bắt buộc và không được vượt quá 100 ký tự.");
 		}
 		if (request.getStudents().isEmpty()) {
-			errors.add("Vui lòng nhập hoặc import ít nhất một sinh viên.");
+			errors.add("Vui lòng nhập hoặc import ít nhất một intern.");
 		}
 		Set<String> codes = new LinkedHashSet<>();
 		Set<String> emails = new LinkedHashSet<>();
-		for (LabUsageRequestStudent student : request.getStudents()) {
-			if (student.getStudentCode().isBlank() || student.getFullName().isBlank()
-					|| !EMAIL.matcher(student.getEmail()).matches()) {
-				errors.add("Mỗi sinh viên phải có mã, họ tên và email hợp lệ.");
+		for (LabUsageRequestStudent intern : request.getStudents()) {
+			String code = trim(intern.getStudentCode()).toUpperCase(Locale.ROOT);
+			String email = trim(intern.getEmail()).toLowerCase(Locale.ROOT);
+			String cohort = trim(intern.getCohort());
+			if (code.isBlank() || trim(intern.getFullName()).isBlank() || cohort.isBlank()
+					|| !EMAIL.matcher(email).matches()) {
+				errors.add("Mỗi intern phải có mã, họ tên, Gmail và khóa hợp lệ.");
 				break;
 			}
-			if (!codes.add(student.getStudentCode().toUpperCase(Locale.ROOT)) || !emails.add(student.getEmail())) {
-				errors.add("Mã sinh viên và email không được trùng trong cùng request.");
+			if (!codes.add(code) || !emails.add(email)) {
+				errors.add("Mã intern và Gmail không được trùng trong cùng danh sách.");
 				break;
 			}
-		}
-		for (LabUsageRequestSlot slot : request.getSlots()) {
-			if (slot.getDayOfWeek() < 2 || slot.getDayOfWeek() > 7 || slot.getSlotId() < 1 || slot.getSlotId() > 4) {
-				errors.add("Lịch học chứa thứ hoặc slot không hợp lệ.");
-				break;
-			}
+			intern.setStudentCode(code);
+			intern.setEmail(email);
+			intern.setFullName(trim(intern.getFullName()));
+			intern.setCohort(cohort);
 		}
 		return errors;
 	}
@@ -353,35 +321,30 @@ public class MentorLabUsageRequestController extends HttpServlet {
 	}
 
 	private void prepareForm(HttpServletRequest request) throws SQLException {
-		LabUsageRequest labRequest = (LabUsageRequest) request.getAttribute("labRequest");
-		Set<String> selectedSlots = new LinkedHashSet<>();
-		for (LabUsageRequestSlot slot : labRequest.getSlots()) {
-			selectedSlots.add(slot.getKey());
-		}
-		request.setAttribute("selectedSlots", selectedSlots);
 		request.setAttribute("semesters", requestDAO.findOpenSemesters());
 		request.setAttribute("csrfToken", csrfToken(request));
 	}
 
 	private void downloadTemplate(HttpServletResponse response) throws IOException {
 		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-		response.setHeader("Content-Disposition", "attachment; filename=lab-usage-request-template.xlsx");
+		response.setHeader("Content-Disposition", "attachment; filename=intern-list-template.xlsx");
 		try (Workbook workbook = new XSSFWorkbook()) {
-			Sheet students = workbook.createSheet("Students");
-			Row studentHeader = students.createRow(0);
-			studentHeader.createCell(0).setCellValue("Student Code");
-			studentHeader.createCell(1).setCellValue("Full Name");
-			studentHeader.createCell(2).setCellValue("Email");
-			Sheet slots = workbook.createSheet("Slots");
-			Row slotHeader = slots.createRow(0);
-			slotHeader.createCell(0).setCellValue("Day Of Week");
-			slotHeader.createCell(1).setCellValue("Slot Number");
+			Sheet interns = workbook.createSheet("Interns");
+			Row header = interns.createRow(0);
+			header.createCell(0).setCellValue("Intern Code");
+			header.createCell(1).setCellValue("Full Name");
+			header.createCell(2).setCellValue("Gmail");
+			header.createCell(3).setCellValue("Cohort");
 			workbook.write(response.getOutputStream());
 		}
 	}
 
+	private String canonicalPath(HttpServletRequest request) {
+		return request.getServletPath().replace("/mentor/interns", "/mentor/lab-requests");
+	}
+
 	private long mentorId(HttpServletRequest request) {
-		return AuthenticationSupport.currentUserId(request);
+		return AuthSession.userId(request);
 	}
 
 	private String csrfToken(HttpServletRequest request) {
@@ -406,7 +369,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			}
 			return id;
 		} catch (NumberFormatException exception) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid request ID.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid list ID.");
 			return 0;
 		}
 	}
@@ -422,15 +385,21 @@ public class MentorLabUsageRequestController extends HttpServlet {
 
 	private String databaseMessage(SQLException exception) {
 		String message = exception.getMessage();
-		if (message != null && (message.contains("Email ") || message.contains("mã sinh viên"))) {
+		if (message != null && (message.contains("Email ") || message.contains("Gmail ")
+				|| message.contains("Mã intern"))) {
 			return message;
 		}
-		return "Không thể lưu request. Email hoặc mã sinh viên có thể đã tồn tại.";
+		return "Không thể lưu danh sách. Học kỳ có thể đã có danh sách hoặc dữ liệu bị trùng.";
 	}
 
 	private void handleDatabaseError(HttpServletResponse response, SQLException exception) throws IOException {
-		getServletContext().log("Loading Lab Usage Requests failed", exception);
-		response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải Lab Usage Requests.");
+		getServletContext().log("Loading intern lists failed", exception);
+		response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải danh sách intern.");
+	}
+
+	private String[] parameters(HttpServletRequest request, String primary, String fallback) {
+		String[] values = request.getParameterValues(primary);
+		return values == null ? request.getParameterValues(fallback) : values;
 	}
 
 	private int length(String[] values) {

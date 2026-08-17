@@ -18,6 +18,9 @@ public class DisposalRecord {
 	private String completionNote;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	private String assetCode;
+	private String assetName;
+	private String requesterName;
 
 	public DisposalRecord() {
 	}
@@ -161,5 +164,24 @@ public class DisposalRecord {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getAssetCode() {
+		return assetCode;
+	}
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+	public String getAssetName() {
+		return assetName;
+	}
+	public void setAssetName(String assetName) {
+		this.assetName = assetName;
+	}
+	public String getRequesterName() {
+		return requesterName;
+	}
+	public void setRequesterName(String requesterName) {
+		this.requesterName = requesterName;
 	}
 }

@@ -18,11 +18,11 @@
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">AD</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
         </header>
         <section class="content-area">
-            <div class="content-heading"><div><p class="eyebrow">ADMIN PORTAL</p><h2>System administration</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/admin/lab-requests"><svg><use href="#i-clipboard"/></svg>Review requests</a></div>
+            <div class="content-heading"><div><p class="eyebrow">ADMIN PORTAL</p><h2>System administration</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg>Review intern lists</a></div>
             <div class="stats-grid">
                 <a class="stat-card stat-green" href="${pageContext.request.contextPath}/admin/users"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong>Users</strong><span>Accounts, roles and status</span><small>Open User Management</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users/import"><div class="stat-icon"><svg><use href="#i-upload"/></svg></div><div><strong>Import</strong><span>Add student accounts from Excel</span><small>Open batch import</small></div></a>
-                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/admin/lab-requests?status=PENDING"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingLabRequestCount}"/></strong><span>Pending lab requests</span><small>Approve or reject Mentor submissions</small></div></a>
+                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users/import"><div class="stat-icon"><svg><use href="#i-upload"/></svg></div><div><strong>Import</strong><span>Add intern accounts from Excel</span><small>Open batch import</small></div></a>
+                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingLabRequestCount}"/></strong><span>Pending intern lists</span><small>Approve or reject Mentor submissions</small></div></a>
             </div>
         </section>
     </main>

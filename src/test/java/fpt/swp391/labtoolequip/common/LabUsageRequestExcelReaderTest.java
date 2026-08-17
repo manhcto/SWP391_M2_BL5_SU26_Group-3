@@ -11,21 +11,16 @@ import org.junit.jupiter.api.Test;
 
 class LabUsageRequestExcelReaderTest {
 	@Test
-	void readsStudentsAndRecurringSlots() throws Exception {
+	void readsInternsWithoutSchedule() throws Exception {
 		byte[] file;
 		try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-			Sheet students = workbook.createSheet("Students");
-			students.createRow(0);
-			Row student = students.createRow(1);
-			student.createCell(0).setCellValue("SE123456");
-			student.createCell(1).setCellValue("Student One");
-			student.createCell(2).setCellValue("student@example.com");
-
-			Sheet slots = workbook.createSheet("Slots");
-			slots.createRow(0);
-			Row slot = slots.createRow(1);
-			slot.createCell(0).setCellValue("Thứ 2");
-			slot.createCell(1).setCellValue("Slot 3");
+			Sheet interns = workbook.createSheet("Interns");
+			interns.createRow(0);
+			Row intern = interns.createRow(1);
+			intern.createCell(0).setCellValue("INTERN001");
+			intern.createCell(1).setCellValue("Intern One");
+			intern.createCell(2).setCellValue("intern@example.com");
+			intern.createCell(3).setCellValue("K17");
 			workbook.write(output);
 			file = output.toByteArray();
 		}
@@ -34,8 +29,7 @@ class LabUsageRequestExcelReaderTest {
 				"request.xlsx");
 
 		assertEquals(1, imported.students().size());
-		assertEquals("student@example.com", imported.students().get(0).getEmail());
-		assertEquals(2, imported.slots().get(0).getDayOfWeek());
-		assertEquals(3, imported.slots().get(0).getSlotId());
+		assertEquals("intern@example.com", imported.students().get(0).getEmail());
+		assertEquals("K17", imported.students().get(0).getCohort());
 	}
 }

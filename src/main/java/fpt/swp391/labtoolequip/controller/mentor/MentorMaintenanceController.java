@@ -1,6 +1,6 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
-import fpt.swp391.labtoolequip.common.AuthenticationSupport;
+import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.AssetDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
@@ -55,7 +55,7 @@ public class MentorMaintenanceController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		String keyword = request.getParameter("keyword");
 		String status = request.getParameter("status");
-		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(AuthenticationSupport.currentUserId(request),
+		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(AuthSession.userId(request),
 				keyword, status);
 		request.setAttribute("records", records);
 		request.setAttribute("keyword", keyword);
@@ -94,7 +94,7 @@ public class MentorMaintenanceController extends HttpServlet {
 		m.setAssetId(assetId);
 		m.setDescription(description);
 		m.setQuantity(quantity);
-		m.setRequestedBy(AuthenticationSupport.currentUserId(request));
+		m.setRequestedBy(AuthSession.userId(request));
 
 		maintenanceDAO.create(m);
 		response.sendRedirect(request.getContextPath() + "/mentor/maintenance?success=submitted");

@@ -21,7 +21,7 @@
     <nav class="side-nav" aria-label="Admin navigation">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
         <a class="nav-link${activeMenu == 'users' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/users"><svg><use href="#i-users"/></svg><span>Manage Users</span></a>
-        <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/lab-requests"><svg><use href="#i-clipboard"/></svg><span>Lab Usage Requests</span></a>
+        <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg><span>Intern Lists</span></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${currentUser.role}"/></span></div></div>

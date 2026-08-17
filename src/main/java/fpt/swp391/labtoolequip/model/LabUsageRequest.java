@@ -21,8 +21,6 @@ public class LabUsageRequest {
 	private String mentorName;
 	private String mentorEmail;
 	private int studentCount;
-	private String scheduleSummary;
-	private List<LabUsageRequestSlot> slots = new ArrayList<>();
 	private List<LabUsageRequestStudent> students = new ArrayList<>();
 
 	public LabUsageRequest() {
@@ -169,22 +167,6 @@ public class LabUsageRequest {
 
 	public void setStudentCount(int studentCount) {
 		this.studentCount = studentCount;
-	}
-
-	public String getScheduleSummary() {
-		return scheduleSummary;
-	}
-
-	public void setScheduleSummary(String scheduleSummary) {
-		this.scheduleSummary = scheduleSummary;
-	}
-
-	public List<LabUsageRequestSlot> getSlots() {
-		return slots;
-	}
-
-	public void setSlots(List<LabUsageRequestSlot> slots) {
-		this.slots = slots;
 	}
 
 	public List<LabUsageRequestStudent> getStudents() {

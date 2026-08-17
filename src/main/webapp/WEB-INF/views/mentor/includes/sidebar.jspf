@@ -26,8 +26,8 @@
     </a>
     <nav class="side-nav" aria-label="Mentor navigation">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
-        <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/lab-requests"><svg><use href="#i-clipboard"/></svg><span>Lab Usage Requests</span></a>
-        <a class="nav-link" href="#"><svg><use href="#i-users"/></svg><span>Students</span></a>
+        <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/interns"><svg><use href="#i-clipboard"/></svg><span>Intern List</span></a>
+        <a class="nav-link" href="#"><svg><use href="#i-users"/></svg><span>Interns</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-box"/></svg><span>Assets</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>

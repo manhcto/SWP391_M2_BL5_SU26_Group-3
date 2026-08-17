@@ -9,6 +9,7 @@ public class LabUsageRequestStudent {
 	private String studentCode;
 	private String fullName;
 	private String email;
+	private String cohort;
 	private LocalDateTime addedAt;
 
 	public LabUsageRequestStudent() {
@@ -67,6 +68,14 @@ public class LabUsageRequestStudent {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getCohort() {
+		return cohort;
+	}
+
+	public void setCohort(String cohort) {
+		this.cohort = cohort;
 	}
 
 	public LocalDateTime getAddedAt() {

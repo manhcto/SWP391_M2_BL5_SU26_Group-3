@@ -89,8 +89,8 @@
                             <div style="margin-bottom: 16px;">
                                 <label style="font-size:12px; font-weight:700; color:#1a2521; display:block; margin-bottom:8px;">1. Chọn loại tài khoản cần Import từ Excel:</label>
                                 <div class="role-pill-group">
-                                    <label class="role-pill active" id="pill-STUDENT" onclick="selectImportRole('STUDENT')">
-                                        <input type="radio" name="importRoleRadio" value="STUDENT" checked>
+                                    <label class="role-pill active" id="pill-INTERN" onclick="selectImportRole('INTERN')">
+                                        <input type="radio" name="importRoleRadio" value="INTERN" checked>
                                         <div>
                                             <div>🎓 Sinh viên (Student)</div>
                                             <small style="font-size:10px; color:#68736f; font-weight:400;">4 cột: Họ tên, Mã SV, Ngành, Khóa</small>
@@ -132,7 +132,7 @@
                             </div>
 
                             <form id="importForm" method="post" action="${pageContext.request.contextPath}/admin/users/import" style="display:none; margin-top:20px;">
-                                <input type="hidden" name="targetRole" id="targetRoleInput" value="STUDENT">
+                                <input type="hidden" name="targetRole" id="targetRoleInput" value="INTERN">
                                 <textarea name="importData" id="importDataText" style="display:none;"></textarea>
                                 
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -200,7 +200,7 @@
                                         <select class="form-control" name="role" style="border-color: #188255; font-weight: 600;">
                                             <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR (2) - Giảng viên hướng dẫn</option>
                                             <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER (3) - Cán bộ quản lý Lab</option>
-                                            <option value="STUDENT" ${user.role == 'STUDENT' ? 'selected' : ''}>STUDENT (1) - Sinh viên</option>
+                                            <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Intern</option>
                                         </select>
                                     </c:otherwise>
                                 </c:choose>
@@ -232,7 +232,7 @@
                             <div class="form-group">
                                 <label>Vai trò cần tạo (Role) *</label>
                                 <select class="form-control" name="role" id="roleSelect" onchange="toggleStudentFields()">
-                                    <option value="STUDENT" ${user.role == 'STUDENT' ? 'selected' : ''}>STUDENT (1) - Sinh viên</option>
+                                    <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Intern</option>
                                     <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR (2) - Giảng viên hướng dẫn</option>
                                     <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER (3) - Cán bộ quản lý Lab</option>
                                 </select>
@@ -279,7 +279,7 @@
 </div>
 
 <script>
-    let currentSelectedRole = 'STUDENT';
+    let currentSelectedRole = 'INTERN';
 
     function selectImportRole(role) {
         currentSelectedRole = role;
@@ -292,12 +292,12 @@
         document.getElementById('targetRoleInput').value = role;
 
         const roleNames = {
-            'STUDENT': 'Sinh viên',
+            'INTERN': 'Intern',
             'MENTOR': 'Giảng viên (Mentor)',
             'LAB_MANAGER': 'Quản lý Lab (Lab Manager)'
         };
         const roleHints = {
-            'STUDENT': 'Hệ thống sẽ tự động quét Họ tên + Mã SV và sinh email dạng [ten][ho][maSV]@fpt.edu.vn',
+            'INTERN': 'Intern cần có mã intern và Gmail xác thực.',
             'MENTOR': 'Hệ thống sẽ tự động quét Họ tên và sinh email giảng viên dạng [ten][ho]@fpt.edu.vn',
             'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và sinh email quản lý dạng [ten][ho]@fpt.edu.vn'
         };
@@ -311,7 +311,7 @@
         document.getElementById('importForm').style.display = 'none';
     }
 
-    function generateFptEmail(fullName, code, isStudent) {
+    function generateFptEmail(fullName, code, isIntern) {
         if (!fullName) return "";
         let clean = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().trim();
         let words = clean.split(/\s+/);
@@ -321,7 +321,7 @@
         for (let i = 0; i < words.length - 1; i++) {
             initials += words[i].charAt(0);
         }
-        if (isStudent && code) {
+        if (isIntern && code) {
             return firstName + initials + code.trim().toLowerCase() + "@fpt.edu.vn";
         }
         return firstName + initials + "@fpt.edu.vn";
@@ -364,7 +364,7 @@
 
             let parsedUsers = [];
             let linesForServer = [];
-            const isStudent = (currentSelectedRole === 'STUDENT');
+            const isIntern = (currentSelectedRole === 'INTERN');
 
             for (let i = 0; i < rows.length; i++) {
                 let row = rows[i];
@@ -382,7 +382,7 @@
                 let major = "";
                 let cohort = "";
 
-                if (isStudent) {
+                if (isIntern) {
                     code = col1;
                     let col2 = String(row[2] || '').trim();
                     if (col2.includes('@')) {
@@ -421,8 +421,8 @@
 
             // Update Thead
             const thead = document.getElementById('previewThead');
-            if (isStudent) {
-                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Mã SV</th><th>Email FPT (từ file)</th><th>Chuyên ngành</th><th>Khóa</th></tr>';
+            if (isIntern) {
+                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Mã intern</th><th>Gmail</th><th>Khóa</th></tr>';
             } else {
                 thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Email FPT (từ file)</th><th>Đơn vị / Phòng phụ trách</th><th>Vai trò</th></tr>';
             }
@@ -432,12 +432,11 @@
             tbody.innerHTML = '';
             parsedUsers.forEach((u, idx) => {
                 const tr = document.createElement('tr');
-                if (isStudent) {
+                if (isIntern) {
                     tr.innerHTML = '<td>' + (idx + 1) + '</td>' +
                         '<td><b>' + u.fullName + '</b></td>' +
                         '<td>' + u.code + '</td>' +
                         '<td><span style="color:#188255; font-weight:600;">' + u.email + '</span></td>' +
-                        '<td>' + u.major + '</td>' +
                         '<td>' + u.cohort + '</td>';
                 } else {
                     tr.innerHTML = '<td>' + (idx + 1) + '</td>' +
@@ -465,7 +464,7 @@
     function downloadSampleExcel() {
         let csvContent = "";
         let fileName = "";
-        if (currentSelectedRole === 'STUDENT') {
+        if (currentSelectedRole === 'INTERN') {
             csvContent = "Họ và tên,Mã sinh viên,Email FPT,Chuyên ngành,Khóa\n" +
                 "Lê Hoàng Nam,SE160123,namlhse160123@fpt.edu.vn,Software Engineering,K16\n" +
                 "Trần Bảo Ngọc,HE150442,ngoctbhe150442@fpt.edu.vn,IoT Embedded Systems,K15\n" +
@@ -497,13 +496,13 @@
     function toggleStudentFields() {
         const roleSelect = document.getElementById('roleSelect');
         if (!roleSelect) return;
-        const isStudent = roleSelect.value === 'STUDENT';
+        const isIntern = roleSelect.value === 'INTERN';
         const scGroup = document.getElementById('studentCodeGroup');
         const mjGroup = document.getElementById('majorGroup');
         const chGroup = document.getElementById('cohortGroup');
-        if (scGroup) scGroup.style.display = isStudent ? 'flex' : 'none';
-        if (mjGroup) mjGroup.style.display = isStudent ? 'flex' : 'none';
-        if (chGroup) chGroup.style.display = isStudent ? 'flex' : 'none';
+        if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
+        if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
+        if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
     }
     toggleStudentFields();
 </script>
