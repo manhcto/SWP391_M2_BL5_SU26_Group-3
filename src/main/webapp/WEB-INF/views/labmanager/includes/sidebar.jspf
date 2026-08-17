@@ -23,12 +23,12 @@
     <nav class="side-nav" aria-label="Lab Manager navigation">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-clipboard"/></svg><span>Lab Requests</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-users"/></svg><span>Students</span></a>
+        <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-users"/></svg><span>Interns</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-box"/></svg><span>Assets</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-alert"/></svg><span>Incidents</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a>
+        <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a>
         <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg><span>Maintenance</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-trash"/></svg><span>Disposal</span></a>
     </nav>

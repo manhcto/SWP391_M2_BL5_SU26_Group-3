@@ -11,6 +11,10 @@
   - Demo accounts use password: 123
 */
 
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
+
 USE [master];
 GO
 
@@ -476,6 +480,11 @@ BEGIN TRY
     DECLARE @semester_id bigint;
     DECLARE @request_id bigint;
     DECLARE @category_id bigint;
+    DECLARE @asset_id bigint;
+    DECLARE @usage_one_id bigint;
+    DECLARE @usage_two_id bigint;
+    DECLARE @incident_one_id bigint;
+    DECLARE @incident_two_id bigint;
     DECLARE @password_hash varchar(255) = '$2a$10$c4PNSNs0bJn0drrJzAxThu4TBztls3COfVZA.W33b0BL6cquNIS.C';
 
     INSERT dbo.users (full_name, email, password_hash, role, status)
@@ -540,6 +549,63 @@ BEGIN TRY
     VALUES
         ('DEMO-MULTIMETER-001', N'Digital Multimeter', @category_id, 'SERIALIZED',
          'DEMO-SN-001', 1, 'GOOD', 'AVAILABLE', 1, N'Lab cabinet A1', N'Demo asset.');
+
+    SET @asset_id = SCOPE_IDENTITY();
+
+    INSERT dbo.asset_usages
+        (request_id, semester_id, student_id, asset_id, quantity, borrowed_at, due_at, returned_at,
+         condition_before, condition_after, status, note, created_by)
+    VALUES
+        (@request_id, @semester_id, @intern_one_id, @asset_id, 1, '2026-08-05T08:00:00',
+         '2026-08-12T17:00:00', '2026-08-10T16:30:00', 'GOOD', 'FAIR', 'RETURNED',
+         N'Demo usage for a resolved responsibility case.', @intern_one_user_id);
+
+    SET @usage_one_id = SCOPE_IDENTITY();
+
+    INSERT dbo.asset_usages
+        (request_id, semester_id, student_id, asset_id, quantity, borrowed_at, due_at, returned_at,
+         condition_before, condition_after, status, note, created_by)
+    VALUES
+        (@request_id, @semester_id, @intern_two_id, @asset_id, 1, '2026-08-13T08:00:00',
+         '2026-08-20T17:00:00', '2026-08-16T15:00:00', 'GOOD', 'DAMAGED', 'RETURNED',
+         N'Demo usage for a responsibility pending review.', @intern_two_user_id);
+
+    SET @usage_two_id = SCOPE_IDENTITY();
+
+    INSERT dbo.incidents
+        (asset_id, asset_usage_id, reported_by, affected_quantity, incident_type, description, severity,
+         status, occurred_at, reported_at, investigation_note, handling_result)
+    VALUES
+        (@asset_id, @usage_one_id, @intern_one_user_id, 1, 'MALFUNCTION',
+         N'Multimeter probe showed normal consumable wear during project work.', 'LOW', 'RESOLVED',
+         '2026-08-10T15:30:00', '2026-08-10T16:35:00',
+         N'Mentor inspected the probe and confirmed normal wear.', N'Consumable probe replaced by the LAB.');
+
+    SET @incident_one_id = SCOPE_IDENTITY();
+
+    INSERT dbo.incidents
+        (asset_id, asset_usage_id, reported_by, affected_quantity, incident_type, description, severity,
+         status, occurred_at, reported_at, investigation_note, handling_result)
+    VALUES
+        (@asset_id, @usage_two_id, @intern_two_user_id, 1, 'DAMAGE',
+         N'Excessive voltage input caused the multimeter fuse to fail.', 'HIGH', 'INVESTIGATING',
+         '2026-08-16T14:30:00', '2026-08-16T15:05:00',
+         N'Usage history and returned condition identify the related Intern.', NULL);
+
+    SET @incident_two_id = SCOPE_IDENTITY();
+
+    INSERT dbo.responsibilities
+        (incident_id, student_id, determined_by, conclusion, decision, status, resolution_note,
+         determined_at, resolved_at)
+    VALUES
+        (@incident_one_id, @intern_one_id, @mentor_id,
+         N'Normal consumable wear occurred during approved project work.',
+         N'Waived - LAB consumable replacement.', 'RESOLVED', N'No Intern compensation required.',
+         '2026-08-11T09:00:00', '2026-08-11T09:00:00'),
+        (@incident_two_id, @intern_two_id, @mentor_id,
+         N'Incorrect voltage range selection caused the fuse failure.',
+         N'Component replacement recommendation: 150,000 VND.', 'PENDING_REVIEW', NULL,
+         '2026-08-17T09:00:00', NULL);
 
     COMMIT TRANSACTION;
 END TRY

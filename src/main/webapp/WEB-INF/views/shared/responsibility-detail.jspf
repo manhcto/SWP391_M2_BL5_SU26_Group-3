@@ -1,0 +1,50 @@
+<article class="panel">
+    <div class="form-grid">
+        <div class="form-group"><label>Responsibility Code</label><input class="form-control readonly-field" value="#<c:out value='${responsibility.responsibilityCode}'/>" readonly></div>
+        <div class="form-group"><label>Status</label><input class="form-control readonly-field" value="<c:out value='${responsibility.status}'/>" readonly></div>
+        <div class="form-group"><label>Intern</label><input class="form-control readonly-field" value="<c:out value='${responsibility.internName}'/> (<c:out value='${responsibility.internCode}'/>)" readonly></div>
+        <div class="form-group"><label>Intern Email</label><input class="form-control readonly-field" value="<c:out value='${responsibility.internEmail}'/>" readonly></div>
+        <div class="form-group"><label>Determined By</label><input class="form-control readonly-field" value="<c:out value='${responsibility.mentorName}'/>" readonly></div>
+        <div class="form-group"><label>Determined At</label><input class="form-control readonly-field" value="<c:out value='${responsibility.determinedAt}'/>" readonly></div>
+    </div>
+</article>
+
+<div class="detail-columns">
+    <article class="panel">
+        <div class="panel-header"><div><h3>Related Incident & Evidence</h3><p>Incident details used during the investigation</p></div></div>
+        <div class="form-grid">
+            <div class="form-group"><label>Incident Reference</label><input class="form-control readonly-field" value="<c:out value='${responsibility.incidentCode}'/>" readonly></div>
+            <div class="form-group"><label>Type / Severity</label><input class="form-control readonly-field" value="<c:out value='${responsibility.incidentType}'/> / <c:out value='${responsibility.incidentSeverity}'/>" readonly></div>
+            <div class="form-group"><label>Incident Status</label><input class="form-control readonly-field" value="<c:out value='${responsibility.incidentStatus}'/>" readonly></div>
+            <div class="form-group"><label>Occurred / Reported</label><input class="form-control readonly-field" value="<c:out value='${responsibility.occurredAt}' default='Unknown'/> / <c:out value='${responsibility.reportedAt}'/>" readonly></div>
+            <div class="form-group full-width"><label>Incident Evidence / Description</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.incidentDescription}"/></textarea></div>
+            <div class="form-group full-width"><label>Investigation Note</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.investigationNote}" default="No investigation note."/></textarea></div>
+            <div class="form-group full-width"><label>Incident Handling Result</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.handlingResult}" default="No handling result."/></textarea></div>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header"><div><h3>Related Asset Usage</h3><p>Traceable asset and borrowing history</p></div></div>
+        <div class="form-grid">
+            <div class="form-group"><label>Asset</label><input class="form-control readonly-field" value="<c:out value='${responsibility.assetName}'/> (<c:out value='${responsibility.assetCode}'/>)" readonly></div>
+            <div class="form-group"><label>Usage ID / Status</label><input class="form-control readonly-field" value="#AU-${responsibility.assetUsageId} / <c:out value='${responsibility.usageStatus}'/>" readonly></div>
+            <div class="form-group"><label>Borrowed At</label><input class="form-control readonly-field" value="<c:out value='${responsibility.borrowedAt}'/>" readonly></div>
+            <div class="form-group"><label>Due At</label><input class="form-control readonly-field" value="<c:out value='${responsibility.dueAt}'/>" readonly></div>
+            <div class="form-group full-width"><label>Returned At</label><input class="form-control readonly-field" value="<c:out value='${responsibility.returnedAt}' default='Not returned'/>" readonly></div>
+        </div>
+    </article>
+</div>
+
+<article class="panel">
+    <div class="panel-header"><div><h3>Responsibility Result & Handling Decision</h3><p>Mentor conclusion, compensation or resolution</p></div></div>
+    <div class="form-grid">
+        <div class="form-group full-width"><label>Mentor Finding</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.conclusion}"/></textarea></div>
+        <div class="form-group full-width"><label>Action / Compensation Recommendation</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.decision}" default="No compensation or action specified."/></textarea></div>
+        <div class="form-group full-width"><label>Resolution Note</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.resolutionNote}" default="No resolution note."/></textarea></div>
+        <c:if test="${not empty responsibility.reviewerName}">
+            <div class="form-group"><label>Reviewed By</label><input class="form-control readonly-field" value="<c:out value='${responsibility.reviewerName}'/>" readonly></div>
+            <div class="form-group"><label>Reviewed At</label><input class="form-control readonly-field" value="<c:out value='${responsibility.reviewedAt}'/>" readonly></div>
+            <div class="form-group full-width"><label>Manager Decision</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.reviewNote}" default="No manager note."/></textarea></div>
+        </c:if>
+    </div>
+</article>
