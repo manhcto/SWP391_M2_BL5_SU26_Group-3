@@ -57,40 +57,16 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-<svg class="svg-sprite" aria-hidden="true">
-    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
-    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5L4 17l3 3 7.7-8.3a4 4 0 0 0 5-5L17.4 9 15 6.6l2.3-2.3a4 4 0 0 0-2.6 2Z"/></symbol>
-    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></symbol>
-    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
-    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
-    <symbol id="i-file-excel" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="17"/><line x1="16" y1="13" x2="8" y2="17"/></symbol>
-</svg>
+<c:set var="activeMenu" value="users" scope="request"/>
 <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-        <a class="brand" href="${pageContext.request.contextPath}/admin/dashboard" aria-label="LAB Asset home">
-            <span class="brand-mark"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"></span>
-            <span><strong>LAB ASSET</strong><small>ADMIN PORTAL</small></span>
-        </a>
-        <nav class="side-nav">
-            <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
-            <a class="nav-link active" href="${pageContext.request.contextPath}/admin/users" aria-current="page"><svg><use href="#i-users"/></svg><span>User Management</span></a>
-            <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-wrench"/></svg><span>Database Status</span></a>
-            <a class="nav-link" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-users"/></svg><span>My Profile</span></a>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong>System Admin</strong><span><i></i> Online (Superuser)</span></div></div>
-            <a class="sign-out" href="${pageContext.request.contextPath}/login"><svg><use href="#i-logout"/></svg><span>Sign out</span></a>
-        </div>
-    </aside>
-    <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>
+    <%@ include file="../includes/sidebar.jspf"%>
 
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1><c:choose><c:when test="${formMode == 'import'}">Batch Import Accounts from Excel</c:when><c:when test="${formMode == 'edit'}">Edit User Role & Status (#USR-${user.userId})</c:when><c:otherwise>Add New User Account</c:otherwise></c:choose></h1><p>Admin manages accounts for Student, Mentor, and Lab Manager</p></div></div>
             <div class="topbar-actions">
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users">‹ Back to Users List</a>
-                <div class="top-profile"><div class="avatar">AD</div><span>Administrator</span></div>
+                <div class="top-profile"><div class="avatar">AD</div><span><c:out value="${currentUser.fullName}"/></span></div>
             </div>
         </header>
 
@@ -113,8 +89,8 @@
                             <div style="margin-bottom: 16px;">
                                 <label style="font-size:12px; font-weight:700; color:#1a2521; display:block; margin-bottom:8px;">1. Chọn loại tài khoản cần Import từ Excel:</label>
                                 <div class="role-pill-group">
-                                    <label class="role-pill active" id="pill-STUDENT" onclick="selectImportRole('STUDENT')">
-                                        <input type="radio" name="importRoleRadio" value="STUDENT" checked>
+                                    <label class="role-pill active" id="pill-INTERN" onclick="selectImportRole('INTERN')">
+                                        <input type="radio" name="importRoleRadio" value="INTERN" checked>
                                         <div>
                                             <div>🎓 Sinh viên (Student)</div>
                                             <small style="font-size:10px; color:#68736f; font-weight:400;">4 cột: Họ tên, Mã SV, Ngành, Khóa</small>
@@ -163,7 +139,7 @@
                             </div>
 
                             <form id="importForm" method="post" action="${pageContext.request.contextPath}/admin/users/import" style="display:none; margin-top:20px;">
-                                <input type="hidden" name="targetRole" id="targetRoleInput" value="STUDENT">
+                                <input type="hidden" name="targetRole" id="targetRoleInput" value="INTERN">
                                 <textarea name="importData" id="importDataText" style="display:none;"></textarea>
                                 
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -231,7 +207,7 @@
                                         <select class="form-control" name="role" style="border-color: #188255; font-weight: 600;">
                                             <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR (2) - Giảng viên hướng dẫn</option>
                                             <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER (3) - Cán bộ quản lý Lab</option>
-                                            <option value="STUDENT" ${user.role == 'STUDENT' ? 'selected' : ''}>STUDENT (1) - Sinh viên</option>
+                                            <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Intern</option>
                                         </select>
                                     </c:otherwise>
                                 </c:choose>
@@ -263,7 +239,7 @@
                             <div class="form-group">
                                 <label>Vai trò cần tạo (Role) *</label>
                                 <select class="form-control" name="role" id="roleSelect" onchange="toggleStudentFields()">
-                                    <option value="STUDENT" ${user.role == 'STUDENT' ? 'selected' : ''}>STUDENT (1) - Sinh viên</option>
+                                    <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Intern</option>
                                     <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR (2) - Giảng viên hướng dẫn</option>
                                     <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER (3) - Cán bộ quản lý Lab</option>
                                 </select>
@@ -310,6 +286,7 @@
 </div>
 
 <script>
+<<<<<<< HEAD
     function showImportError(msg) {
         document.getElementById('importErrorMsg').innerText = msg;
         document.getElementById('importErrorAlert').style.display = 'block';
@@ -320,6 +297,9 @@
     function hideImportError() {
         document.getElementById('importErrorAlert').style.display = 'none';
     }
+=======
+    let currentSelectedRole = 'INTERN';
+>>>>>>> 92729230901428c44a5b5971da07ad103bf52702
 
     function selectImportRole(role) {
         hideImportError();
@@ -333,14 +313,20 @@
         document.getElementById('targetRoleInput').value = role;
 
         const roleNames = {
-            'STUDENT': 'Sinh viên',
+            'INTERN': 'Intern',
             'MENTOR': 'Giảng viên (Mentor)',
             'LAB_MANAGER': 'Quản lý Lab (Lab Manager)'
         };
         const roleHints = {
+<<<<<<< HEAD
             'STUDENT': 'Hệ thống sẽ tự động quét Họ tên, Mã SV, Email FPT, Chuyên ngành và Khóa',
             'MENTOR': 'Hệ thống sẽ tự động quét Họ tên, Email FPT và Bộ môn / Khoa',
             'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và Email FPT của Quản lý Lab'
+=======
+            'INTERN': 'Intern cần có mã intern và Gmail xác thực.',
+            'MENTOR': 'Hệ thống sẽ tự động quét Họ tên và sinh email giảng viên dạng [ten][ho]@fpt.edu.vn',
+            'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và sinh email quản lý dạng [ten][ho]@fpt.edu.vn'
+>>>>>>> 92729230901428c44a5b5971da07ad103bf52702
         };
 
         document.getElementById('step2Label').innerText = '2. Tải lên file Excel danh sách ' + roleNames[role] + ':';
@@ -352,7 +338,7 @@
         document.getElementById('importForm').style.display = 'none';
     }
 
-    function generateFptEmail(fullName, code, isStudent) {
+    function generateFptEmail(fullName, code, isIntern) {
         if (!fullName) return "";
         let clean = fullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase().trim();
         let words = clean.split(/\s+/);
@@ -362,7 +348,7 @@
         for (let i = 0; i < words.length - 1; i++) {
             initials += words[i].charAt(0);
         }
-        if (isStudent && code) {
+        if (isIntern && code) {
             return firstName + initials + code.trim().toLowerCase() + "@fpt.edu.vn";
         }
         return firstName + initials + "@fpt.edu.vn";
@@ -483,7 +469,7 @@
             // Trích xuất dữ liệu người dùng sau khi đã xác thực khớp định dạng
             let parsedUsers = [];
             let linesForServer = [];
-            const isStudent = (currentSelectedRole === 'STUDENT');
+            const isIntern = (currentSelectedRole === 'INTERN');
 
             for (let i = 0; i < dataRows.length; i++) {
                 let row = dataRows[i];
@@ -495,7 +481,7 @@
                 let major = "";
                 let cohort = "";
 
-                if (isStudent) {
+                if (isIntern) {
                     code = col1;
                     let col2 = String(row[2] || '').trim();
                     if (col2.includes('@')) {
@@ -545,8 +531,8 @@
 
             // Update Thead
             const thead = document.getElementById('previewThead');
-            if (isStudent) {
-                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Mã SV</th><th>Email FPT (từ file)</th><th>Chuyên ngành</th><th>Khóa</th></tr>';
+            if (isStudent || isIntern) {
+                thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Mã intern</th><th>Gmail</th><th>Khóa</th></tr>';
             } else if (currentSelectedRole === 'MENTOR') {
                 thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Email FPT (từ file)</th><th>Bộ môn / Khoa</th><th>Vai trò</th></tr>';
             } else {
@@ -558,12 +544,11 @@
             tbody.innerHTML = '';
             parsedUsers.forEach((u, idx) => {
                 const tr = document.createElement('tr');
-                if (isStudent) {
+                if (isIntern) {
                     tr.innerHTML = '<td>' + (idx + 1) + '</td>' +
                         '<td><b>' + u.fullName + '</b></td>' +
                         '<td>' + u.code + '</td>' +
                         '<td><span style="color:#188255; font-weight:600;">' + u.email + '</span></td>' +
-                        '<td>' + u.major + '</td>' +
                         '<td>' + u.cohort + '</td>';
                 } else if (currentSelectedRole === 'MENTOR') {
                     tr.innerHTML = '<td>' + (idx + 1) + '</td>' +
@@ -596,7 +581,7 @@
     function downloadSampleExcel() {
         let csvContent = "";
         let fileName = "";
-        if (currentSelectedRole === 'STUDENT') {
+        if (currentSelectedRole === 'INTERN') {
             csvContent = "Họ và tên,Mã sinh viên,Email FPT,Chuyên ngành,Khóa\n" +
                 "Lê Hoàng Nam,SE160123,namlhse160123@fpt.edu.vn,Software Engineering,K16\n" +
                 "Trần Bảo Ngọc,HE150442,ngoctbhe150442@fpt.edu.vn,IoT Embedded Systems,K15\n" +
@@ -628,13 +613,13 @@
     function toggleStudentFields() {
         const roleSelect = document.getElementById('roleSelect');
         if (!roleSelect) return;
-        const isStudent = roleSelect.value === 'STUDENT';
+        const isIntern = roleSelect.value === 'INTERN';
         const scGroup = document.getElementById('studentCodeGroup');
         const mjGroup = document.getElementById('majorGroup');
         const chGroup = document.getElementById('cohortGroup');
-        if (scGroup) scGroup.style.display = isStudent ? 'flex' : 'none';
-        if (mjGroup) mjGroup.style.display = isStudent ? 'flex' : 'none';
-        if (chGroup) chGroup.style.display = isStudent ? 'flex' : 'none';
+        if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
+        if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
+        if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
     }
     toggleStudentFields();
 </script>

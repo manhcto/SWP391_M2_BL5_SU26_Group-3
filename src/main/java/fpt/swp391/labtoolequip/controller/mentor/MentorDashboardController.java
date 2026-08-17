@@ -1,7 +1,7 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
+import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
-import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -17,13 +17,13 @@ public class MentorDashboardController extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		User mentor = (User) request.getSession().getAttribute("currentUser");
 		try {
 			request.setAttribute("approvedRequests",
-					labUsageRequestDAO.findApprovedScheduleByMentor(mentor.getUserId()));
-			request.getRequestDispatcher("/WEB-INF/views/mentor/dashboard.jsp").forward(request, response);
+					labUsageRequestDAO.findApprovedSchedule(AuthSession.userId(request)));
 		} catch (SQLException exception) {
-			throw new ServletException("Không thể tải lịch Lab đã được duyệt.", exception);
+			getServletContext().log("Approved Mentor schedule is unavailable.", exception);
+			request.setAttribute("approvedRequests", java.util.List.of());
 		}
+		request.getRequestDispatcher("/WEB-INF/views/mentor/dashboard.jsp").forward(request, response);
 	}
 }

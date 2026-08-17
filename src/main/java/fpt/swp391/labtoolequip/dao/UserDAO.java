@@ -79,6 +79,25 @@ public class UserDAO {
 		}
 	}
 
+	public boolean linkGoogleSubject(long userId, String googleSubject) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET google_subject = ?, updated_at = SYSUTCDATETIME()
+				WHERE user_id = ? AND (google_subject IS NULL OR google_subject = ?)
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, googleSubject);
+			statement.setLong(2, userId);
+			statement.setString(3, googleSubject);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
+	public boolean bindGoogleSubject(long userId, String googleSubject) throws SQLException {
+		return linkGoogleSubject(userId, googleSubject);
+	}
+
 	public long create(User user) throws SQLException {
 		String insertUser = """
 				INSERT INTO dbo.users (full_name, email, password_hash, role, status)
@@ -104,7 +123,7 @@ public class UserDAO {
 					}
 				}
 
-				if ("STUDENT".equals(user.getRole())) {
+				if ("INTERN".equals(user.getRole())) {
 					insertStudentProfile(connection, userId, user);
 				}
 				connection.commit();
@@ -178,7 +197,7 @@ public class UserDAO {
 		try (Connection connection = dbConnection.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
-				if (!"STUDENT".equals(user.getRole())) {
+				if (!"INTERN".equals(user.getRole())) {
 					deleteStudentProfile(connection, user.getUserId());
 				}
 
@@ -188,7 +207,7 @@ public class UserDAO {
 					return false;
 				}
 
-				if ("STUDENT".equals(user.getRole())) {
+				if ("INTERN".equals(user.getRole())) {
 					upsertStudentProfile(connection, user);
 				}
 				connection.commit();

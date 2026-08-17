@@ -1,9 +1,9 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
+import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.AssetDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
-import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -55,9 +55,7 @@ public class MentorMaintenanceController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		String keyword = request.getParameter("keyword");
 		String status = request.getParameter("status");
-		User currentUser = (User) request.getSession().getAttribute("currentUser");
-		long mentorId = currentUser != null ? currentUser.getUserId() : 2L;
-		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(mentorId, keyword, status);
+		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(AuthSession.userId(request), keyword, status);
 		request.setAttribute("records", records);
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
@@ -90,14 +88,12 @@ public class MentorMaintenanceController extends HttpServlet {
 		long assetId = Long.parseLong(request.getParameter("assetId"));
 		String description = request.getParameter("description");
 		int quantity = Integer.parseInt(request.getParameter("quantity"));
-		User currentUser = (User) request.getSession().getAttribute("currentUser");
-		long mentorId = currentUser != null ? currentUser.getUserId() : 2L;
 
 		MaintenanceRecord m = new MaintenanceRecord();
 		m.setAssetId(assetId);
 		m.setDescription(description);
 		m.setQuantity(quantity);
-		m.setRequestedBy(mentorId);
+		m.setRequestedBy(AuthSession.userId(request));
 
 		maintenanceDAO.create(m);
 		response.sendRedirect(request.getContextPath() + "/mentor/maintenance?success=submitted");

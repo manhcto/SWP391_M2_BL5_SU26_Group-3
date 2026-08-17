@@ -19,7 +19,7 @@ import org.mindrot.jbcrypt.BCrypt;
 @WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/import",
 		"/admin/users/toggle-status", "/admin/users/change-role"})
 public class UserController extends HttpServlet {
-	private static final Set<String> ROLES = Set.of("ADMIN", "LAB_MANAGER", "MENTOR", "STUDENT");
+	private static final Set<String> ROLES = Set.of("ADMIN", "LAB_MANAGER", "MENTOR", "INTERN");
 	private static final Set<String> STATUSES = Set.of("ACTIVE", "INACTIVE");
 	private static final String LIST_VIEW = "/WEB-INF/views/admin/users/list.jsp";
 	private static final String DETAIL_VIEW = "/WEB-INF/views/admin/users/detail.jsp";
@@ -94,7 +94,7 @@ public class UserController extends HttpServlet {
 			throws ServletException, IOException {
 		User user = new User();
 		user.setStatus("ACTIVE");
-		user.setRole("STUDENT");
+		user.setRole("INTERN");
 		request.setAttribute("user", user);
 		request.setAttribute("formMode", "add");
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
@@ -123,8 +123,8 @@ public class UserController extends HttpServlet {
 
 		// Tự động sinh Email FPT nếu người dùng chưa nhập
 		if (user.getEmail() == null || user.getEmail().isBlank()) {
-			boolean isStudent = "STUDENT".equals(user.getRole());
-			String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(), isStudent);
+			boolean isIntern = "INTERN".equals(user.getRole());
+			String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(), isIntern);
 			user.setEmail(autoEmail);
 		}
 
@@ -146,9 +146,9 @@ public class UserController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		String importData = request.getParameter("importData");
 		String targetRoleParam = normalize(request.getParameter("targetRole"));
-		String selectedRole = Set.of("STUDENT", "MENTOR", "LAB_MANAGER").contains(targetRoleParam)
+		String selectedRole = Set.of("INTERN", "MENTOR", "LAB_MANAGER").contains(targetRoleParam)
 				? targetRoleParam
-				: "STUDENT";
+				: "INTERN";
 
 		if (importData == null || importData.isBlank()) {
 			request.setAttribute("errors", List.of("Vui lòng nhập dữ liệu cần import."));
@@ -176,7 +176,7 @@ public class UserController extends HttpServlet {
 				String major = "Software Engineering";
 				String cohort = "K16";
 
-				if ("STUDENT".equals(role)) {
+				if ("INTERN".equals(role)) {
 					// Thứ tự cột Sinh viên: Họ và tên, Mã sinh viên, Gmail (@fpt.edu.vn), Chuyên
 					// ngành, Khóa
 					code = tokens.length > 1 ? tokens[1].trim() : "";
@@ -215,10 +215,10 @@ public class UserController extends HttpServlet {
 
 				User u = new User();
 				u.setFullName(fullName);
-				u.setStudentCode("STUDENT".equals(role) && !code.isEmpty() ? code : null);
+				u.setStudentCode("INTERN".equals(role) && !code.isEmpty() ? code : null);
 				u.setEmail(email);
-				u.setMajor("STUDENT".equals(role) ? major : null);
-				u.setCohort("STUDENT".equals(role) ? cohort : null);
+				u.setMajor("INTERN".equals(role) ? major : null);
+				u.setCohort("INTERN".equals(role) ? cohort : null);
 				u.setRole(role);
 				u.setStatus("ACTIVE");
 
@@ -268,8 +268,8 @@ public class UserController extends HttpServlet {
 		if (!STATUSES.contains(user.getStatus())) {
 			errors.add("Trạng thái không hợp lệ.");
 		}
-		if ("STUDENT".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
-			errors.add("Mã sinh viên là bắt buộc đối với sinh viên.");
+		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
+			errors.add("Mã intern là bắt buộc đối với intern.");
 		}
 		return errors;
 	}

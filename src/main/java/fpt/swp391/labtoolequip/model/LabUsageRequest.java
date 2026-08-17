@@ -18,9 +18,9 @@ public class LabUsageRequest {
 	private LocalDateTime updatedAt;
 	private String semesterCode;
 	private String semesterName;
+	private String mentorName;
+	private String mentorEmail;
 	private int studentCount;
-	private String scheduleSummary;
-	private List<LabUsageRequestSlot> slots = new ArrayList<>();
 	private List<LabUsageRequestStudent> students = new ArrayList<>();
 
 	public LabUsageRequest() {
@@ -145,28 +145,28 @@ public class LabUsageRequest {
 		this.semesterName = semesterName;
 	}
 
+	public String getMentorName() {
+		return mentorName;
+	}
+
+	public void setMentorName(String mentorName) {
+		this.mentorName = mentorName;
+	}
+
+	public String getMentorEmail() {
+		return mentorEmail;
+	}
+
+	public void setMentorEmail(String mentorEmail) {
+		this.mentorEmail = mentorEmail;
+	}
+
 	public int getStudentCount() {
 		return studentCount;
 	}
 
 	public void setStudentCount(int studentCount) {
 		this.studentCount = studentCount;
-	}
-
-	public String getScheduleSummary() {
-		return scheduleSummary;
-	}
-
-	public void setScheduleSummary(String scheduleSummary) {
-		this.scheduleSummary = scheduleSummary;
-	}
-
-	public List<LabUsageRequestSlot> getSlots() {
-		return slots;
-	}
-
-	public void setSlots(List<LabUsageRequestSlot> slots) {
-		this.slots = slots;
 	}
 
 	public List<LabUsageRequestStudent> getStudents() {
