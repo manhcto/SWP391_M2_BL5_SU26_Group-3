@@ -103,9 +103,9 @@
                                 </select>
                             </div>
 
-                            <div class="form-group full-width" style="margin-top: 14px; display: flex; gap: 10px;">
-                                <button class="primary-button" type="submit">Save Changes</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users">Cancel</a>
+                            <div class="form-group full-width" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #edf0ec; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users" style="height: 38px; padding: 0 18px; font-size: 12px;">‹ Cancel</a>
+                                <button class="primary-button" type="submit" style="height: 38px; padding: 0 22px; font-size: 12px; cursor: pointer;">Save Changes</button>
                             </div>
                         </form>
                     </c:when>
@@ -160,9 +160,9 @@
                                 </select>
                             </div>
 
-                            <div class="form-group full-width" style="margin-top: 14px; display: flex; gap: 10px;">
-                                <button class="primary-button" type="submit">Create User Account</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users">Cancel</a>
+                            <div class="form-group full-width" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #edf0ec; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users" style="height: 38px; padding: 0 18px; font-size: 12px;">‹ Cancel</a>
+                                <button class="primary-button" type="submit" style="height: 38px; padding: 0 22px; font-size: 12px; cursor: pointer;">Create User Account</button>
                             </div>
                         </form>
                     </c:otherwise>
