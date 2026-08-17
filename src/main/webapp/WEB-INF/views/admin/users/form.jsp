@@ -286,7 +286,8 @@
 </div>
 
 <script>
-<<<<<<< HEAD
+    let currentSelectedRole = 'INTERN';
+
     function showImportError(msg) {
         document.getElementById('importErrorMsg').innerText = msg;
         document.getElementById('importErrorAlert').style.display = 'block';
@@ -297,9 +298,6 @@
     function hideImportError() {
         document.getElementById('importErrorAlert').style.display = 'none';
     }
-=======
-    let currentSelectedRole = 'INTERN';
->>>>>>> 92729230901428c44a5b5971da07ad103bf52702
 
     function selectImportRole(role) {
         hideImportError();
@@ -313,25 +311,19 @@
         document.getElementById('targetRoleInput').value = role;
 
         const roleNames = {
-            'INTERN': 'Intern',
+            'INTERN': 'Sinh viên thực tập (Intern)',
             'MENTOR': 'Giảng viên (Mentor)',
             'LAB_MANAGER': 'Quản lý Lab (Lab Manager)'
         };
         const roleHints = {
-<<<<<<< HEAD
-            'STUDENT': 'Hệ thống sẽ tự động quét Họ tên, Mã SV, Email FPT, Chuyên ngành và Khóa',
+            'INTERN': 'Hệ thống sẽ tự động quét Họ tên, Mã sinh viên, Email FPT, Chuyên ngành và Khóa',
             'MENTOR': 'Hệ thống sẽ tự động quét Họ tên, Email FPT và Bộ môn / Khoa',
             'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và Email FPT của Quản lý Lab'
-=======
-            'INTERN': 'Intern cần có mã intern và Gmail xác thực.',
-            'MENTOR': 'Hệ thống sẽ tự động quét Họ tên và sinh email giảng viên dạng [ten][ho]@fpt.edu.vn',
-            'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và sinh email quản lý dạng [ten][ho]@fpt.edu.vn'
->>>>>>> 92729230901428c44a5b5971da07ad103bf52702
         };
 
-        document.getElementById('step2Label').innerText = '2. Tải lên file Excel danh sách ' + roleNames[role] + ':';
-        document.getElementById('btnDownloadText').innerText = 'Tải file Excel mẫu ' + roleNames[role] + ' (.csv)';
-        document.getElementById('dropzoneHint').innerText = roleHints[role];
+        document.getElementById('step2Label').innerText = '2. Tải lên file Excel danh sách ' + (roleNames[role] || role) + ':';
+        document.getElementById('btnDownloadText').innerText = 'Tải file Excel mẫu ' + (roleNames[role] || role) + ' (.csv)';
+        document.getElementById('dropzoneHint').innerText = roleHints[role] || '';
 
         // Reset file and preview
         document.getElementById('excelFileInput').value = '';
@@ -431,15 +423,18 @@
 
             let detectedType = '';
             if (hasStudentCode || maxCols >= 4) {
-                detectedType = 'STUDENT';
+                detectedType = 'INTERN';
             } else if (hasDepartmentCol || maxCols === 3) {
                 detectedType = 'MENTOR';
             } else {
                 detectedType = 'LAB_MANAGER';
             }
 
+            const isRoleIntern = (currentSelectedRole === 'INTERN' || currentSelectedRole === 'STUDENT');
+            const isDetectedIntern = (detectedType === 'INTERN' || detectedType === 'STUDENT');
+
             // Kiểm tra tính tương thích giữa file tải lên và tab vai trò được chọn
-            if (currentSelectedRole === 'STUDENT' && detectedType !== 'STUDENT') {
+            if (isRoleIntern && !isDetectedIntern) {
                 if (detectedType === 'MENTOR') {
                     showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (gồm Họ tên, Email và Bộ môn, không có Mã sinh viên). Vui lòng chọn tab Giảng viên (Mentor) hoặc tải file đúng danh sách Sinh viên.');
                 } else {
@@ -449,7 +444,7 @@
             }
 
             if (currentSelectedRole === 'MENTOR' && detectedType !== 'MENTOR') {
-                if (detectedType === 'STUDENT') {
+                if (isDetectedIntern) {
                     showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Giảng viên. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Giảng viên (3 cột: Họ tên, Email, Bộ môn).');
                 } else {
                     showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ có 2 cột Họ tên và Email, thiếu cột Bộ môn / Khoa của Giảng viên). Vui lòng chọn tab Quản lý Lab hoặc tải đúng file danh sách Giảng viên.');
@@ -458,7 +453,7 @@
             }
 
             if (currentSelectedRole === 'LAB_MANAGER' && detectedType !== 'LAB_MANAGER') {
-                if (detectedType === 'STUDENT') {
+                if (isDetectedIntern) {
                     showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Quản lý Lab.');
                 } else {
                     showImportError('Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (có kèm cột Bộ môn / Khoa) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Giảng viên (Mentor) hoặc tải đúng file danh sách Quản lý Lab (2 cột: Họ tên, Email).');
@@ -469,7 +464,7 @@
             // Trích xuất dữ liệu người dùng sau khi đã xác thực khớp định dạng
             let parsedUsers = [];
             let linesForServer = [];
-            const isIntern = (currentSelectedRole === 'INTERN');
+            const isIntern = isRoleIntern;
 
             for (let i = 0; i < dataRows.length; i++) {
                 let row = dataRows[i];
