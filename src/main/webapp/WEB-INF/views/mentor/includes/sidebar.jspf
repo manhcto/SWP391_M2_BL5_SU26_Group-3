@@ -30,7 +30,7 @@
         <a class="nav-link" href="#"><svg><use href="#i-users"/></svg><span>Interns</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-box"/></svg><span>Assets</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a>
-        <a class="nav-link" href="#"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
+        <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/inspections"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-alert"/></svg><span>Incidents</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/responsibilities"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a>
         <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/maintenance"><svg><use href="#i-wrench"/></svg><span>Maintenance</span></a>

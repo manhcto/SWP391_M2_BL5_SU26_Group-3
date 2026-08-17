@@ -11,6 +11,9 @@
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V3h8v3M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
 </svg>
@@ -26,7 +29,7 @@
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-users"/></svg><span>Interns</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-box"/></svg><span>Assets</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
+        <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/inspections"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
         <a class="nav-link" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-alert"/></svg><span>Incidents</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a>
         <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg><span>Maintenance</span></a>
