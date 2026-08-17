@@ -5,35 +5,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>User Details</title>
+    <title>User Details (#USR-${user.userId}) | LAB Asset</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
 <body>
-<main>
-    <h1>User Details</h1>
-    <c:if test="${param.created == '1'}"><p>User created successfully.</p></c:if>
-    <c:if test="${param.updated == '1'}"><p>User updated successfully.</p></c:if>
+<c:set var="activeMenu" value="users" scope="request"/>
+<div class="app-shell">
+    <%@ include file="../includes/sidebar.jspf"%>
 
-    <dl>
-        <dt>ID</dt><dd><c:out value="${user.userId}"/></dd>
-        <dt>Full name</dt><dd><c:out value="${user.fullName}"/></dd>
-        <dt>Email</dt><dd><c:out value="${user.email}"/></dd>
-        <dt>Role</dt><dd><c:out value="${user.role}"/></dd>
-        <dt>Status</dt><dd><c:out value="${user.status}"/></dd>
-        <dt>Authentication</dt>
-        <dd>${empty user.googleSubject ? 'Local account' : 'Google account linked'}</dd>
-        <c:if test="${user.role == 'STUDENT'}">
-            <dt>Student code</dt><dd><c:out value="${user.studentCode}"/></dd>
-            <dt>Major</dt><dd><c:out value="${user.major}" default="—"/></dd>
-            <dt>Cohort</dt><dd><c:out value="${user.cohort}" default="—"/></dd>
-        </c:if>
-        <dt>Created at</dt><dd><c:out value="${user.createdAt}"/></dd>
-        <dt>Updated at</dt><dd><c:out value="${user.updatedAt}"/></dd>
-    </dl>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>User Profile: <c:out value="${user.fullName}"/></h1><p>Account details & authorization scope</p></div></div>
+            <div class="topbar-actions">
+                <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users">‹ Back to Users</a>
+                <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/edit?id=${user.userId}">Edit User</a>
+            </div>
+        </header>
 
-    <nav>
-        <a href="${pageContext.request.contextPath}/admin/users/edit?id=${user.userId}">Edit User</a> ·
-        <a href="${pageContext.request.contextPath}/admin/users">Back to Users</a>
-    </nav>
-</main>
+        <section class="content-area">
+            <article class="panel">
+                <div class="form-grid">
+                    <div class="form-group"><label>User ID</label><input class="form-control" type="text" value="#USR-${user.userId}" readonly style="background:#f4f6f4;"></div>
+                    <div class="form-group"><label>Full Name</label><input class="form-control" type="text" value="<c:out value='${user.fullName}'/>" readonly style="background:#f4f6f4;"></div>
+                    <div class="form-group"><label>Email Address (@fpt.edu.vn)</label><input class="form-control" type="text" value="<c:out value='${user.email}'/>" readonly style="background:#f4f6f4;"></div>
+                    <div class="form-group"><label>Assigned Role</label><input class="form-control" type="text" value="<c:out value='${user.role}'/>" readonly style="background:#f4f6f4; font-weight:700;"></div>
+                    <c:if test="${not empty user.studentCode}">
+                        <div class="form-group"><label>Student Roll Code</label><input class="form-control" type="text" value="<c:out value='${user.studentCode}'/>" readonly style="background:#f4f6f4;"></div>
+                        <div class="form-group"><label>Major & Cohort</label><input class="form-control" type="text" value="<c:out value='${user.major}' default='Software Engineering'/> (<c:out value='${user.cohort}' default='K16'/>)" readonly style="background:#f4f6f4;"></div>
+                    </c:if>
+                    <div class="form-group"><label>Account Status</label><input class="form-control" type="text" value="<c:out value='${user.status}'/>" readonly style="background:#f4f6f4; color:${user.status == 'ACTIVE' ? '#188255' : '#c63d3d'}; font-weight:700;"></div>
+                    <div class="form-group"><label>Created Date</label><input class="form-control" type="text" value="<c:out value='${user.createdAt}'/>" readonly style="background:#f4f6f4;"></div>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
 </body>
 </html>

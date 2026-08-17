@@ -23,6 +23,7 @@ public final class AuthSession {
 		session.setAttribute(EMAIL, user.getEmail());
 		session.setAttribute(FULL_NAME, user.getFullName());
 		session.setAttribute(ROLE, user.getRole());
+		session.setAttribute("currentUser", user);
 	}
 
 	public static long userId(HttpServletRequest request) {
@@ -39,7 +40,7 @@ public final class AuthSession {
 			case "ADMIN" -> contextPath + "/admin/dashboard";
 			case "LAB_MANAGER" -> contextPath + "/lab-manager/dashboard";
 			case "MENTOR" -> contextPath + "/mentor/dashboard";
-			case "STUDENT" -> contextPath + "/student/dashboard";
+			case "INTERN" -> contextPath + "/intern/dashboard";
 			default -> contextPath + "/login";
 		};
 	}

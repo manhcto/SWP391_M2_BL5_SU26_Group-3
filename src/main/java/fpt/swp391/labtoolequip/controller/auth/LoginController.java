@@ -13,6 +13,7 @@ import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Optional;
+import org.mindrot.jbcrypt.BCrypt;
 import util.AppConfig;
 
 @WebServlet("/login")
@@ -39,10 +40,14 @@ public class LoginController extends HttpServlet {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
 		}
+		request.setCharacterEncoding("UTF-8");
+		String email = request.getParameter("email");
+		String password = request.getParameter("password");
+		request.setAttribute("email", email);
 		try {
-			Optional<User> found = userDAO.findByEmail(request.getParameter("email"));
-			if (found.isEmpty() || !"ACTIVE".equals(found.get().getStatus())) {
-				request.setAttribute("message", "Access denied: active authorized account required.");
+			Optional<User> found = userDAO.findByEmail(email);
+			if (found.isEmpty() || !validPassword(found.get(), password)) {
+				request.setAttribute("message", "Email hoặc mật khẩu không chính xác.");
 				doGet(request, response);
 				return;
 			}
@@ -50,6 +55,18 @@ public class LoginController extends HttpServlet {
 			response.sendRedirect(AuthSession.dashboard(request.getContextPath(), found.get().getRole()));
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
+		}
+	}
+
+	static boolean validPassword(User user, String password) {
+		if (user == null || password == null || !"ACTIVE".equals(user.getStatus()) || user.getPasswordHash() == null
+				|| user.getPasswordHash().isBlank()) {
+			return false;
+		}
+		try {
+			return BCrypt.checkpw(password, user.getPasswordHash());
+		} catch (IllegalArgumentException exception) {
+			return false;
 		}
 	}
 

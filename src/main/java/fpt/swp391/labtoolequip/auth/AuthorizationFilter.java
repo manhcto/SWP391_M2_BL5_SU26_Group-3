@@ -43,8 +43,8 @@ public class AuthorizationFilter implements Filter {
 			return "LAB_MANAGER";
 		if (path.startsWith("/mentor/"))
 			return "MENTOR";
-		if (path.startsWith("/student/"))
-			return "STUDENT";
+		if (path.startsWith("/intern/") || path.startsWith("/student/"))
+			return "INTERN";
 		return null;
 	}
 }

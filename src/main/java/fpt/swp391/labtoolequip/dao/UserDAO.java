@@ -26,7 +26,8 @@ public class UserDAO {
 
 	public List<User> findAll(String keyword, String role, String status) throws SQLException {
 		String sql = SELECT_USER + """
-				WHERE (? = '' OR u.full_name LIKE ? OR u.email LIKE ?)
+				WHERE u.role != 'ADMIN'
+				  AND (? = '' OR u.full_name LIKE ? OR u.email LIKE ? OR sp.student_code LIKE ?)
 				  AND (? = '' OR u.role = ?)
 				  AND (? = '' OR u.status = ?)
 				ORDER BY u.created_at DESC, u.user_id DESC
@@ -40,10 +41,11 @@ public class UserDAO {
 			statement.setString(1, search);
 			statement.setString(2, "%" + search + "%");
 			statement.setString(3, "%" + search + "%");
-			statement.setString(4, roleFilter);
+			statement.setString(4, "%" + search + "%");
 			statement.setString(5, roleFilter);
-			statement.setString(6, statusFilter);
+			statement.setString(6, roleFilter);
 			statement.setString(7, statusFilter);
+			statement.setString(8, statusFilter);
 
 			try (ResultSet result = statement.executeQuery()) {
 				List<User> users = new ArrayList<>();
@@ -67,28 +69,33 @@ public class UserDAO {
 	}
 
 	public Optional<User> findByEmail(String email) throws SQLException {
+		String sql = SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)";
 		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection
-						.prepareStatement(SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)")) {
-			statement.setString(1, email);
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, valueOrEmpty(email));
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
 			}
 		}
 	}
 
-	public boolean bindGoogleSubject(long userId, String subject) throws SQLException {
+	public boolean linkGoogleSubject(long userId, String googleSubject) throws SQLException {
 		String sql = """
 				UPDATE dbo.users
 				SET google_subject = ?, updated_at = SYSUTCDATETIME()
-				WHERE user_id = ? AND google_subject IS NULL
+				WHERE user_id = ? AND (google_subject IS NULL OR google_subject = ?)
 				""";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.setString(1, subject);
+			statement.setString(1, googleSubject);
 			statement.setLong(2, userId);
+			statement.setString(3, googleSubject);
 			return statement.executeUpdate() == 1;
 		}
+	}
+
+	public boolean bindGoogleSubject(long userId, String googleSubject) throws SQLException {
+		return linkGoogleSubject(userId, googleSubject);
 	}
 
 	public long create(User user) throws SQLException {
@@ -116,7 +123,7 @@ public class UserDAO {
 					}
 				}
 
-				if ("STUDENT".equals(user.getRole())) {
+				if ("INTERN".equals(user.getRole())) {
 					insertStudentProfile(connection, userId, user);
 				}
 				connection.commit();
@@ -128,11 +135,69 @@ public class UserDAO {
 		}
 	}
 
+	public int batchCreate(List<User> users) throws SQLException {
+		int createdCount = 0;
+		for (User u : users) {
+			try {
+				if (findByEmail(u.getEmail()).isEmpty()) {
+					create(u);
+					createdCount++;
+				}
+			} catch (SQLException ex) {
+				// Skip duplicates or log
+			}
+		}
+		return createdCount;
+	}
+
+	public boolean toggleStatus(long userId) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET status = CASE WHEN status = 'ACTIVE' THEN 'INACTIVE' ELSE 'ACTIVE' END,
+				    updated_at = SYSUTCDATETIME()
+				WHERE user_id = ?
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, userId);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
+	public boolean updateRole(long userId, String newRole) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET role = ?, updated_at = SYSUTCDATETIME()
+				WHERE user_id = ? AND role IN ('MENTOR', 'LAB_MANAGER')
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, newRole);
+			statement.setLong(2, userId);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
+	public boolean updateRoleAndStatus(long userId, String role, String status) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET role = ?, status = ?, updated_at = SYSUTCDATETIME()
+				WHERE user_id = ?
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, role);
+			statement.setString(2, status);
+			statement.setLong(3, userId);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
 	public boolean update(User user) throws SQLException {
 		try (Connection connection = dbConnection.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
-				if (!"STUDENT".equals(user.getRole())) {
+				if (!"INTERN".equals(user.getRole())) {
 					deleteStudentProfile(connection, user.getUserId());
 				}
 
@@ -142,7 +207,7 @@ public class UserDAO {
 					return false;
 				}
 
-				if ("STUDENT".equals(user.getRole())) {
+				if ("INTERN".equals(user.getRole())) {
 					upsertStudentProfile(connection, user);
 				}
 				connection.commit();
@@ -155,7 +220,7 @@ public class UserDAO {
 	}
 
 	private boolean updateUser(Connection connection, User user) throws SQLException {
-		boolean changePassword = user.getPasswordHash() != null;
+		boolean changePassword = user.getPasswordHash() != null && !user.getPasswordHash().isBlank();
 		String sql = changePassword ? """
 				UPDATE dbo.users
 				SET full_name = ?, email = ?, password_hash = ?, role = ?, status = ?, updated_at = SYSUTCDATETIME()

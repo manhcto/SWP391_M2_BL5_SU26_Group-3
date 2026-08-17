@@ -6,6 +6,10 @@ public class LabUsageRequestStudent {
 	private Long requestId;
 	private Long semesterId;
 	private Long studentId;
+	private String studentCode;
+	private String fullName;
+	private String email;
+	private String cohort;
 	private LocalDateTime addedAt;
 
 	public LabUsageRequestStudent() {
@@ -40,6 +44,38 @@ public class LabUsageRequestStudent {
 
 	public void setStudentId(Long studentId) {
 		this.studentId = studentId;
+	}
+
+	public String getStudentCode() {
+		return studentCode;
+	}
+
+	public void setStudentCode(String studentCode) {
+		this.studentCode = studentCode;
+	}
+
+	public String getFullName() {
+		return fullName;
+	}
+
+	public void setFullName(String fullName) {
+		this.fullName = fullName;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getCohort() {
+		return cohort;
+	}
+
+	public void setCohort(String cohort) {
+		this.cohort = cohort;
 	}
 
 	public LocalDateTime getAddedAt() {

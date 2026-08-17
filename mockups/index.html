@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LAB Asset Portal Navigation</title>
+    <link rel="stylesheet" href="assets/css/mentor-dashboard.css">
+    <style>
+        .portal-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 24px; }
+        .role-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
+        .role-card h2 { margin: 0 0 12px; font-size: 16px; display: flex; align-items: center; justify-content: space-between; }
+        .link-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+        .link-list a { display: block; padding: 8px 12px; border-radius: 6px; background: #f8faf8; color: var(--ink); font-size: 12px; font-weight: 550; transition: all .15s; border: 1px solid #eef2ee; }
+        .link-list a:hover { background: var(--emerald); color: #fff; transform: translateX(3px); }
+    </style>
+</head>
+<body style="background: #f6f5f1;">
+    <div class="portal-container">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <img src="assets/images/fpt-university-logo.png" alt="FPT University" style="height: 50px; margin-bottom: 12px;">
+            <h1 style="margin: 0; font-size: 24px; color: var(--navy);">LAB Asset Management System</h1>
+            <p style="color: var(--muted); margin: 6px 0 0; font-size: 13px;">Full UI Mockup Portal Directory for All 4 Roles</p>
+        </div>
+        <div class="role-grid">
+            <div class="role-card">
+                <h2>Admin Portal <span class="badge badge-purple">4 Screens</span></h2>
+                <ul class="link-list">
+                    <li><a href="admin-dashboard.html">Admin Dashboard</a></li>
+                    <li><a href="admin-users.html">User Management (FE-01)</a></li>
+                    <li><a href="admin-database.html">Database Status</a></li>
+                    <li><a href="admin-profile.html">My Profile</a></li>
+                </ul>
+            </div>
+            <div class="role-card">
+                <h2>Lab Manager Portal <span class="badge badge-green">11 Screens</span></h2>
+                <ul class="link-list">
+                    <li><a href="labmanager-dashboard.html">Lab Manager Dashboard</a></li>
+                    <li><a href="labmanager-requests.html">Lab Requests (FE-03)</a></li>
+                    <li><a href="labmanager-students.html">Students Directory</a></li>
+                    <li><a href="labmanager-assets.html">Assets Management (FE-02)</a></li>
+                    <li><a href="labmanager-asset-usage.html">Asset Usage (FE-04)</a></li>
+                    <li><a href="labmanager-inspections.html">Inspections (FE-05)</a></li>
+                    <li><a href="labmanager-incidents.html">Incidents (FE-06)</a></li>
+                    <li><a href="labmanager-responsibilities.html">Responsibilities (FE-07)</a></li>
+                    <li><a href="labmanager-maintenance.html">Maintenance (FE-08)</a></li>
+                    <li><a href="labmanager-disposal.html">Disposal (FE-09)</a></li>
+                    <li><a href="labmanager-semesters.html">Semesters Management</a></li>
+                </ul>
+            </div>
+            <div class="role-card">
+                <h2>Mentor Portal <span class="badge badge-gold">10 Screens</span></h2>
+                <ul class="link-list">
+                    <li><a href="mentor-dashboard.html">Mentor Dashboard</a></li>
+                    <li><a href="mentor-requests.html">Lab Requests (FE-03)</a></li>
+                    <li><a href="mentor-students.html">Students List</a></li>
+                    <li><a href="mentor-assets.html">Assets Catalog (FE-02)</a></li>
+                    <li><a href="mentor-asset-usage.html">Asset Usage (FE-04)</a></li>
+                    <li><a href="mentor-inspections.html">Inspections (FE-05)</a></li>
+                    <li><a href="mentor-incidents.html">Incidents (FE-06)</a></li>
+                    <li><a href="mentor-responsibilities.html">Responsibilities (FE-07)</a></li>
+                    <li><a href="mentor-maintenance.html">Maintenance (FE-08)</a></li>
+                    <li><a href="mentor-disposal.html">Disposal (FE-09)</a></li>
+                </ul>
+            </div>
+            <div class="role-card">
+                <h2>Student Portal <span class="badge badge-blue">7 Screens</span></h2>
+                <ul class="link-list">
+                    <li><a href="student-dashboard.html">Student Dashboard</a></li>
+                    <li><a href="student-assets.html">Asset List (FE-02)</a></li>
+                    <li><a href="student-borrow.html">Borrow Asset (FE-04)</a></li>
+                    <li><a href="student-return.html">Return Asset (FE-04)</a></li>
+                    <li><a href="student-usage-history.html">My Usage History (FE-04)</a></li>
+                    <li><a href="student-incidents.html">My Incidents (FE-06)</a></li>
+                    <li><a href="student-responsibilities.html">My Responsibilities (FE-07)</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -9,8 +9,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -156,32 +156,25 @@ public class AssetUsageDAO {
 	}
 
 	private Membership currentMembership(Connection connection, long userId, ZonedDateTime now) throws SQLException {
-		int day = now.getDayOfWeek().getValue() + 1;
 		String sql = """
-				SELECT TOP 1 lurs.request_id, lurs.semester_id, lurs.student_id, ts.end_time
+				SELECT TOP 1 lurs.request_id, lurs.semester_id, lurs.student_id, s.end_date
 				FROM dbo.users u
 				JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
 				JOIN dbo.lab_usage_request_students lurs ON lurs.student_id = sp.student_id
 				JOIN dbo.lab_usage_requests lur ON lur.request_id = lurs.request_id AND lur.semester_id = lurs.semester_id
 				JOIN dbo.semesters s ON s.semester_id = lur.semester_id
-				JOIN dbo.lab_usage_request_slots rs ON rs.request_id = lur.request_id AND rs.day_of_week = ?
-				JOIN dbo.lab_time_slots ts ON ts.slot_id = rs.slot_id
-				WHERE u.user_id = ? AND u.role = 'STUDENT' AND u.status = 'ACTIVE' AND sp.status = 'ACTIVE'
+				WHERE u.user_id = ? AND u.role = 'INTERN' AND u.status = 'ACTIVE' AND sp.status = 'ACTIVE'
 				  AND lur.status = 'APPROVED' AND s.status = 'ACTIVE' AND ? BETWEEN s.start_date AND s.end_date
-				  AND CAST(? AS time(0)) >= ts.start_time AND CAST(? AS time(0)) < ts.end_time
-				ORDER BY ts.end_time
+				ORDER BY s.end_date
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.setInt(1, day);
-			statement.setLong(2, userId);
-			statement.setDate(3, java.sql.Date.valueOf(now.toLocalDate()));
-			statement.setTime(4, java.sql.Time.valueOf(now.toLocalTime()));
-			statement.setTime(5, java.sql.Time.valueOf(now.toLocalTime()));
+			statement.setLong(1, userId);
+			statement.setDate(2, java.sql.Date.valueOf(now.toLocalDate()));
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
-					throw new IllegalStateException("No approved membership in the current lab slot.");
+					throw new IllegalStateException("No approved intern list for the current semester.");
 				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3),
-						result.getObject(4, LocalTime.class));
+						result.getDate(4).toLocalDate());
 			}
 		}
 	}
@@ -214,7 +207,7 @@ public class AssetUsageDAO {
 				 condition_before, status, note, created_by) OUTPUT INSERTED.asset_usage_id
 				VALUES (?, ?, ?, ?, ?, SYSUTCDATETIME(), ?, ?, 'IN_USE', ?, ?)
 				""";
-		Instant due = ZonedDateTime.of(now.toLocalDate(), membership.endTime(), labZone).toInstant();
+		Instant due = ZonedDateTime.of(membership.endDate(), java.time.LocalTime.of(23, 59, 59), labZone).toInstant();
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, membership.requestId());
 			statement.setLong(2, membership.semesterId());
@@ -278,6 +271,6 @@ public class AssetUsageDAO {
 	private String blankToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
 	}
-	private record Membership(long requestId, long semesterId, long studentId, LocalTime endTime) {
+	private record Membership(long requestId, long semesterId, long studentId, LocalDate endDate) {
 	}
 }

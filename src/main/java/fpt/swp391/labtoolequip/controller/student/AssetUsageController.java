@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 
-@WebServlet("/student/usages/*")
+@WebServlet({"/intern/usages/*", "/student/usages/*"})
 public class AssetUsageController extends HttpServlet {
 	private final AssetUsageDAO dao = new AssetUsageDAO();
 
@@ -53,7 +53,8 @@ public class AssetUsageController extends HttpServlet {
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 				return;
 			}
-			response.sendRedirect(request.getContextPath() + "/student/usages");
+			String basePath = request.getServletPath().startsWith("/intern/") ? "/intern/usages" : "/student/usages";
+			response.sendRedirect(request.getContextPath() + basePath);
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
