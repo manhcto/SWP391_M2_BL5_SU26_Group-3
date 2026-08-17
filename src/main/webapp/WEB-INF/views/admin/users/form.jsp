@@ -155,6 +155,13 @@
                                 <span style="font-size:11px; color:#8a938f; margin-top:4px; display:block;" id="dropzoneHint">Hệ thống sẽ tự động quét Họ tên + Mã SV và sinh email FPT tương ứng</span>
                             </div>
 
+                            <div id="importErrorAlert" style="display:none; padding: 14px 18px; background: #fdf2f2; border: 1.5px solid #f5c2c2; color: #c63d3d; border-radius: 8px; margin-top: 16px; font-size: 12px; font-weight: 600; line-height: 1.5;">
+                                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                    <span style="font-size: 18px; line-height: 1;">⚠️</span>
+                                    <div id="importErrorMsg">Dữ liệu trong file không phù hợp! Vui lòng chọn file khác.</div>
+                                </div>
+                            </div>
+
                             <form id="importForm" method="post" action="${pageContext.request.contextPath}/admin/users/import" style="display:none; margin-top:20px;">
                                 <input type="hidden" name="targetRole" id="targetRoleInput" value="STUDENT">
                                 <textarea name="importData" id="importDataText" style="display:none;"></textarea>
@@ -303,9 +310,19 @@
 </div>
 
 <script>
-    let currentSelectedRole = 'STUDENT';
+    function showImportError(msg) {
+        document.getElementById('importErrorMsg').innerText = msg;
+        document.getElementById('importErrorAlert').style.display = 'block';
+        document.getElementById('importForm').style.display = 'none';
+        document.getElementById('excelFileInput').value = '';
+    }
+
+    function hideImportError() {
+        document.getElementById('importErrorAlert').style.display = 'none';
+    }
 
     function selectImportRole(role) {
+        hideImportError();
         currentSelectedRole = role;
         document.querySelectorAll('.role-pill').forEach(el => el.classList.remove('active'));
         const activePill = document.getElementById('pill-' + role);
@@ -321,9 +338,9 @@
             'LAB_MANAGER': 'Quản lý Lab (Lab Manager)'
         };
         const roleHints = {
-            'STUDENT': 'Hệ thống sẽ tự động quét Họ tên + Mã SV và sinh email dạng [ten][ho][maSV]@fpt.edu.vn',
-            'MENTOR': 'Hệ thống sẽ tự động quét Họ tên và sinh email giảng viên dạng [ten][ho]@fpt.edu.vn',
-            'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và sinh email quản lý dạng [ten][ho]@fpt.edu.vn'
+            'STUDENT': 'Hệ thống sẽ tự động quét Họ tên, Mã SV, Email FPT, Chuyên ngành và Khóa',
+            'MENTOR': 'Hệ thống sẽ tự động quét Họ tên, Email FPT và Bộ môn / Khoa',
+            'LAB_MANAGER': 'Hệ thống sẽ tự động quét Họ tên và Email FPT của Quản lý Lab'
         };
 
         document.getElementById('step2Label').innerText = '2. Tải lên file Excel danh sách ' + roleNames[role] + ':';
@@ -345,24 +362,29 @@
         for (let i = 0; i < words.length - 1; i++) {
             initials += words[i].charAt(0);
         }
-        let cleanCode = (isStudent && code && !code.includes("@")) ? code.trim().toLowerCase() : "";
-        return firstName + initials + cleanCode + "@fpt.edu.vn";
+        if (isStudent && code) {
+            return firstName + initials + code.trim().toLowerCase() + "@fpt.edu.vn";
+        }
+        return firstName + initials + "@fpt.edu.vn";
     }
 
     function handleDrop(e) {
         e.preventDefault();
+        hideImportError();
         if (e.dataTransfer.files.length > 0) {
             parseExcelFile(e.dataTransfer.files[0]);
         }
     }
 
     function handleExcelUpload(e) {
+        hideImportError();
         if (e.target.files.length > 0) {
             parseExcelFile(e.target.files[0]);
         }
     }
 
     function parseExcelFile(file) {
+        hideImportError();
         const reader = new FileReader();
         const isCsv = file.name.endsWith('.csv');
 
@@ -405,12 +427,23 @@
                 let cohort = "";
 
                 if (isStudent) {
+                    // Kiểm tra nếu ném nhầm file Quản lý Lab / Giảng viên (chỉ có Họ tên và Email, không có Mã SV)
                     if (col1.includes('@')) {
-                        // Người dùng tải file 2 cột (Họ tên, Email) vào tab Sinh viên
-                        email = col1;
-                        code = "";
-                        major = String(row[2] || 'Software Engineering').trim();
-                        cohort = String(row[3] || 'K16').trim();
+                        let foundCode = '';
+                        for (let c = 2; c < row.length; c++) {
+                            let val = String(row[c] || '').trim();
+                            if (val && !val.includes('@') && /^[A-Za-z]{2}[0-9]{4,8}$/i.test(val)) {
+                                foundCode = val;
+                                break;
+                            }
+                        }
+                        if (!foundCode) {
+                            showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên dường như là danh sách Quản lý Lab / Giảng viên (chỉ gồm Họ tên và Email, thiếu cột Mã sinh viên). Vui lòng chọn lại đúng file danh sách Sinh viên hoặc chuyển sang tab loại tài khoản tương ứng.');
+                            return;
+                        } else {
+                            code = foundCode;
+                            email = col1;
+                        }
                     } else {
                         code = col1;
                         let col2 = String(row[2] || '').trim();
@@ -426,9 +459,16 @@
                         }
                     }
                     if (!email) email = generateFptEmail(fullName, code, true);
-                    parsedUsers.push({ fullName, code: code || '— (Chưa có)', email, major, cohort });
+                    parsedUsers.push({ fullName, code, email, major, cohort });
                     linesForServer.push(fullName + ',' + code + ',' + email + ',' + major + ',' + cohort + ',' + currentSelectedRole);
                 } else if (currentSelectedRole === 'MENTOR') {
+                    // Kiểm tra nếu ném nhầm file Sinh viên vào mục Mentor
+                    let hasEmail = (col1.includes('@') || String(row[2] || '').includes('@'));
+                    if (!hasEmail && /^[A-Za-z]{2}[0-9]{4,8}$/i.test(col1)) {
+                        showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (có chứa Mã sinh viên) thay vì danh sách Giảng viên (Mentor). Vui lòng chuyển sang tab Sinh viên để Import.');
+                        return;
+                    }
+
                     let col1Text = col1;
                     if (col1Text.includes('@')) {
                         email = col1Text;
@@ -443,6 +483,13 @@
                     linesForServer.push(fullName + ',' + email + ',' + major + ',,' + currentSelectedRole);
                 } else {
                     // LAB_MANAGER: Chỉ cần Họ tên & Email FPT
+                    // Kiểm tra nếu ném nhầm file Sinh viên vào mục Lab Manager
+                    let hasEmail = (col1.includes('@') || String(row[2] || '').includes('@'));
+                    if (!hasEmail && /^[A-Za-z]{2}[0-9]{4,8}$/i.test(col1)) {
+                        showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (có chứa Mã sinh viên) thay vì danh sách Quản lý Lab. Vui lòng chuyển sang tab Sinh viên để Import.');
+                        return;
+                    }
+
                     if (col1.includes('@')) {
                         email = col1;
                     } else {
@@ -456,7 +503,7 @@
             }
 
             if (parsedUsers.length === 0) {
-                alert('Không tìm thấy dữ liệu hợp lệ trong file Excel.');
+                showImportError('⚠️ Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại file của bạn.');
                 return;
             }
 

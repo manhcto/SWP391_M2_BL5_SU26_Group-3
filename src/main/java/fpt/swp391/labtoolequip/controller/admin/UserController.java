@@ -177,26 +177,21 @@ public class UserController extends HttpServlet {
 				String cohort = "K16";
 
 				if ("STUDENT".equals(role)) {
-					String col1 = tokens.length > 1 ? tokens[1].trim() : "";
-					if (col1.contains("@")) {
-						// Người dùng tải file 2 cột (Tên, Email) vào tab Sinh viên
-						email = col1.toLowerCase();
-						code = "";
+					// Thứ tự cột Sinh viên: Họ và tên, Mã sinh viên, Gmail (@fpt.edu.vn), Chuyên
+					// ngành, Khóa
+					code = tokens.length > 1 ? tokens[1].trim() : "";
+					if (tokens.length > 2 && tokens[2].contains("@")) {
+						email = tokens[2].trim().toLowerCase();
+						major = tokens.length > 3 ? tokens[3].trim() : "Software Engineering";
+						cohort = tokens.length > 4 ? tokens[4].trim() : "K16";
+					} else {
+						// Nếu người dùng không điền email thì tìm trong các cột khác hoặc tự sinh
+						// fallback
 						major = tokens.length > 2 ? tokens[2].trim() : "Software Engineering";
 						cohort = tokens.length > 3 ? tokens[3].trim() : "K16";
-					} else {
-						code = col1;
-						if (tokens.length > 2 && tokens[2].contains("@")) {
-							email = tokens[2].trim().toLowerCase();
-							major = tokens.length > 3 ? tokens[3].trim() : "Software Engineering";
-							cohort = tokens.length > 4 ? tokens[4].trim() : "K16";
-						} else {
-							major = tokens.length > 2 ? tokens[2].trim() : "Software Engineering";
-							cohort = tokens.length > 3 ? tokens[3].trim() : "K16";
-							email = (tokens.length > 4 && tokens[4].contains("@"))
-									? tokens[4].trim().toLowerCase()
-									: EmailHelper.generateFptEmail(fullName, code, true);
-						}
+						email = (tokens.length > 4 && tokens[4].contains("@"))
+								? tokens[4].trim().toLowerCase()
+								: EmailHelper.generateFptEmail(fullName, code, true);
 					}
 					if (email.isEmpty()) {
 						email = EmailHelper.generateFptEmail(fullName, code, true);
