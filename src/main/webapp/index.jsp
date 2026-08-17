@@ -1,2 +1,4 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<% response.sendError(404); %>
+<%
+    response.sendRedirect(request.getContextPath() + "/admin/users");
+%>
