@@ -526,7 +526,7 @@
 
             // Update Thead
             const thead = document.getElementById('previewThead');
-            if (isStudent || isIntern) {
+            if (isIntern) {
                 thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Mã intern</th><th>Gmail</th><th>Khóa</th></tr>';
             } else if (currentSelectedRole === 'MENTOR') {
                 thead.innerHTML = '<tr><th>STT</th><th>Họ và tên</th><th>Email FPT (từ file)</th><th>Bộ môn / Khoa</th><th>Vai trò</th></tr>';
