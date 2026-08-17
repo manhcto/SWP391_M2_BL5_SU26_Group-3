@@ -83,7 +83,7 @@
                                     <th style="text-align: right;">Actions</th>
                                 </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="userTableBody">
                                 <c:forEach var="u" items="${users}">
                                     <tr>
                                         <td><strong>#USR-${u.userId}</strong></td>
@@ -127,9 +127,17 @@
                             </table>
                         </div>
                         <div class="table-footer">
-                            <div class="page-size-selector"><span>Show</span><select class="form-control" style="width: auto; height: 28px;"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select><span>entries per page</span></div>
-                            <span>Showing 1 to ${users.size()} of ${users.size()} users</span>
-                            <div class="pagination-controls"><button class="page-btn" disabled>‹</button><button class="page-btn active">1</button><button class="page-btn">2</button><button class="page-btn">›</button></div>
+                            <div class="page-size-selector">
+                                <span>Show</span>
+                                <select class="form-control" id="pageSizeSelect" style="width: auto; height: 28px;" onchange="changePageSize(this.value)">
+                                    <option value="10" selected>10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <span>entries per page</span>
+                            </div>
+                            <span id="pageInfoText">Showing 1 to ${users.size()} of ${users.size()} users</span>
+                            <div class="pagination-controls" id="paginationControls"></div>
                         </div>
                     </c:otherwise>
                 </c:choose>
@@ -137,5 +145,72 @@
         </section>
     </main>
 </div>
+
+<script>
+    let currentPage = 1;
+    let pageSize = 10;
+
+    function renderPagination() {
+        const rows = document.querySelectorAll('#userTableBody tr');
+        const totalRows = rows.length;
+        if (totalRows === 0) return;
+
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        // Show/hide rows
+        const start = (currentPage - 1) * pageSize;
+        const end = Math.min(start + pageSize, totalRows);
+
+        rows.forEach((row, idx) => {
+            row.style.display = (idx >= start && idx < end) ? '' : 'none';
+        });
+
+        // Update info text
+        const info = document.getElementById('pageInfoText');
+        if (info) {
+            info.innerText = 'Showing ' + (start + 1) + ' to ' + end + ' of ' + totalRows + ' users';
+        }
+
+        // Render controls
+        const container = document.getElementById('paginationControls');
+        if (!container) return;
+        container.innerHTML = '';
+
+        // Prev btn
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'page-btn';
+        prevBtn.innerText = '‹';
+        prevBtn.disabled = (currentPage === 1);
+        prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderPagination(); } };
+        container.appendChild(prevBtn);
+
+        // Page number buttons
+        for (let p = 1; p <= totalPages; p++) {
+            const pBtn = document.createElement('button');
+            pBtn.className = 'page-btn' + (p === currentPage ? ' active' : '');
+            pBtn.innerText = p;
+            pBtn.onclick = () => { currentPage = p; renderPagination(); };
+            container.appendChild(pBtn);
+        }
+
+        // Next btn
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'page-btn';
+        nextBtn.innerText = '›';
+        nextBtn.disabled = (currentPage === totalPages);
+        nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderPagination(); } };
+        container.appendChild(nextBtn);
+    }
+
+    function changePageSize(val) {
+        pageSize = parseInt(val, 10) || 10;
+        currentPage = 1;
+        renderPagination();
+    }
+
+    document.addEventListener('DOMContentLoaded', renderPagination);
+    renderPagination();
+</script>
 </body>
 </html>

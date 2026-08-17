@@ -197,17 +197,20 @@
                             </c:if>
 
                             <div class="form-group">
-                                <label>Vai trò (Role) * <small style="color:#188255; font-weight:600;">(Được phép đổi quyền)</small></label>
+                                <label>Vai trò (Role) *</label>
                                 <c:choose>
                                     <c:when test="${user.role == 'ADMIN'}">
-                                        <input class="form-control readonly-field" type="text" value="ADMIN (4) - Tài khoản Quản trị viên duy nhất" readonly disabled>
+                                        <input class="form-control readonly-field" type="text" value="ADMIN - Quản trị viên hệ thống (Cố định)" readonly disabled>
                                         <input type="hidden" name="role" value="ADMIN">
+                                    </c:when>
+                                    <c:when test="${user.role == 'INTERN'}">
+                                        <input class="form-control readonly-field" type="text" value="INTERN - Sinh viên thực tập (Cố định)" readonly disabled>
+                                        <input type="hidden" name="role" value="INTERN">
                                     </c:when>
                                     <c:otherwise>
                                         <select class="form-control" name="role" style="border-color: #188255; font-weight: 600;">
-                                            <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR (2) - Giảng viên hướng dẫn</option>
-                                            <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER (3) - Cán bộ quản lý Lab</option>
-                                            <option value="INTERN" ${user.role == 'INTERN' ? 'selected' : ''}>INTERN - Intern</option>
+                                            <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>MENTOR - Giảng viên hướng dẫn</option>
+                                            <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER - Quản lý Lab</option>
                                         </select>
                                     </c:otherwise>
                                 </c:choose>

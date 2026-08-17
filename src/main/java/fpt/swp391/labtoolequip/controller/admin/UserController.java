@@ -263,6 +263,15 @@ public class UserController extends HttpServlet {
 		String role = normalize(request.getParameter("role"));
 		String status = normalize(request.getParameter("status"));
 
+		// Quy tắc nghiệp vụ: INTERN và ADMIN không thể đổi sang vai trò khác
+		if ("INTERN".equals(user.getRole()) || "ADMIN".equals(user.getRole())) {
+			role = user.getRole();
+		} else if ("MENTOR".equals(user.getRole()) || "LAB_MANAGER".equals(user.getRole())) {
+			if (!"MENTOR".equals(role) && !"LAB_MANAGER".equals(role)) {
+				role = user.getRole();
+			}
+		}
+
 		List<String> errors = new ArrayList<>();
 		if (!ROLES.contains(role)) {
 			errors.add("Vai trò không hợp lệ.");
