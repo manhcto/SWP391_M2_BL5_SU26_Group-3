@@ -137,11 +137,6 @@
                                 <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="e.g. anhnmse160123@fpt.edu.vn">
                             </div>
 
-                            <div class="form-group" id="passwordGroup">
-                                <label>Mật khẩu khởi tạo (Password) *</label>
-                                <input class="form-control" type="password" name="password" id="passwordInput" placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)...">
-                            </div>
-
                             <div class="form-group" id="majorGroup">
                                 <label>Chuyên ngành (Major)</label>
                                 <input class="form-control" type="text" name="major" value="<c:out value='${user.major}'/>" placeholder="e.g. Software Engineering">
@@ -182,18 +177,10 @@
         const chGroup = document.getElementById('cohortGroup');
         const emailLabel = document.getElementById('emailLabel');
         const emailInput = document.getElementById('emailInput');
-        const pwdGroup = document.getElementById('passwordGroup');
-        const pwdInput = document.getElementById('passwordInput');
 
         if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
         if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
         if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
-
-        if (pwdGroup) pwdGroup.style.display = isIntern ? 'none' : 'flex';
-        if (pwdInput) {
-            pwdInput.required = !isIntern;
-            if (isIntern) pwdInput.value = '';
-        }
 
         if (isIntern) {
             if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) *';

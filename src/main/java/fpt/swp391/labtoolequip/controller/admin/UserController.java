@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import org.mindrot.jbcrypt.BCrypt;
 
 @WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit", "/admin/users/toggle-status",
 		"/admin/users/change-role"})
@@ -128,17 +127,11 @@ public class UserController extends HttpServlet {
 	private void createUser(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		User user = extractUser(request);
-		String rawPassword = trim(request.getParameter("password"));
-
-		List<String> errors = validate(user, true, rawPassword);
+		List<String> errors = validate(user, true);
 
 		if (!errors.isEmpty()) {
 			forwardWithErrors(request, response, user, errors, "add");
 			return;
-		}
-
-		if (!rawPassword.isEmpty()) {
-			user.setPasswordHash(BCrypt.hashpw(rawPassword, BCrypt.gensalt()));
 		}
 
 		userDAO.create(user);
@@ -215,7 +208,7 @@ public class UserController extends HttpServlet {
 		return user;
 	}
 
-	private List<String> validate(User user, boolean isAdd, String rawPassword) {
+	private List<String> validate(User user, boolean isAdd) {
 		List<String> errors = new ArrayList<>();
 		if (user.getFullName().isEmpty()) {
 			errors.add("Họ và tên không được để trống.");
@@ -245,16 +238,6 @@ public class UserController extends HttpServlet {
 
 		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
 			errors.add("Mã sinh viên là bắt buộc đối với sinh viên thực tập (Intern).");
-		}
-
-		// Validate Password khi tạo mới (Chỉ bắt buộc đối với Mentor và Lab Manager;
-		// Intern đăng nhập qua Google OAuth)
-		if (isAdd && !"INTERN".equals(user.getRole())) {
-			if (rawPassword == null || rawPassword.trim().isEmpty()) {
-				errors.add("Mật khẩu khởi tạo không được để trống đối với Giảng viên và Quản lý Lab.");
-			} else if (rawPassword.trim().length() < 6) {
-				errors.add("Mật khẩu phải có tối thiểu 6 ký tự.");
-			}
 		}
 
 		return errors;
