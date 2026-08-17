@@ -133,8 +133,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label id="emailLabel">Email (@fpt.edu.vn) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên)</small></label>
-                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" placeholder="e.g. anhnmse160123@fpt.edu.vn">
+                                <label id="emailLabel">Email (@fpt.edu.vn) *</label>
+                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="e.g. anhnmse160123@fpt.edu.vn">
                             </div>
 
                             <div class="form-group" id="passwordGroup">
@@ -196,10 +196,10 @@
         }
 
         if (isIntern) {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên + Mã SV)</small>';
+            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) *';
             if (emailInput) emailInput.placeholder = 'e.g. anhnmse160123@fpt.edu.vn';
         } else if (roleSelect.value === 'MENTOR') {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn / @gmail.com) <small style="color:#8a938f">(Để trống sẽ tự sinh theo Họ tên)</small> *';
+            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn / @gmail.com) *';
             if (emailInput) emailInput.placeholder = 'e.g. anhnm@fpt.edu.vn hoặc mentor@gmail.com';
         } else {
             if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / @fpt.edu.vn) *';

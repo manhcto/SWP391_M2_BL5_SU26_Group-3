@@ -1,6 +1,5 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
-import fpt.swp391.labtoolequip.common.EmailHelper;
 import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
@@ -130,19 +129,6 @@ public class UserController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		User user = extractUser(request);
 		String rawPassword = trim(request.getParameter("password"));
-
-		// Tự động sinh Email FPT nếu để trống email
-		if ("INTERN".equals(user.getRole())) {
-			if (user.getEmail() == null || user.getEmail().isBlank()) {
-				String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(), true);
-				user.setEmail(autoEmail);
-			}
-		} else if ("MENTOR".equals(user.getRole())) {
-			if (user.getEmail() == null || user.getEmail().isBlank()) {
-				String autoEmail = EmailHelper.generateFptEmail(user.getFullName(), "", false);
-				user.setEmail(autoEmail);
-			}
-		}
 
 		List<String> errors = validate(user, true, rawPassword);
 
