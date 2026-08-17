@@ -3,7 +3,6 @@
   Creates lab_asset_management when it does not exist, then creates the schema.
   Timestamps are stored in UTC.
 */
-
 USE [master];
 GO
 
@@ -80,6 +79,7 @@ BEGIN TRY
         approved_by bigint NULL,
         approved_at datetime2(0) NULL,
         approval_note nvarchar(max) NULL,
+        group_name nvarchar(100) NOT NULL CONSTRAINT DF_lab_usage_requests_group_name DEFAULT (N'Legacy group'),
         created_at datetime2(0) NOT NULL CONSTRAINT DF_lab_usage_requests_created_at DEFAULT (SYSUTCDATETIME()),
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_lab_usage_requests_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_lab_usage_requests PRIMARY KEY (request_id),
@@ -97,6 +97,33 @@ BEGIN TRY
     CREATE INDEX IX_lab_usage_requests_semester ON dbo.lab_usage_requests (semester_id);
     CREATE INDEX IX_lab_usage_requests_mentor ON dbo.lab_usage_requests (mentor_id);
     CREATE INDEX IX_lab_usage_requests_status ON dbo.lab_usage_requests (status);
+
+    CREATE TABLE dbo.lab_time_slots (
+        slot_id tinyint NOT NULL,
+        slot_name varchar(20) NOT NULL,
+        start_time time(0) NOT NULL,
+        end_time time(0) NOT NULL,
+        CONSTRAINT PK_lab_time_slots PRIMARY KEY (slot_id),
+        CONSTRAINT UQ_lab_time_slots_name UNIQUE (slot_name),
+        CONSTRAINT CK_lab_time_slots_time CHECK (start_time < end_time)
+    );
+
+    INSERT dbo.lab_time_slots (slot_id, slot_name, start_time, end_time) VALUES
+        (1, 'SLOT_1', '07:30', '09:50'), (2, 'SLOT_2', '10:00', '12:20'),
+        (3, 'SLOT_3', '12:50', '15:10'), (4, 'SLOT_4', '15:20', '17:30');
+
+    CREATE TABLE dbo.lab_usage_request_slots (
+        request_id bigint NOT NULL,
+        day_of_week tinyint NOT NULL,
+        slot_id tinyint NOT NULL,
+        CONSTRAINT PK_lab_usage_request_slots PRIMARY KEY (request_id, day_of_week, slot_id),
+        CONSTRAINT FK_lab_usage_request_slots_request FOREIGN KEY (request_id)
+            REFERENCES dbo.lab_usage_requests(request_id) ON DELETE CASCADE,
+        CONSTRAINT FK_lab_usage_request_slots_slot FOREIGN KEY (slot_id) REFERENCES dbo.lab_time_slots(slot_id),
+        CONSTRAINT CK_lab_usage_request_slots_day CHECK (day_of_week BETWEEN 2 AND 7)
+    );
+
+    CREATE INDEX IX_lab_usage_request_slots_schedule ON dbo.lab_usage_request_slots (day_of_week, slot_id);
 
     CREATE TABLE dbo.lab_usage_request_students (
         request_id bigint NOT NULL,
@@ -407,12 +434,7 @@ BEGIN TRY
         CONSTRAINT FK_disposal_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_disposal_records_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_disposal_records_quantity CHECK (quantity > 0),
-        CONSTRAINT CK_disposal_records_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')),
-        CONSTRAINT CK_disposal_records_approval CHECK (
-            (status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL)
-            OR (status IN ('APPROVED', 'REJECTED', 'COMPLETED')
-                AND approved_by IS NOT NULL AND approved_at IS NOT NULL)
-        ),
+        CONSTRAINT CK_disposal_records_status CHECK (status IN ('PENDING', 'CANCELLED', 'COMPLETED')),
         CONSTRAINT CK_disposal_records_completion CHECK (
             (status = 'COMPLETED' AND completed_at IS NOT NULL)
             OR (status <> 'COMPLETED' AND completed_at IS NULL)
@@ -422,6 +444,8 @@ BEGIN TRY
     CREATE INDEX IX_disposal_records_asset ON dbo.disposal_records (asset_id);
     CREATE INDEX IX_disposal_records_maintenance ON dbo.disposal_records (maintenance_id) WHERE maintenance_id IS NOT NULL;
     CREATE INDEX IX_disposal_records_status ON dbo.disposal_records (status);
+    CREATE UNIQUE INDEX UX_disposal_records_pending_asset ON dbo.disposal_records (asset_id)
+        WHERE status = 'PENDING';
 
     COMMIT TRANSACTION;
 END TRY

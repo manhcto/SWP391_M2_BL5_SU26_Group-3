@@ -3,6 +3,7 @@ package fpt.swp391.labtoolequip.common;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import util.AppConfig;
 
 public class DBConnection {
 	static {
@@ -22,10 +23,7 @@ public class DBConnection {
 	}
 
 	private static String requiredSetting(String name) {
-		String value = System.getenv(name);
-		if (value == null || value.isBlank()) {
-			value = System.getProperty(name);
-		}
+		String value = AppConfig.get(name);
 		if (value == null || value.isBlank()) {
 			throw new IllegalStateException("Thiếu cấu hình " + name + ".");
 		}
