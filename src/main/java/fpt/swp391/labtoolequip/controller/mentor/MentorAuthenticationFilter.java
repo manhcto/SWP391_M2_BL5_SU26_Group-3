@@ -28,14 +28,28 @@ public class MentorAuthenticationFilter implements Filter {
 		User user = session == null ? null : (User) session.getAttribute("currentUser");
 		if (user == null) {
 			try {
-				user = userDAO.findByEmail(DEMO_MENTOR_EMAIL).orElse(null);
+				user = userDAO.findByEmail("anhnm@fpt.edu.vn").orElse(null);
+				if (user == null) {
+					user = userDAO.findByEmail(DEMO_MENTOR_EMAIL).orElse(null);
+				}
+				if (user == null) {
+					List<User> mentors = userDAO.findAll(null, "MENTOR", "ACTIVE");
+					if (!mentors.isEmpty()) {
+						user = mentors.get(0);
+					}
+				}
+				if (user == null) {
+					User defaultMentor = new User();
+					defaultMentor.setFullName("Nguyễn Minh Anh");
+					defaultMentor.setEmail("anhnm@fpt.edu.vn");
+					defaultMentor.setRole("MENTOR");
+					defaultMentor.setStatus("ACTIVE");
+					long id = userDAO.create(defaultMentor);
+					defaultMentor.setUserId(id);
+					user = defaultMentor;
+				}
 			} catch (SQLException exception) {
 				throw new ServletException("Không thể tải tài khoản Mentor demo.", exception);
-			}
-			if (user == null) {
-				response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
-						"Chưa có tài khoản Mentor demo. Hãy chạy database/migrate_lab_usage_requests.sql.");
-				return;
 			}
 			request.getSession(true).setAttribute("currentUser", user);
 		}

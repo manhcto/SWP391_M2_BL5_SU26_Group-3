@@ -54,7 +54,8 @@ public class MentorMaintenanceController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		String keyword = request.getParameter("keyword");
 		String status = request.getParameter("status");
-		long mentorId = 2L; // Default Mentor user ID for demo/mentor session
+		User currentUser = (User) request.getSession().getAttribute("currentUser");
+		long mentorId = currentUser != null ? currentUser.getUserId() : 2L;
 		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(mentorId, keyword, status);
 		request.setAttribute("records", records);
 		request.setAttribute("keyword", keyword);
@@ -88,12 +89,14 @@ public class MentorMaintenanceController extends HttpServlet {
 		long assetId = Long.parseLong(request.getParameter("assetId"));
 		String description = request.getParameter("description");
 		int quantity = Integer.parseInt(request.getParameter("quantity"));
+		User currentUser = (User) request.getSession().getAttribute("currentUser");
+		long mentorId = currentUser != null ? currentUser.getUserId() : 2L;
 
 		MaintenanceRecord m = new MaintenanceRecord();
 		m.setAssetId(assetId);
 		m.setDescription(description);
 		m.setQuantity(quantity);
-		m.setRequestedBy(2L); // Mentor user ID
+		m.setRequestedBy(mentorId);
 
 		maintenanceDAO.create(m);
 		response.sendRedirect(request.getContextPath() + "/mentor/maintenance?success=submitted");
