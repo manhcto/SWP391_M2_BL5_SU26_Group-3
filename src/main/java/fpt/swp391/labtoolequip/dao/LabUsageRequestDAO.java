@@ -102,8 +102,8 @@ public class LabUsageRequestDAO {
 
 	public int countByStatus(String status) throws SQLException {
 		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection.prepareStatement(
-						"SELECT COUNT(*) FROM dbo.lab_usage_requests WHERE status = ?")) {
+				PreparedStatement statement = connection
+						.prepareStatement("SELECT COUNT(*) FROM dbo.lab_usage_requests WHERE status = ?")) {
 			statement.setString(1, status);
 			try (ResultSet result = statement.executeQuery()) {
 				result.next();
@@ -142,8 +142,8 @@ public class LabUsageRequestDAO {
 
 	public Optional<LabUsageRequest> findByIdForMentor(long requestId, long mentorId) throws SQLException {
 		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection.prepareStatement(
-						SELECT_REQUEST + "WHERE r.request_id = ? AND r.mentor_id = ?")) {
+				PreparedStatement statement = connection
+						.prepareStatement(SELECT_REQUEST + "WHERE r.request_id = ? AND r.mentor_id = ?")) {
 			statement.setLong(1, requestId);
 			statement.setLong(2, mentorId);
 			try (ResultSet result = statement.executeQuery()) {
@@ -236,8 +236,8 @@ public class LabUsageRequestDAO {
 					statement.setLong(5, request.getMentorId());
 					statement.executeUpdate();
 				}
-				try (PreparedStatement statement = connection.prepareStatement(
-						"DELETE dbo.lab_usage_request_student_entries WHERE request_id = ?")) {
+				try (PreparedStatement statement = connection
+						.prepareStatement("DELETE dbo.lab_usage_request_student_entries WHERE request_id = ?")) {
 					statement.setLong(1, request.getRequestId());
 					statement.executeUpdate();
 				}
@@ -304,8 +304,8 @@ public class LabUsageRequestDAO {
 				if ("APPROVED".equals(status)) {
 					synchronizeApprovedMemberships(connection, request);
 				}
-				try (PreparedStatement entries = connection.prepareStatement(
-						"DELETE dbo.lab_usage_request_student_entries WHERE request_id = ?")) {
+				try (PreparedStatement entries = connection
+						.prepareStatement("DELETE dbo.lab_usage_request_student_entries WHERE request_id = ?")) {
 					entries.setLong(1, request.getRequestId());
 					entries.executeUpdate();
 				}
@@ -342,15 +342,15 @@ public class LabUsageRequestDAO {
 					throw new SQLException("Không thể xóa danh sách đã có lịch sử sử dụng tài sản.");
 				}
 				Map<Long, Long> internAccounts = findInternAccounts(connection, requestId);
-				try (PreparedStatement memberships = connection.prepareStatement(
-						"DELETE dbo.lab_usage_request_students WHERE request_id = ?")) {
+				try (PreparedStatement memberships = connection
+						.prepareStatement("DELETE dbo.lab_usage_request_students WHERE request_id = ?")) {
 					memberships.setLong(1, requestId);
 					memberships.executeUpdate();
 				}
 				try (PreparedStatement statement = connection.prepareStatement("""
-						DELETE FROM dbo.lab_usage_requests
-						WHERE request_id = ?
-					""")) {
+							DELETE FROM dbo.lab_usage_requests
+							WHERE request_id = ?
+						""")) {
 					statement.setLong(1, requestId);
 					boolean deleted = statement.executeUpdate() == 1;
 					if (deleted) {
@@ -390,8 +390,8 @@ public class LabUsageRequestDAO {
 
 	private Set<Long> findMembershipStudentIds(Connection connection, long requestId) throws SQLException {
 		Set<Long> studentIds = new HashSet<>();
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT student_id FROM dbo.lab_usage_request_students WHERE request_id = ?")) {
+		try (PreparedStatement statement = connection
+				.prepareStatement("SELECT student_id FROM dbo.lab_usage_request_students WHERE request_id = ?")) {
 			statement.setLong(1, requestId);
 			try (ResultSet result = statement.executeQuery()) {
 				while (result.next()) {
@@ -403,8 +403,8 @@ public class LabUsageRequestDAO {
 	}
 
 	private boolean hasAssetUsage(Connection connection, long requestId) throws SQLException {
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.asset_usages WHERE request_id = ?")) {
+		try (PreparedStatement statement = connection
+				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE request_id = ?")) {
 			statement.setLong(1, requestId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -447,13 +447,13 @@ public class LabUsageRequestDAO {
 			if (hasOtherInternReferences(connection, requestId, userId, studentId)) {
 				continue;
 			}
-			try (PreparedStatement profile = connection.prepareStatement(
-					"DELETE dbo.student_profiles WHERE student_id = ?")) {
+			try (PreparedStatement profile = connection
+					.prepareStatement("DELETE dbo.student_profiles WHERE student_id = ?")) {
 				profile.setLong(1, studentId);
 				profile.executeUpdate();
 			}
-			try (PreparedStatement user = connection.prepareStatement(
-					"DELETE dbo.users WHERE user_id = ? AND role = 'INTERN'")) {
+			try (PreparedStatement user = connection
+					.prepareStatement("DELETE dbo.users WHERE user_id = ? AND role = 'INTERN'")) {
 				user.setLong(1, userId);
 				user.executeUpdate();
 			}
@@ -464,25 +464,25 @@ public class LabUsageRequestDAO {
 			throws SQLException {
 		if (exists(connection,
 				"SELECT 1 FROM dbo.lab_usage_request_student_entries e JOIN dbo.users u ON LOWER(u.email) = LOWER(e.email) "
-						+ "WHERE e.request_id <> ? AND u.user_id = ?", requestId, userId)
+						+ "WHERE e.request_id <> ? AND u.user_id = ?",
+				requestId, userId)
 				|| exists(connection,
-						"SELECT 1 FROM dbo.lab_usage_request_students WHERE request_id <> ? AND student_id = ?", requestId,
-						studentId)
+						"SELECT 1 FROM dbo.lab_usage_request_students WHERE request_id <> ? AND student_id = ?",
+						requestId, studentId)
 				|| exists(connection, "SELECT 1 FROM dbo.asset_usages WHERE student_id = ?", studentId)
 				|| exists(connection, "SELECT 1 FROM dbo.responsibilities WHERE student_id = ?", studentId)) {
 			return true;
 		}
 		return exists(connection, "SELECT 1 FROM dbo.lab_usage_requests WHERE mentor_id = ? OR approved_by = ?", userId,
-				userId)
-				|| exists(connection, "SELECT 1 FROM dbo.asset_usages WHERE created_by = ?", userId)
+				userId) || exists(connection, "SELECT 1 FROM dbo.asset_usages WHERE created_by = ?", userId)
 				|| exists(connection, "SELECT 1 FROM dbo.inspection_records WHERE inspected_by = ?", userId)
 				|| exists(connection, "SELECT 1 FROM dbo.incidents WHERE reported_by = ?", userId)
-				|| exists(connection, "SELECT 1 FROM dbo.responsibilities WHERE determined_by = ? OR reviewed_by = ?", userId,
-						userId)
-				|| exists(connection, "SELECT 1 FROM dbo.maintenance_records WHERE requested_by = ? OR approved_by = ?", userId,
-						userId)
-				|| exists(connection, "SELECT 1 FROM dbo.disposal_records WHERE requested_by = ? OR approved_by = ?", userId,
-						userId);
+				|| exists(connection, "SELECT 1 FROM dbo.responsibilities WHERE determined_by = ? OR reviewed_by = ?",
+						userId, userId)
+				|| exists(connection, "SELECT 1 FROM dbo.maintenance_records WHERE requested_by = ? OR approved_by = ?",
+						userId, userId)
+				|| exists(connection, "SELECT 1 FROM dbo.disposal_records WHERE requested_by = ? OR approved_by = ?",
+						userId, userId);
 	}
 
 	private boolean exists(Connection connection, String sql, long... parameters) throws SQLException {
@@ -710,8 +710,9 @@ public class LabUsageRequestDAO {
 	}
 
 	private boolean lockForAdmin(Connection connection, long requestId) throws SQLException {
-		return lock(connection, "SELECT request_id FROM dbo.lab_usage_requests WITH (UPDLOCK, HOLDLOCK) "
-				+ "WHERE request_id = ?", requestId, null);
+		return lock(connection,
+				"SELECT request_id FROM dbo.lab_usage_requests WITH (UPDLOCK, HOLDLOCK) " + "WHERE request_id = ?",
+				requestId, null);
 	}
 
 	private boolean lock(Connection connection, String sql, long first, Long second) throws SQLException {

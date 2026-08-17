@@ -174,7 +174,7 @@ public class AssetUsageDAO {
 				if (!result.next())
 					throw new IllegalStateException("No approved intern list for the current semester.");
 				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3),
-					result.getDate(4).toLocalDate());
+						result.getDate(4).toLocalDate());
 			}
 		}
 	}

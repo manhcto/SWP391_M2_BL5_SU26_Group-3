@@ -27,9 +27,9 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @WebServlet({"/mentor/interns", "/mentor/interns/view", "/mentor/interns/add", "/mentor/interns/edit",
-		"/mentor/interns/delete", "/mentor/interns/template", "/mentor/lab-requests",
-		"/mentor/lab-requests/view", "/mentor/lab-requests/add", "/mentor/lab-requests/edit",
-		"/mentor/lab-requests/delete", "/mentor/lab-requests/template"})
+		"/mentor/interns/delete", "/mentor/interns/template", "/mentor/lab-requests", "/mentor/lab-requests/view",
+		"/mentor/lab-requests/add", "/mentor/lab-requests/edit", "/mentor/lab-requests/delete",
+		"/mentor/lab-requests/template"})
 @MultipartConfig(maxFileSize = 5 * 1024 * 1024)
 public class MentorLabUsageRequestController extends HttpServlet {
 	private static final String LIST_VIEW = "/WEB-INF/views/mentor/lab-requests/list.jsp";
@@ -98,7 +98,8 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			status = "";
 		}
 		Long semesterId = optionalId(request.getParameter("semesterId"));
-		request.setAttribute("requests", requestDAO.findByMentor(AuthSession.userId(request), keyword, status, semesterId));
+		request.setAttribute("requests",
+				requestDAO.findByMentor(AuthSession.userId(request), keyword, status, semesterId));
 		request.setAttribute("semesters", requestDAO.findOpenSemesters());
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
@@ -385,8 +386,8 @@ public class MentorLabUsageRequestController extends HttpServlet {
 
 	private String databaseMessage(SQLException exception) {
 		String message = exception.getMessage();
-		if (message != null && (message.contains("Email ") || message.contains("Gmail ")
-				|| message.contains("Mã intern"))) {
+		if (message != null
+				&& (message.contains("Email ") || message.contains("Gmail ") || message.contains("Mã intern"))) {
 			return message;
 		}
 		return "Không thể lưu danh sách. Học kỳ có thể đã có danh sách hoặc dữ liệu bị trùng.";

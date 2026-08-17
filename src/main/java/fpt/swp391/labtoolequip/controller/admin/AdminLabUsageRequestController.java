@@ -20,8 +20,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 @WebServlet({"/admin/interns", "/admin/interns/view", "/admin/interns/edit", "/admin/interns/delete",
-		"/admin/interns/decision", "/admin/lab-requests", "/admin/lab-requests/view",
-		"/admin/lab-requests/edit", "/admin/lab-requests/delete", "/admin/lab-requests/decision"})
+		"/admin/interns/decision", "/admin/lab-requests", "/admin/lab-requests/view", "/admin/lab-requests/edit",
+		"/admin/lab-requests/delete", "/admin/lab-requests/decision"})
 public class AdminLabUsageRequestController extends HttpServlet {
 	private static final String LIST_VIEW = "/WEB-INF/views/admin/lab-requests/list.jsp";
 	private static final String DETAIL_VIEW = "/WEB-INF/views/admin/lab-requests/detail.jsp";
@@ -136,8 +136,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		forwardEditForm(request, response, internList, List.of());
 	}
 
-	private void decide(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, IOException {
+	private void decide(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {
 		long requestId = requireId(request, response);
 		if (response.isCommitted()) {
 			return;
@@ -152,7 +151,8 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái PENDING.");
 			return;
 		}
-		response.sendRedirect(request.getContextPath() + "/admin/interns/view?id=" + requestId + "&decided=" + decision);
+		response.sendRedirect(
+				request.getContextPath() + "/admin/interns/view?id=" + requestId + "&decided=" + decision);
 	}
 
 	private void update(HttpServletRequest request, HttpServletResponse response)

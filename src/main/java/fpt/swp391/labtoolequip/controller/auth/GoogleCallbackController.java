@@ -50,17 +50,19 @@ public class GoogleCallbackController extends HttpServlet {
 				deny(request, response, "Google email is not verified.");
 				return;
 			}
-			String domain = required("FPT_EMAIL_DOMAIN");
-			if (!payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
-				deny(request, response, "Access denied: an FPT Google account is required.");
-				return;
-			}
 			Optional<User> found = userDAO.findByEmail(payload.getEmail());
 			if (found.isEmpty() || !"ACTIVE".equals(found.get().getStatus())) {
 				deny(request, response, "Access denied: account is not authorized or active.");
 				return;
 			}
 			User user = found.get();
+			String domain = required("FPT_EMAIL_DOMAIN");
+			if ("INTERN".equals(user.getRole())
+					&& !payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
+				deny(request, response,
+						"Access denied: an FPT Google account (@" + domain + ") is required for students.");
+				return;
+			}
 			if (user.getGoogleSubject() == null) {
 				userDAO.bindGoogleSubject(user.getUserId(), payload.getSubject());
 				user = userDAO.findById(user.getUserId()).orElseThrow();

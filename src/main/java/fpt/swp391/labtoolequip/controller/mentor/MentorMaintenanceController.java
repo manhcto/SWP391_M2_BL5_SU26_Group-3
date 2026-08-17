@@ -55,8 +55,7 @@ public class MentorMaintenanceController extends HttpServlet {
 			throws SQLException, ServletException, IOException {
 		String keyword = request.getParameter("keyword");
 		String status = request.getParameter("status");
-		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(AuthSession.userId(request),
-				keyword, status);
+		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(AuthSession.userId(request), keyword, status);
 		request.setAttribute("records", records);
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
