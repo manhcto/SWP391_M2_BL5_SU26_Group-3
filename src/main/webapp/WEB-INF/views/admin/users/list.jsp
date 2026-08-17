@@ -106,7 +106,7 @@
                                         <td>
                                             <c:choose>
                                                 <c:when test="${not empty u.studentCode}"><c:out value="${u.studentCode}"/> · <c:out value="${u.major}" default="Engineering"/></c:when>
-                                                <c:otherwise>Faculty / Staff</c:otherwise>
+                                                <c:otherwise></c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td>
