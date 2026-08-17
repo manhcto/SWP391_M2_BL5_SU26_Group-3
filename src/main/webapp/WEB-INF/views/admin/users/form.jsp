@@ -406,20 +406,89 @@
                 rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
             }
 
+            // Lọc các dòng dữ liệu thực tế (bỏ qua header và dòng trống)
+            let dataRows = [];
+            for (let i = 0; i < rows.length; i++) {
+                let r = rows[i];
+                if (!r || r.length === 0) continue;
+                let r0 = String(r[0] || '').trim();
+                let r1 = String(r[1] || '').trim();
+                if (r0.toLowerCase().includes('họ') || r0.toLowerCase().includes('name') || r1.toLowerCase().includes('mã') || r1.toLowerCase().includes('code')) {
+                    continue; // Header
+                }
+                if (r0) dataRows.push(r);
+            }
+
+            if (dataRows.length === 0) {
+                showImportError('⚠️ Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại file của bạn.');
+                return;
+            }
+
+            // Phân tích đặc trưng của file để phát hiện định dạng thực tế
+            let hasStudentCode = false;
+            let hasDepartmentCol = false;
+            let maxCols = 0;
+
+            for (let r of dataRows) {
+                maxCols = Math.max(maxCols, r.length);
+                for (let c = 0; c < r.length; c++) {
+                    let val = String(r[c] || '').trim();
+                    if (/^[A-Za-z]{2}[0-9]{4,8}$/i.test(val)) {
+                        hasStudentCode = true;
+                    }
+                }
+                let col2 = String(r[2] || '').trim();
+                if (col2 && !col2.includes('@') && isNaN(col2)) {
+                    hasDepartmentCol = true;
+                }
+            }
+
+            let detectedType = '';
+            if (hasStudentCode || maxCols >= 4) {
+                detectedType = 'STUDENT';
+            } else if (hasDepartmentCol || maxCols === 3) {
+                detectedType = 'MENTOR';
+            } else {
+                detectedType = 'LAB_MANAGER';
+            }
+
+            // Kiểm tra tính tương thích giữa file tải lên và tab vai trò được chọn
+            if (currentSelectedRole === 'STUDENT' && detectedType !== 'STUDENT') {
+                if (detectedType === 'MENTOR') {
+                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (gồm Họ tên, Email và Bộ môn, không có Mã sinh viên). Vui lòng chọn tab Giảng viên (Mentor) hoặc tải file đúng danh sách Sinh viên.');
+                } else {
+                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ gồm Họ tên và Email, không có Mã sinh viên). Vui lòng chọn tab Quản lý Lab (Lab Manager) hoặc tải file đúng danh sách Sinh viên.');
+                }
+                return;
+            }
+
+            if (currentSelectedRole === 'MENTOR' && detectedType !== 'MENTOR') {
+                if (detectedType === 'STUDENT') {
+                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Giảng viên. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Giảng viên (3 cột: Họ tên, Email, Bộ môn).');
+                } else {
+                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Quản lý Lab (chỉ có 2 cột Họ tên và Email, thiếu cột Bộ môn / Khoa của Giảng viên). Vui lòng chọn tab Quản lý Lab hoặc tải đúng file danh sách Giảng viên.');
+                }
+                return;
+            }
+
+            if (currentSelectedRole === 'LAB_MANAGER' && detectedType !== 'LAB_MANAGER') {
+                if (detectedType === 'STUDENT') {
+                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (chứa Mã sinh viên) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Sinh viên hoặc tải đúng file danh sách Quản lý Lab.');
+                } else {
+                    showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Giảng viên (có kèm cột Bộ môn / Khoa) thay vì danh sách Quản lý Lab. Vui lòng chọn tab Giảng viên (Mentor) hoặc tải đúng file danh sách Quản lý Lab (2 cột: Họ tên, Email).');
+                }
+                return;
+            }
+
+            // Trích xuất dữ liệu người dùng sau khi đã xác thực khớp định dạng
             let parsedUsers = [];
             let linesForServer = [];
             const isStudent = (currentSelectedRole === 'STUDENT');
 
-            for (let i = 0; i < rows.length; i++) {
-                let row = rows[i];
-                if (!row || row.length === 0) continue;
+            for (let i = 0; i < dataRows.length; i++) {
+                let row = dataRows[i];
                 let col0 = String(row[0] || '').trim();
                 let col1 = String(row[1] || '').trim();
-                if (col0.toLowerCase().includes('họ') || col0.toLowerCase().includes('name') || col1.toLowerCase().includes('mã')) {
-                    continue; // Header
-                }
-                if (!col0) continue;
-
                 let fullName = col0;
                 let code = "";
                 let email = "";
@@ -427,48 +496,22 @@
                 let cohort = "";
 
                 if (isStudent) {
-                    // Kiểm tra nếu ném nhầm file Quản lý Lab / Giảng viên (chỉ có Họ tên và Email, không có Mã SV)
-                    if (col1.includes('@')) {
-                        let foundCode = '';
-                        for (let c = 2; c < row.length; c++) {
-                            let val = String(row[c] || '').trim();
-                            if (val && !val.includes('@') && /^[A-Za-z]{2}[0-9]{4,8}$/i.test(val)) {
-                                foundCode = val;
-                                break;
-                            }
-                        }
-                        if (!foundCode) {
-                            showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên dường như là danh sách Quản lý Lab / Giảng viên (chỉ gồm Họ tên và Email, thiếu cột Mã sinh viên). Vui lòng chọn lại đúng file danh sách Sinh viên hoặc chuyển sang tab loại tài khoản tương ứng.');
-                            return;
-                        } else {
-                            code = foundCode;
-                            email = col1;
-                        }
+                    code = col1;
+                    let col2 = String(row[2] || '').trim();
+                    if (col2.includes('@')) {
+                        email = col2;
+                        major = String(row[3] || 'Software Engineering').trim();
+                        cohort = String(row[4] || 'K16').trim();
                     } else {
-                        code = col1;
-                        let col2 = String(row[2] || '').trim();
-                        if (col2.includes('@')) {
-                            email = col2;
-                            major = String(row[3] || 'Software Engineering').trim();
-                            cohort = String(row[4] || 'K16').trim();
-                        } else {
-                            major = col2 || 'Software Engineering';
-                            cohort = String(row[3] || 'K16').trim();
-                            let col4 = String(row[4] || '').trim();
-                            email = col4.includes('@') ? col4 : generateFptEmail(fullName, code, true);
-                        }
+                        major = col2 || 'Software Engineering';
+                        cohort = String(row[3] || 'K16').trim();
+                        let col4 = String(row[4] || '').trim();
+                        email = col4.includes('@') ? col4 : generateFptEmail(fullName, code, true);
                     }
                     if (!email) email = generateFptEmail(fullName, code, true);
                     parsedUsers.push({ fullName, code, email, major, cohort });
                     linesForServer.push(fullName + ',' + code + ',' + email + ',' + major + ',' + cohort + ',' + currentSelectedRole);
                 } else if (currentSelectedRole === 'MENTOR') {
-                    // Kiểm tra nếu ném nhầm file Sinh viên vào mục Mentor
-                    let hasEmail = (col1.includes('@') || String(row[2] || '').includes('@'));
-                    if (!hasEmail && /^[A-Za-z]{2}[0-9]{4,8}$/i.test(col1)) {
-                        showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (có chứa Mã sinh viên) thay vì danh sách Giảng viên (Mentor). Vui lòng chuyển sang tab Sinh viên để Import.');
-                        return;
-                    }
-
                     let col1Text = col1;
                     if (col1Text.includes('@')) {
                         email = col1Text;
@@ -482,14 +525,7 @@
                     parsedUsers.push({ fullName, code: '', email, major, cohort: '' });
                     linesForServer.push(fullName + ',' + email + ',' + major + ',,' + currentSelectedRole);
                 } else {
-                    // LAB_MANAGER: Chỉ cần Họ tên & Email FPT
-                    // Kiểm tra nếu ném nhầm file Sinh viên vào mục Lab Manager
-                    let hasEmail = (col1.includes('@') || String(row[2] || '').includes('@'));
-                    if (!hasEmail && /^[A-Za-z]{2}[0-9]{4,8}$/i.test(col1)) {
-                        showImportError('⚠️ Dữ liệu không phù hợp! File bạn tải lên là danh sách Sinh viên (có chứa Mã sinh viên) thay vì danh sách Quản lý Lab. Vui lòng chuyển sang tab Sinh viên để Import.');
-                        return;
-                    }
-
+                    // LAB_MANAGER: Họ tên & Email
                     if (col1.includes('@')) {
                         email = col1;
                     } else {
