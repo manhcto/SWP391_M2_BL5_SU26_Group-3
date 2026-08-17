@@ -45,15 +45,14 @@ Sinh viên được di chuyển tự do trong LAB; hệ thống không quản l�
 
 ## Xác thực và cấp quyền
 
-Phạm vi `AU-01 Authentication` gồm đăng nhập bằng tài khoản nội bộ, đăng nhập với Google, đổi mật khẩu và đăng xuất. Chức năng yêu cầu đặt lại mật khẩu đã bị loại khỏi phạm vi hiện tại.
+Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuất. Đăng nhập development bằng email chỉ xuất hiện khi `DEV_AUTH_ENABLED=true`.
 
 - Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `STUDENT`.
-- Tài khoản nội bộ sử dụng email và mật khẩu đã được băm; người dùng không được tự đăng ký hoặc tự chọn vai trò.
 - Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Đăng nhập Google không tự tạo tài khoản và không quyết định quyền hạn.
-- Khi đăng nhập với Google được triển khai, email Google phải trùng khớp tài khoản đã được tạo trước và đang ở trạng thái `ACTIVE`.
+- Email Google đã xác minh phải thuộc miền FPT, trùng tài khoản được tạo trước và đang ở trạng thái `ACTIVE`.
+- Lần đăng nhập đầu tiên bind `google_subject`; các lần sau subject phải khớp binding đã lưu.
 - Mỗi người dùng có tài khoản riêng. Vai trò lưu trong hệ thống quyết định dashboard và các chức năng được phép truy cập.
-
-> Trạng thái hiện tại: `/login` mới là màn hình email/mật khẩu mẫu và chưa thực hiện xác thực. Google OAuth, đổi mật khẩu và đăng xuất sẽ được triển khai ở phase sau.
+- Filter phía server bảo vệ route `/student/*`, `/mentor/*`, `/lab-manager/*` và `/admin/*` theo đúng vai trò.
 
 ## Luồng nghiệp vụ chính
 
@@ -65,7 +64,7 @@ Phạm vi `AU-01 Authentication` gồm đăng nhập bằng tài khoản nội b
 6. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
 7. Khi phát hiện mất, hỏng, sai số lượng, quá hạn hoặc bất thường, Mentor hoặc Student có thể tạo sự cố.
 8. Mentor điều tra dựa trên lịch sử mượn trả và bằng chứng trước khi kết luận trách nhiệm.
-9. Tài sản hỏng có thể được bảo trì; tài sản không thể sửa có thể được đề xuất thanh lý và chờ Lab Manager phê duyệt.
+9. Lab Manager tạo quy trình thanh lý cho toàn bộ asset record; có thể hủy khi đang chờ hoặc hoàn tất khi không còn lượt mượn active.
 
 ## Mô hình tài sản
 
@@ -104,15 +103,17 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 Đã triển khai:
 
 - Schema SQL Server gồm 14 bảng nghiệp vụ và các model Java tương ứng.
-- Kết nối SQL Server qua `DBConnection` và biến môi trường.
+- Cấu hình `.env` qua `AppConfig`; kết nối SQL Server qua `DBConnection`.
+- Google OAuth/OIDC, bind Google subject, session, logout và Filter phân quyền theo role.
 - FE-01 Manage User ở mức MVC/JDBC cơ bản: `UserController`, `UserDAO` và các JSP danh sách, chi tiết, thêm, sửa.
+- FE-04 Manage Asset Usage: Student mượn/trả/xem lịch sử; Lab Manager xem và lọc toàn bộ lịch sử; transaction khóa asset chống over-borrow.
+- FE-09 Manage Asset Disposal: Lab Manager tạo, sửa, hủy và hoàn tất quy trình `PENDING/CANCELLED/COMPLETED`.
 - Controller và JSP khung cho dashboard của Admin, Lab Manager, Mentor và Student.
 - Mentor Dashboard responsive; dữ liệu trên dashboard hiện là dữ liệu trình diễn.
 
 Chưa triển khai đầy đủ:
 
-- Xác thực thật, Google OAuth, phân quyền request, đổi mật khẩu và đăng xuất.
-- DAO, Controller và JSP nghiệp vụ cho FE-02 đến FE-09.
+- DAO, Controller và JSP nghiệp vụ cho FE-02, FE-03, FE-05 đến FE-08.
 - Dữ liệu động cho các dashboard và kiểm thử tự động; `src/test` hiện chỉ có file giữ package.
 
 ## Công nghệ
@@ -120,8 +121,10 @@ Chưa triển khai đầy đủ:
 - Java 17
 - Jakarta EE Web 10
 - JSP, JSTL và Jakarta Servlet
+- Bootstrap 5
 - JDBC với Microsoft SQL Server
-- BCrypt cho mật khẩu tài khoản nội bộ
+- Google OAuth/OIDC
+- java-dotenv
 - Maven Wrapper
 - Apache Tomcat 10.1 qua Cargo Maven plugin
 - JUnit 5 (đã cấu hình, chưa có test case)
@@ -134,15 +137,28 @@ Chưa triển khai đầy đủ:
 
 ## Cấu hình cơ sở dữ liệu
 
-Khai báo các biến môi trường sau trong hệ điều hành hoặc Run Configuration của IntelliJ/Tomcat:
+Sao chép `.env.example` thành `.env`, sau đó cấu hình:
 
 ```dotenv
 DB_URL=jdbc:sqlserver://localhost:1433;databaseName=lab_asset_management;encrypt=true;trustServerCertificate=true
 DB_USERNAME=sa
 DB_PASSWORD=change-me
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8080/labtoolequip/oauth2/callback
+FPT_EMAIL_DOMAIN=fpt.edu.vn
+LAB_TIMEZONE=Asia/Ho_Chi_Minh
+DEV_AUTH_ENABLED=false
 ```
 
-`DBConnection` đọc trực tiếp các biến môi trường trên. Có thể dùng Java system properties cùng tên khi chạy cục bộ. Ứng dụng không tự đọc tệp `.env`; `.env.example` chỉ là mẫu cấu hình và `.env` đã được Git bỏ qua.
+`AppConfig` tìm `.env` từ vị trí chạy ứng dụng lên project root. `.env` đã được Git bỏ qua; không commit database password hoặc Google Client Secret.
+
+Khởi tạo database rồi thêm dữ liệu demo:
+
+```powershell
+sqlcmd -S localhost,1433 -U sa -P <password> -C -b -i database/schema.sql
+sqlcmd -S localhost,1433 -U sa -P <password> -C -b -i database/mock_data.sql
+```
 
 ## Chạy dự án
 
@@ -179,9 +195,8 @@ Chạy build và kiểm tra định dạng:
 
 ```text
 database/
-├── schema.sql                 # Script tạo schema SQL Server
-├── schema.dbml                # Mô hình database dạng DBML
-└── schema_smoke_test.sql      # Script kiểm tra nhanh schema
+├── schema.sql                 # Tạo database và toàn bộ schema SQL Server
+└── mock_data.sql              # Dữ liệu demo idempotent, gồm account Google demo được cấp trước
 src/
 ├── main/
 │   ├── java/fpt/swp391/labtoolequip/
