@@ -16,7 +16,7 @@ import java.util.Locale;
 import java.util.Set;
 import org.mindrot.jbcrypt.BCrypt;
 
-@WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/import",
+@WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/import", "/admin/users/edit",
 		"/admin/users/toggle-status", "/admin/users/change-role"})
 public class UserController extends HttpServlet {
 	private static final Set<String> ROLES = Set.of("ADMIN", "LAB_MANAGER", "MENTOR", "INTERN");
@@ -34,6 +34,7 @@ public class UserController extends HttpServlet {
 			switch (request.getServletPath()) {
 				case "/admin/users/view" -> showDetail(request, response);
 				case "/admin/users/add" -> showAddForm(request, response);
+				case "/admin/users/edit" -> showEditForm(request, response);
 				case "/admin/users/import" -> showImportForm(request, response);
 				case "/admin/users/toggle-status" -> toggleStatus(request, response);
 				case "/admin/users/change-role" -> changeRole(request, response);
@@ -51,6 +52,7 @@ public class UserController extends HttpServlet {
 		try {
 			switch (request.getServletPath()) {
 				case "/admin/users/add" -> createUser(request, response);
+				case "/admin/users/edit" -> updateUser(request, response);
 				case "/admin/users/import" -> importBatchUsers(request, response);
 				case "/admin/users/toggle-status" -> toggleStatus(request, response);
 				default -> response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
@@ -97,6 +99,22 @@ public class UserController extends HttpServlet {
 		user.setRole("INTERN");
 		request.setAttribute("user", user);
 		request.setAttribute("formMode", "add");
+		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
+	}
+
+	private void showEditForm(HttpServletRequest request, HttpServletResponse response)
+			throws SQLException, ServletException, IOException {
+		long userId = requireId(request, response);
+		if (response.isCommitted()) {
+			return;
+		}
+		User user = userDAO.findById(userId).orElse(null);
+		if (user == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		request.setAttribute("user", user);
+		request.setAttribute("formMode", "edit");
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
@@ -228,6 +246,40 @@ public class UserController extends HttpServlet {
 
 		int imported = userDAO.batchCreate(batchList);
 		response.sendRedirect(request.getContextPath() + "/admin/users?success=imported&count=" + imported);
+	}
+
+	private void updateUser(HttpServletRequest request, HttpServletResponse response)
+			throws SQLException, ServletException, IOException {
+		long userId = requireId(request, response);
+		if (response.isCommitted()) {
+			return;
+		}
+		User user = userDAO.findById(userId).orElse(null);
+		if (user == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+
+		String role = normalize(request.getParameter("role"));
+		String status = normalize(request.getParameter("status"));
+
+		List<String> errors = new ArrayList<>();
+		if (!ROLES.contains(role)) {
+			errors.add("Vai trò không hợp lệ.");
+		}
+		if (!STATUSES.contains(status)) {
+			errors.add("Trạng thái không hợp lệ.");
+		}
+
+		if (!errors.isEmpty()) {
+			user.setRole(role);
+			user.setStatus(status);
+			forwardWithErrors(request, response, user, errors, "edit");
+			return;
+		}
+
+		userDAO.updateRoleAndStatus(userId, role, status);
+		response.sendRedirect(request.getContextPath() + "/admin/users?success=updated");
 	}
 
 	private void changeRole(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {

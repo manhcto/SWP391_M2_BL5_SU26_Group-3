@@ -94,11 +94,14 @@
                                                 <c:when test="${u.role == 'INTERN'}">
                                                     <span class="badge badge-green">INTERN</span>
                                                 </c:when>
+                                                <c:when test="${u.role == 'MENTOR'}">
+                                                    <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">MENTOR</span>
+                                                </c:when>
+                                                <c:when test="${u.role == 'LAB_MANAGER'}">
+                                                    <span class="badge" style="background:#f3e8ff; color:#7e22ce; font-weight:700;">LAB_MANAGER</span>
+                                                </c:when>
                                                 <c:otherwise>
-                                                    <select class="form-control" style="height: 28px; font-size: 11px; padding: 0 8px; width: 140px; font-weight: 700; border-color: #bce1ce; background: #f4f9f6; color: #188255; cursor: pointer;" onchange="if(confirm('Chuyển đổi vai trò của người dùng sang ' + this.value + '?')) { location.href='${pageContext.request.contextPath}/admin/users/change-role?id=${u.userId}&role=' + this.value; } else { this.value='${u.role}'; }">
-                                                        <option value="MENTOR" ${u.role == 'MENTOR' ? 'selected' : ''}>MENTOR</option>
-                                                        <option value="LAB_MANAGER" ${u.role == 'LAB_MANAGER' ? 'selected' : ''}>LAB_MANAGER</option>
-                                                    </select>
+                                                    <span class="badge" style="background:#f1f5f9; color:#475569; font-weight:700;">ADMIN</span>
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
@@ -116,12 +119,7 @@
                                         </td>
                                         <td style="text-align: right;">
                                             <a class="btn-action" href="${pageContext.request.contextPath}/admin/users/view?id=${u.userId}">View</a>
-                                            <a class="btn-action ${u.status == 'ACTIVE' ? 'btn-action-danger' : 'btn-action'}" href="${pageContext.request.contextPath}/admin/users/toggle-status?id=${u.userId}" onclick="return confirm('Bạn có chắc muốn đổi trạng thái tài khoản này?');">
-                                                <c:choose>
-                                                    <c:when test="${u.status == 'ACTIVE'}">Lock</c:when>
-                                                    <c:otherwise>Unlock</c:otherwise>
-                                                </c:choose>
-                                            </a>
+                                            <a class="btn-action" href="${pageContext.request.contextPath}/admin/users/edit?id=${u.userId}" style="background:#e8f4ec; color:#188255; border-color:#bce1ce; font-weight:600;">Edit</a>
                                         </td>
                                     </tr>
                                 </c:forEach>
