@@ -6,7 +6,8 @@
 <main>
     <h1>Student Dashboard</h1>
     <p>Borrow assets and view your usage history, reported incidents, and responsibility records.</p>
-    <nav><a href="${pageContext.request.contextPath}/">Home</a></nav>
+    <nav><a href="${pageContext.request.contextPath}/student/usages">My asset usage</a></nav>
+    <form method="post" action="${pageContext.request.contextPath}/logout"><button>Logout</button></form>
 </main>
 </body>
 </html>

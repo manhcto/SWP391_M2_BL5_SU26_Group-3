@@ -19,6 +19,9 @@ public class AssetUsage {
 	private Long createdBy;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	private String assetCode;
+	private String assetName;
+	private String studentName;
 
 	public AssetUsage() {
 	}
@@ -171,5 +174,29 @@ public class AssetUsage {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getAssetCode() {
+		return assetCode;
+	}
+
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+
+	public String getAssetName() {
+		return assetName;
+	}
+
+	public void setAssetName(String assetName) {
+		this.assetName = assetName;
+	}
+
+	public String getStudentName() {
+		return studentName;
+	}
+
+	public void setStudentName(String studentName) {
+		this.studentName = studentName;
 	}
 }
