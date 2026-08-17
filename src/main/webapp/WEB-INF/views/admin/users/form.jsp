@@ -345,10 +345,8 @@
         for (let i = 0; i < words.length - 1; i++) {
             initials += words[i].charAt(0);
         }
-        if (isStudent && code) {
-            return firstName + initials + code.trim().toLowerCase() + "@fpt.edu.vn";
-        }
-        return firstName + initials + "@fpt.edu.vn";
+        let cleanCode = (isStudent && code && !code.includes("@")) ? code.trim().toLowerCase() : "";
+        return firstName + initials + cleanCode + "@fpt.edu.vn";
     }
 
     function handleDrop(e) {
@@ -407,20 +405,28 @@
                 let cohort = "";
 
                 if (isStudent) {
-                    code = col1;
-                    let col2 = String(row[2] || '').trim();
-                    if (col2.includes('@')) {
-                        email = col2;
-                        major = String(row[3] || 'Software Engineering').trim();
-                        cohort = String(row[4] || 'K16').trim();
-                    } else {
-                        major = col2 || 'Software Engineering';
+                    if (col1.includes('@')) {
+                        // Người dùng tải file 2 cột (Họ tên, Email) vào tab Sinh viên
+                        email = col1;
+                        code = "";
+                        major = String(row[2] || 'Software Engineering').trim();
                         cohort = String(row[3] || 'K16').trim();
-                        let col4 = String(row[4] || '').trim();
-                        email = col4.includes('@') ? col4 : generateFptEmail(fullName, code, true);
+                    } else {
+                        code = col1;
+                        let col2 = String(row[2] || '').trim();
+                        if (col2.includes('@')) {
+                            email = col2;
+                            major = String(row[3] || 'Software Engineering').trim();
+                            cohort = String(row[4] || 'K16').trim();
+                        } else {
+                            major = col2 || 'Software Engineering';
+                            cohort = String(row[3] || 'K16').trim();
+                            let col4 = String(row[4] || '').trim();
+                            email = col4.includes('@') ? col4 : generateFptEmail(fullName, code, true);
+                        }
                     }
                     if (!email) email = generateFptEmail(fullName, code, true);
-                    parsedUsers.push({ fullName, code, email, major, cohort });
+                    parsedUsers.push({ fullName, code: code || '— (Chưa có)', email, major, cohort });
                     linesForServer.push(fullName + ',' + code + ',' + email + ',' + major + ',' + cohort + ',' + currentSelectedRole);
                 } else if (currentSelectedRole === 'MENTOR') {
                     let col1Text = col1;

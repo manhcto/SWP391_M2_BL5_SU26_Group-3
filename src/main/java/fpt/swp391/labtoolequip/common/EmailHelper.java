@@ -37,8 +37,11 @@ public final class EmailHelper {
 			}
 		}
 
-		// 4. Mã sinh viên (nếu là sinh viên)
-		String cleanCode = (code != null && isStudent) ? code.trim().toLowerCase().replaceAll("[^a-z0-9]", "") : "";
+		// 4. Mã sinh viên (nếu là sinh viên và không phải là chuỗi email)
+		String cleanCode = "";
+		if (code != null && isStudent && !code.contains("@")) {
+			cleanCode = code.trim().toLowerCase().replaceAll("[^a-z0-9]", "");
+		}
 
 		return firstName + initials + cleanCode + "@fpt.edu.vn";
 	}
