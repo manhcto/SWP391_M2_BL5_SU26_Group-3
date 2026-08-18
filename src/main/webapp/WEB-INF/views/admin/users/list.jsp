@@ -132,9 +132,10 @@
                                                     <tr>
                                                         <th>User ID</th>
                                                         <th>Full Name</th>
-                                                        <th>Email (@fpt.edu.vn)</th>
+                                                        <th>Email</th>
                                                         <th>Role</th>
-                                                        <th>Student Code / Scope</th>
+                                                        <th>Student Code</th>
+                                                        <th>Major</th>
                                                         <th>Status</th>
                                                         <th style="text-align: right;">Actions</th>
                                                     </tr>
@@ -172,9 +173,15 @@
                                                             <td>
                                                                 <c:choose>
                                                                     <c:when test="${not empty u.studentCode}">
-                                                                        <c:out value="${u.studentCode}" /> ·
-                                                                        <c:out value="${u.major}"
-                                                                            default="Engineering" />
+                                                                        <c:out value="${u.studentCode}" />
+                                                                    </c:when>
+                                                                    <c:otherwise>---</c:otherwise>
+                                                                </c:choose>
+                                                            </td>
+                                                            <td>
+                                                                <c:choose>
+                                                                    <c:when test="${not empty u.major}">
+                                                                        <c:out value="${u.major}" />
                                                                     </c:when>
                                                                     <c:otherwise>---</c:otherwise>
                                                                 </c:choose>
