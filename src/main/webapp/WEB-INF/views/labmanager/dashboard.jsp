@@ -18,9 +18,8 @@
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
         </header>
         <section class="content-area">
-            <div class="content-heading"><div><p class="eyebrow">LAB MANAGER PORTAL</p><h2>Operations overview</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg>Open Maintenance</a></div>
+            <div class="content-heading"><div><p class="eyebrow">LAB MANAGER PORTAL</p><h2>Operations overview</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/lab-manager/usages"><svg><use href="#i-box"/></svg>Open Asset Usages</a></div>
             <div class="stats-grid">
-                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/labmanager/maintenance"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong>Maintenance</strong><span>Review and update repair tickets</span><small>Open maintenance management</small></div></a>
                 <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/usages"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong>Asset usage</strong><span>Review borrowing and return records</span><small>Open asset usage</small></div></a>
                 <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><div class="stat-icon"><svg><use href="#i-list"/></svg></div><div><strong>Responsibilities</strong><span>View Mentor findings and handling decisions</span><small>Open responsibility records</small></div></a>
                 <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/disposals"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong>Disposal</strong><span>Review asset disposal requests</span><small>Open disposal management</small></div></a>

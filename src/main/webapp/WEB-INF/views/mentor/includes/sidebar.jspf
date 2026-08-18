@@ -33,7 +33,7 @@
         <a class="nav-link" href="#"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-alert"/></svg><span>Incidents</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/responsibilities"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a>
-        <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/maintenance"><svg><use href="#i-wrench"/></svg><span>Maintenance</span></a>
+        <a class="nav-link" href="#"><svg><use href="#i-wrench"/></svg><span>Maintenance</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-trash"/></svg><span>Disposal</span></a>
     </nav>
     <div class="sidebar-footer">
