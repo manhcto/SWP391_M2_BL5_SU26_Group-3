@@ -80,6 +80,17 @@ public class UserDAO {
 		}
 	}
 
+	public Optional<User> findByStudentCode(String studentCode) throws SQLException {
+		String sql = SELECT_USER + "WHERE LOWER(sp.student_code) = LOWER(?)";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, valueOrEmpty(studentCode));
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
+			}
+		}
+	}
+
 	public boolean linkGoogleSubject(long userId, String googleSubject) throws SQLException {
 		String sql = """
 				UPDATE dbo.users

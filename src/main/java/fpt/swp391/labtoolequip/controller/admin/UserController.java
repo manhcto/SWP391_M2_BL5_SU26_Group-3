@@ -114,6 +114,7 @@ public class UserController extends HttpServlet {
 		}
 		request.setAttribute("user", user);
 		request.setAttribute("formMode", "edit");
+		request.setAttribute("majors", majorDAO.findActive());
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
@@ -153,8 +154,12 @@ public class UserController extends HttpServlet {
 			return;
 		}
 
+		String fullName = trim(request.getParameter("fullName"));
 		String role = normalize(request.getParameter("role"));
 		String status = normalize(request.getParameter("status"));
+		String studentCode = trim(request.getParameter("studentCode"));
+		Long majorId = optionalLong(request.getParameter("majorId"));
+		String cohort = trim(request.getParameter("cohort"));
 
 		// Quy tắc nghiệp vụ: INTERN và ADMIN không thể đổi sang vai trò khác
 		if ("INTERN".equals(user.getRole()) || "ADMIN".equals(user.getRole())) {
@@ -165,22 +170,22 @@ public class UserController extends HttpServlet {
 			}
 		}
 
-		List<String> errors = new ArrayList<>();
-		if (!ROLES.contains(role)) {
-			errors.add("Vai trò không hợp lệ.");
-		}
-		if (!STATUSES.contains(status)) {
-			errors.add("Trạng thái không hợp lệ.");
+		user.setFullName(fullName);
+		user.setRole(role);
+		user.setStatus(status);
+		if ("INTERN".equals(user.getRole())) {
+			user.setStudentCode(studentCode);
+			user.setMajorId(majorId);
+			user.setCohort(cohort);
 		}
 
+		List<String> errors = validate(user, false);
 		if (!errors.isEmpty()) {
-			user.setRole(role);
-			user.setStatus(status);
 			forwardWithErrors(request, response, user, errors, "edit");
 			return;
 		}
 
-		userDAO.updateRoleAndStatus(userId, role, status);
+		userDAO.update(user);
 		response.sendRedirect(request.getContextPath() + "/admin/users?success=updated");
 	}
 
@@ -239,11 +244,24 @@ public class UserController extends HttpServlet {
 			}
 		}
 
-		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
-			errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
+		if (isAdd && userDAO.findByEmail(user.getEmail()).isPresent()) {
+			errors.add("Email này đã tồn tại trong hệ thống.");
 		}
-		if ("INTERN".equals(user.getRole()) && user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
-			errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");
+
+		if ("INTERN".equals(user.getRole())) {
+			if (user.getStudentCode() == null || user.getStudentCode().isEmpty()) {
+				errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
+			} else {
+				Optional<User> existingStudent = userDAO.findByStudentCode(user.getStudentCode());
+				if (existingStudent.isPresent()) {
+					if (isAdd || existingStudent.get().getUserId() != user.getUserId()) {
+						errors.add("Mã sinh viên này đã được sử dụng bởi người dùng khác.");
+					}
+				}
+			}
+			if (user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
+				errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");
+			}
 		}
 
 		return errors;
