@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.AssetUsage;
 import java.sql.Connection;
@@ -92,20 +93,20 @@ public class AssetUsageDAO {
 
 	public long borrow(long userId, long assetId, int quantity, String note) throws SQLException {
 		if (quantity <= 0)
-			throw new IllegalArgumentException("Quantity must be greater than zero.");
+			throw new IllegalArgumentException("Số lượng phải lớn hơn 0.");
 		ZonedDateTime now = ZonedDateTime.now(labZone);
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				Asset asset = lockAsset(connection, assetId);
 				if (!"AVAILABLE".equals(asset.getStatus()) || !Boolean.TRUE.equals(asset.getBorrowable()))
-					throw new IllegalStateException("Asset is not available for borrowing.");
+					throw new IllegalStateException("Thiết bị hiện không thể cho mượn.");
 				if (hasPendingDisposal(connection, assetId))
-					throw new IllegalStateException("Asset has a pending disposal.");
+					throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
 				Membership membership = currentMembership(connection, userId, now);
 				int active = activeQuantity(connection, assetId);
 				if (active + quantity > asset.getTotalQuantity())
-					throw new IllegalStateException("Insufficient available quantity.");
+					throw new IllegalStateException("Số lượng thiết bị khả dụng không đủ.");
 				long id = insertUsage(connection, userId, asset, quantity, note, membership, now);
 				connection.commit();
 				return id;
@@ -118,7 +119,7 @@ public class AssetUsageDAO {
 
 	public void returnUsage(long userId, long usageId, String conditionAfter, String note) throws SQLException {
 		if (!List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(conditionAfter))
-			throw new IllegalArgumentException("A valid return condition is required.");
+			throw new IllegalArgumentException("Vui lòng chọn tình trạng hợp lệ khi trả thiết bị.");
 		String sql = """
 				UPDATE au WITH (UPDLOCK, ROWLOCK)
 				SET returned_at = SYSUTCDATETIME(), condition_after = ?, note = ?, status = 'RETURNED', updated_at = SYSUTCDATETIME()
@@ -133,7 +134,7 @@ public class AssetUsageDAO {
 			statement.setLong(3, usageId);
 			statement.setLong(4, userId);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Usage cannot be returned or is not yours.");
+				throw new IllegalStateException("Không thể trả lượt mượn này hoặc lượt mượn không thuộc về bạn.");
 		}
 	}
 
@@ -143,7 +144,7 @@ public class AssetUsageDAO {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
-					throw new IllegalArgumentException("Asset not found.");
+					throw new IllegalArgumentException("Không tìm thấy thiết bị.");
 				Asset asset = new Asset();
 				asset.setAssetId(result.getLong("asset_id"));
 				asset.setTotalQuantity(result.getInt("total_quantity"));
@@ -172,7 +173,8 @@ public class AssetUsageDAO {
 			statement.setDate(2, java.sql.Date.valueOf(now.toLocalDate()));
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
-					throw new IllegalStateException("No approved intern list for the current semester.");
+					throw new IllegalStateException(
+							"Bạn chưa thuộc danh sách thực tập sinh được duyệt của học kỳ hiện tại.");
 				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3),
 						result.getDate(4).toLocalDate());
 			}
@@ -244,9 +246,9 @@ public class AssetUsageDAO {
 				usage.setStudentId(result.getLong("student_id"));
 				usage.setAssetId(result.getLong("asset_id"));
 				usage.setQuantity(result.getInt("quantity"));
-				usage.setBorrowedAt(local(result.getTimestamp("borrowed_at")));
-				usage.setDueAt(local(result.getTimestamp("due_at")));
-				usage.setReturnedAt(local(result.getTimestamp("returned_at")));
+				usage.setBorrowedAt(ViewFormat.fromUtc(result.getTimestamp("borrowed_at")));
+				usage.setDueAt(ViewFormat.fromUtc(result.getTimestamp("due_at")));
+				usage.setReturnedAt(ViewFormat.fromUtc(result.getTimestamp("returned_at")));
 				usage.setConditionBefore(result.getString("condition_before"));
 				usage.setConditionAfter(result.getString("condition_after"));
 				usage.setStatus(result.getString("status"));
@@ -259,13 +261,6 @@ public class AssetUsageDAO {
 			}
 			return usages;
 		}
-	}
-
-	private LocalDateTime local(Timestamp value) {
-		return value == null
-				? null
-				: value.toLocalDateTime().atZone(java.time.ZoneOffset.UTC).withZoneSameInstant(labZone)
-						.toLocalDateTime();
 	}
 
 	private String blankToNull(String value) {

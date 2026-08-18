@@ -10,23 +10,23 @@
     <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M8 12h10"/></symbol>
 </svg>
 <aside class="sidebar" id="sidebar">
-    <a class="brand" href="${pageContext.request.contextPath}/intern/dashboard" aria-label="LAB Asset Intern home">
+    <a class="brand" href="${pageContext.request.contextPath}/intern/dashboard" aria-label="Trang chủ thực tập sinh LAB Asset">
         <span class="brand-mark"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"></span>
-        <span><strong>LAB ASSET</strong><small>INTERN PORTAL</small></span>
+        <span><strong>LAB ASSET</strong><small>CỔNG THỰC TẬP SINH</small></span>
     </a>
-    <nav class="side-nav" aria-label="Intern navigation">
-        <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
-        <a class="nav-link${activeMenu == 'borrow' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages/borrow"><svg><use href="#i-box"/></svg><span>Borrow Asset</span></a>
-        <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages"><svg><use href="#i-calendar"/></svg><span>My Usage History</span></a>
-        <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="#"><svg><use href="#i-alert"/></svg><span>My Incidents</span></a>
-        <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/responsibilities"><svg><use href="#i-list"/></svg><span>My Responsibilities</span></a>
+    <nav class="side-nav" aria-label="Điều hướng thực tập sinh">
+        <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
+        <a class="nav-link${activeMenu == 'borrow' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages/borrow"><svg><use href="#i-box"/></svg><span>Mượn thiết bị</span></a>
+        <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages"><svg><use href="#i-calendar"/></svg><span>Lịch sử sử dụng</span></a>
+        <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="#"><svg><use href="#i-alert"/></svg><span>Sự cố của tôi</span></a>
+        <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/responsibilities"><svg><use href="#i-list"/></svg><span>Trách nhiệm của tôi</span></a>
     </nav>
     <div class="sidebar-footer">
-        <div class="profile-card"><div class="avatar avatar-lg">IN</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i>INTERN</span></div></div>
-        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Log out</span></button></form>
+        <div class="profile-card"><div class="avatar avatar-lg">TT</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i>Thực tập sinh</span></div></div>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
     </div>
 </aside>
-<button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>
+<button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Đóng thanh điều hướng"></button>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const menuButton = document.getElementById('menuButton');

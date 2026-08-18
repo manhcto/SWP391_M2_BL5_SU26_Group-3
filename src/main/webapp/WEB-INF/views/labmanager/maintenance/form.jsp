@@ -1,11 +1,12 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core"%>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><c:choose><c:when test="${formMode == 'edit'}">Update Maintenance Ticket</c:when><c:otherwise>Create Maintenance Ticket</c:otherwise></c:choose> | LAB Asset</title>
+    <title><c:choose><c:when test="${formMode == 'edit'}">Cập nhật phiếu bảo trì</c:when><c:otherwise>Tạo phiếu bảo trì</c:otherwise></c:choose> | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
 <body class="lab-manager-page">
@@ -15,9 +16,9 @@
 
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1><c:choose><c:when test="${formMode == 'edit'}">Update Ticket #MNT-${record.maintenanceId}</c:when><c:otherwise>Create Maintenance Ticket</c:otherwise></c:choose></h1><p>Authorize maintenance, dispatch technicians, log results</p></div></div>
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1><c:choose><c:when test="${formMode == 'edit'}">Cập nhật phiếu #MNT-${record.maintenanceId}</c:when><c:otherwise>Tạo phiếu bảo trì</c:otherwise></c:choose></h1><p>Phê duyệt bảo trì, phân công kỹ thuật viên và ghi nhận kết quả</p></div></div>
             <div class="topbar-actions">
-                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">‹ Back to List</a>
+                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">‹ Quay lại danh sách</a>
             </div>
         </header>
 
@@ -41,8 +42,8 @@
                                 <div class="form-group">
                                     <label>Quyết định duyệt *</label>
                                     <select class="form-control" name="decision">
-                                        <option value="APPROVED">APPROVED (Duyệt mang đi sửa chữa)</option>
-                                        <option value="REJECTED">REJECTED (Từ chối yêu cầu)</option>
+                                        <option value="APPROVED">Duyệt sửa chữa</option>
+                                        <option value="REJECTED">Từ chối yêu cầu</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -50,7 +51,7 @@
                                     <input class="form-control" type="text" name="approvalNote" placeholder="e.g. Duyệt chi phí 650.000 VNĐ mang sang FPT Tech Service">
                                 </div>
                                 <div class="form-group full-width">
-                                    <button class="primary-button" type="submit">Submit Approval Decision</button>
+                                    <button class="primary-button" type="submit">Gửi quyết định phê duyệt</button>
                                 </div>
                             </form>
                         </c:if>
@@ -63,9 +64,9 @@
                             <div class="form-group">
                                 <label>Trạng thái tiến độ *</label>
                                 <select class="form-control" name="status">
-                                    <option value="APPROVED" ${record.status == 'APPROVED' ? 'selected' : ''}>APPROVED (Đã duyệt - Chờ xử lý)</option>
-                                    <option value="IN_PROGRESS" ${record.status == 'IN_PROGRESS' ? 'selected' : ''}>IN_PROGRESS (Đang trong quá trình sửa chữa)</option>
-                                    <option value="COMPLETED" ${record.status == 'COMPLETED' ? 'selected' : ''}>COMPLETED (Đã sửa xong - Nghiệm thu hoàn trả kho)</option>
+                                    <option value="APPROVED" ${record.status == 'APPROVED' ? 'selected' : ''}>Đã duyệt - Chờ xử lý</option>
+                                    <option value="IN_PROGRESS" ${record.status == 'IN_PROGRESS' ? 'selected' : ''}>Đang sửa chữa</option>
+                                    <option value="COMPLETED" ${record.status == 'COMPLETED' ? 'selected' : ''}>Đã sửa xong - Chờ nghiệm thu</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -77,8 +78,8 @@
                                 <textarea class="form-control" name="repairResult" placeholder="e.g. Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
                             </div>
                             <div class="form-group full-width" style="display: flex; gap: 10px;">
-                                <button class="primary-button" type="submit">Save Maintenance Progress</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">Cancel</a>
+                                <button class="primary-button" type="submit">Lưu tiến độ bảo trì</button>
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">Hủy</a>
                             </div>
                         </form>
                     </c:when>
@@ -94,7 +95,7 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Số lượng (Quantity) *</label>
+                                <label>Số lượng *</label>
                                 <input class="form-control" type="number" name="quantity" value="1" min="1" required>
                             </div>
                             <div class="form-group full-width">
@@ -102,8 +103,8 @@
                                 <textarea class="form-control" name="description" required placeholder="Mô tả cụ thể hiện tượng lỗi, nguyên nhân hoặc bộ phận cần thay thế..."></textarea>
                             </div>
                             <div class="form-group full-width" style="display: flex; gap: 10px;">
-                                <button class="primary-button" type="submit">Create Maintenance Ticket</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">Cancel</a>
+                                <button class="primary-button" type="submit">Tạo phiếu bảo trì</button>
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">Hủy</a>
                             </div>
                         </form>
                     </c:otherwise>

@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.controller.labmanager;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.dao.AssetDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
@@ -151,10 +152,8 @@ public class LabManagerMaintenanceController extends HttpServlet {
 		String repairResult = request.getParameter("repairResult");
 		String note = request.getParameter("note");
 
-		LocalDateTime startedAt = "IN_PROGRESS".equals(status) || "COMPLETED".equals(status)
-				? LocalDateTime.now()
-				: null;
-		LocalDateTime completedAt = "COMPLETED".equals(status) ? LocalDateTime.now() : null;
+		LocalDateTime startedAt = "IN_PROGRESS".equals(status) || "COMPLETED".equals(status) ? ViewFormat.now() : null;
+		LocalDateTime completedAt = "COMPLETED".equals(status) ? ViewFormat.now() : null;
 
 		maintenanceDAO.updateProgress(id, status, startedAt, completedAt, repairResult, note);
 
@@ -183,7 +182,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 	private void handleError(HttpServletRequest request, HttpServletResponse response, SQLException ex)
 			throws ServletException, IOException {
 		getServletContext().log("LabManagerMaintenanceController error", ex);
-		request.setAttribute("errorMessage", "Database error: " + ex.getMessage());
+		request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu: " + ex.getMessage());
 		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
 	}
 }

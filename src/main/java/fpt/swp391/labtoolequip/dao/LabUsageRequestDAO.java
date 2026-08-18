@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.LabUsageRequest;
 import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
 import fpt.swp391.labtoolequip.model.Semester;
@@ -9,9 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -176,8 +175,8 @@ public class LabUsageRequestDAO {
 				semester.setStartDate(result.getDate("start_date").toLocalDate());
 				semester.setEndDate(result.getDate("end_date").toLocalDate());
 				semester.setStatus(result.getString("status"));
-				semester.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
-				semester.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
+				semester.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+				semester.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 				semesters.add(semester);
 			}
 			return semesters;
@@ -201,7 +200,7 @@ public class LabUsageRequestDAO {
 					statement.executeUpdate();
 					try (ResultSet keys = statement.getGeneratedKeys()) {
 						if (!keys.next()) {
-							throw new SQLException("Không lấy được mã danh sách intern.");
+							throw new SQLException("Không lấy được mã danh sách thực tập sinh.");
 						}
 						requestId = keys.getLong(1);
 					}
@@ -299,7 +298,7 @@ public class LabUsageRequestDAO {
 					}
 				}
 				if ("APPROVED".equals(status) && currentSemesterId != request.getSemesterId()) {
-					throw new SQLException("Không thể đổi học kỳ của danh sách đã APPROVED.");
+					throw new SQLException("Không thể đổi học kỳ của danh sách đã được duyệt.");
 				}
 				if ("APPROVED".equals(status)) {
 					synchronizeApprovedMemberships(connection, request);
@@ -523,7 +522,7 @@ public class LabUsageRequestDAO {
 			connection.setAutoCommit(false);
 			try {
 				if (!isActiveAdmin(connection, adminId)) {
-					throw new SQLException("Tài khoản Admin không hợp lệ.");
+					throw new SQLException("Tài khoản quản trị viên không hợp lệ.");
 				}
 				if (!lockPendingForDecision(connection, requestId)) {
 					connection.rollback();
@@ -546,7 +545,7 @@ public class LabUsageRequestDAO {
 					statement.setString(3, emptyToNull(approvalNote));
 					statement.setLong(4, requestId);
 					if (statement.executeUpdate() != 1) {
-						throw new SQLException("Danh sách không còn ở trạng thái PENDING.");
+						throw new SQLException("Danh sách không còn ở trạng thái chờ duyệt.");
 					}
 				}
 				connection.commit();
@@ -613,7 +612,7 @@ public class LabUsageRequestDAO {
 		}
 
 		if (studentId != null && !intern.getStudentCode().equalsIgnoreCase(existingCode)) {
-			throw new SQLException("Gmail " + intern.getEmail() + " không khớp mã intern hiện có.");
+			throw new SQLException("Gmail " + intern.getEmail() + " không khớp mã thực tập sinh hiện có.");
 		}
 		ensureInternCodeAvailable(connection, intern.getStudentCode(), userId);
 
@@ -627,7 +626,7 @@ public class LabUsageRequestDAO {
 				statement.executeUpdate();
 				try (ResultSet keys = statement.getGeneratedKeys()) {
 					if (!keys.next()) {
-						throw new SQLException("Không tạo được tài khoản intern.");
+						throw new SQLException("Không tạo được tài khoản thực tập sinh.");
 					}
 					userId = keys.getLong(1);
 				}
@@ -655,7 +654,7 @@ public class LabUsageRequestDAO {
 				statement.executeUpdate();
 				try (ResultSet keys = statement.getGeneratedKeys()) {
 					if (!keys.next()) {
-						throw new SQLException("Không tạo được hồ sơ intern.");
+						throw new SQLException("Không tạo được hồ sơ thực tập sinh.");
 					}
 					studentId = keys.getLong(1);
 				}
@@ -701,7 +700,7 @@ public class LabUsageRequestDAO {
 			statement.setString(1, code);
 			try (ResultSet result = statement.executeQuery()) {
 				if (result.next() && (userId == null || result.getLong("user_id") != userId.longValue())) {
-					throw new SQLException("Mã intern " + code + " đã thuộc tài khoản khác.");
+					throw new SQLException("Mã thực tập sinh " + code + " đã thuộc tài khoản khác.");
 				}
 			}
 		}
@@ -770,7 +769,7 @@ public class LabUsageRequestDAO {
 					intern.setFullName(result.getString("full_name"));
 					intern.setEmail(result.getString("email"));
 					intern.setCohort(result.getString("cohort"));
-					intern.setAddedAt(toLocalDateTime(result.getTimestamp("added_at")));
+					intern.setAddedAt(ViewFormat.fromUtc(result.getTimestamp("added_at")));
 					students.add(intern);
 				}
 				return students;
@@ -787,10 +786,10 @@ public class LabUsageRequestDAO {
 		request.setStatus(result.getString("status"));
 		request.setRequestNote(result.getString("request_note"));
 		request.setApprovedBy(nullableLong(result, "approved_by"));
-		request.setApprovedAt(toLocalDateTime(result.getTimestamp("approved_at")));
+		request.setApprovedAt(ViewFormat.fromUtc(result.getTimestamp("approved_at")));
 		request.setApprovalNote(result.getString("approval_note"));
-		request.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
-		request.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
+		request.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+		request.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 		request.setSemesterCode(result.getString("semester_code"));
 		request.setSemesterName(result.getString("semester_name"));
 		request.setMentorName(result.getString("mentor_name"));
@@ -810,10 +809,6 @@ public class LabUsageRequestDAO {
 		} else {
 			statement.setLong(index, value);
 		}
-	}
-
-	private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-		return timestamp == null ? null : timestamp.toLocalDateTime();
 	}
 
 	private String valueOrEmpty(String value) {

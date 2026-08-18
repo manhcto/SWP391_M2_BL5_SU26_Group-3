@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.InspectionItem;
 import fpt.swp391.labtoolequip.model.InspectionRecord;
@@ -14,7 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -192,7 +192,7 @@ public class InspectionDAO {
 			connection.setAutoCommit(false);
 			try {
 				if (!isDraft(connection, id)) {
-					throw new IllegalStateException("Only draft inspections can be edited.");
+					throw new IllegalStateException("Chỉ có thể sửa đợt kiểm tra ở trạng thái bản nháp.");
 				}
 				validateAssets(connection, items);
 				try (PreparedStatement statement = connection.prepareStatement("""
@@ -210,7 +210,7 @@ public class InspectionDAO {
 					statement.setString(7, blankToNull(record.getNote()));
 					statement.setLong(8, id);
 					if (statement.executeUpdate() != 1) {
-						throw new IllegalStateException("Only draft inspections can be edited.");
+						throw new IllegalStateException("Chỉ có thể sửa đợt kiểm tra ở trạng thái bản nháp.");
 					}
 				}
 				try (PreparedStatement statement = connection
@@ -229,35 +229,36 @@ public class InspectionDAO {
 
 	private void validate(InspectionRecord record, List<InspectionItem> items, boolean complete) {
 		if (record.getSemesterId() == null) {
-			throw new IllegalArgumentException("Semester is required.");
+			throw new IllegalArgumentException("Vui lòng chọn học kỳ.");
 		}
 		if (!TYPES.contains(record.getInspectionType())) {
-			throw new IllegalArgumentException("Inspection type is invalid.");
+			throw new IllegalArgumentException("Loại kiểm tra không hợp lệ.");
 		}
 		if (!SCOPES.contains(record.getScope())) {
-			throw new IllegalArgumentException("Inspection scope is invalid.");
+			throw new IllegalArgumentException("Phạm vi kiểm tra không hợp lệ.");
 		}
 		if (record.getInspectionDate() == null) {
-			throw new IllegalArgumentException("Inspection date is required.");
+			throw new IllegalArgumentException("Vui lòng nhập thời gian kiểm tra.");
 		}
 		if (items.isEmpty()) {
-			throw new IllegalArgumentException("Select at least one asset for inspection.");
+			throw new IllegalArgumentException("Vui lòng chọn ít nhất một thiết bị để kiểm tra.");
 		}
 		Set<Long> assets = new HashSet<>();
 		for (InspectionItem item : items) {
 			if (item.getAssetId() == null || !assets.add(item.getAssetId())) {
-				throw new IllegalArgumentException("An asset must not appear twice in one inspection.");
+				throw new IllegalArgumentException(
+						"Một thiết bị không được xuất hiện hai lần trong cùng đợt kiểm tra.");
 			}
 			if (item.getExpectedQuantity() == null || item.getActualQuantity() == null || item.getExpectedQuantity() < 0
 					|| item.getActualQuantity() < 0) {
-				throw new IllegalArgumentException("Quantities must not be negative.");
+				throw new IllegalArgumentException("Số lượng không được là số âm.");
 			}
 			if (!validCondition(item.getExpectedCondition()) || !validCondition(item.getActualCondition())) {
-				throw new IllegalArgumentException("Asset condition value is invalid.");
+				throw new IllegalArgumentException("Tình trạng thiết bị không hợp lệ.");
 			}
 		}
 		if (!STATUSES.contains(complete ? "COMPLETED" : "DRAFT")) {
-			throw new IllegalArgumentException("Inspection status is invalid.");
+			throw new IllegalArgumentException("Trạng thái kiểm tra không hợp lệ.");
 		}
 	}
 
@@ -268,10 +269,10 @@ public class InspectionDAO {
 				statement.setLong(1, item.getAssetId());
 				try (ResultSet result = statement.executeQuery()) {
 					if (!result.next()) {
-						throw new IllegalArgumentException("Selected asset does not exist.");
+						throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
 					}
 					if ("DISPOSED".equals(result.getString("status"))) {
-						throw new IllegalStateException("Disposed assets cannot be inspected as active targets.");
+						throw new IllegalStateException("Không thể chọn thiết bị đã thanh lý làm đối tượng kiểm tra.");
 					}
 				}
 			}
@@ -314,7 +315,7 @@ public class InspectionDAO {
 	private String resultFor(List<InspectionItem> items) {
 		String value = items.stream().anyMatch(InspectionItem::isAbnormal) ? "DISCREPANCY_FOUND" : "NORMAL";
 		if (!RESULTS.contains(value)) {
-			throw new IllegalStateException("Inspection result is invalid.");
+			throw new IllegalStateException("Kết quả kiểm tra không hợp lệ.");
 		}
 		return value;
 	}
@@ -333,12 +334,12 @@ public class InspectionDAO {
 				record.setInspectedBy(result.getLong("inspected_by"));
 				record.setInspectionType(result.getString("inspection_type"));
 				record.setScope(result.getString("scope"));
-				record.setInspectionDate(local(result.getTimestamp("inspection_date")));
+				record.setInspectionDate(ViewFormat.fromUtc(result.getTimestamp("inspection_date")));
 				record.setStatus(result.getString("status"));
 				record.setResult(result.getString("result"));
 				record.setNote(result.getString("note"));
-				record.setCreatedAt(local(result.getTimestamp("created_at")));
-				record.setUpdatedAt(local(result.getTimestamp("updated_at")));
+				record.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+				record.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 				record.setSemesterCode(result.getString("semester_code"));
 				record.setSemesterName(result.getString("semester_name"));
 				record.setInspectorName(result.getString("inspector_name"));
@@ -363,7 +364,7 @@ public class InspectionDAO {
 				item.setActualCondition(result.getString("actual_condition"));
 				item.setDiscrepancyType(result.getString("discrepancy_type"));
 				item.setDiscrepancyNote(result.getString("discrepancy_note"));
-				item.setCreatedAt(local(result.getTimestamp("created_at")));
+				item.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
 				item.setAssetCode(result.getString("asset_code"));
 				item.setAssetName(result.getString("asset_name"));
 				items.add(item);
@@ -381,13 +382,7 @@ public class InspectionDAO {
 	}
 
 	private Timestamp utc(LocalDateTime value) {
-		return Timestamp.valueOf(value.atZone(labZone).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime());
-	}
-
-	private LocalDateTime local(Timestamp value) {
-		return value == null
-				? null
-				: value.toLocalDateTime().atZone(ZoneOffset.UTC).withZoneSameInstant(labZone).toLocalDateTime();
+		return ViewFormat.toUtc(value);
 	}
 
 	private Long parseLongOrNull(String value) {

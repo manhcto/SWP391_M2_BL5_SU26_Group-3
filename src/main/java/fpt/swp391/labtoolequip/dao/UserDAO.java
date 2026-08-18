@@ -1,14 +1,13 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.User;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -119,7 +118,8 @@ public class UserDAO {
 					statement.executeUpdate();
 					try (ResultSet keys = statement.getGeneratedKeys()) {
 						if (!keys.next()) {
-							throw new SQLException("Creating user failed: no generated ID.");
+							throw new SQLException(
+									"Không thể tạo người dùng: cơ sở dữ liệu không trả về mã người dùng.");
 						}
 						userId = keys.getLong(1);
 					}
@@ -300,13 +300,9 @@ public class UserDAO {
 		user.setMajorId(nullableLong(result, "major_id"));
 		user.setMajor(result.getString("major"));
 		user.setCohort(result.getString("cohort"));
-		user.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
-		user.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
+		user.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+		user.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 		return user;
-	}
-
-	private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-		return timestamp == null ? null : timestamp.toLocalDateTime();
 	}
 
 	private String valueOrEmpty(String value) {

@@ -229,7 +229,7 @@ public class UserController extends HttpServlet {
 		} else {
 			if ("INTERN".equals(user.getRole())) {
 				if (!user.getEmail().toLowerCase().endsWith("@fpt.edu.vn")) {
-					errors.add("Email của sinh viên thực tập (Intern) bắt buộc phải có định dạng @fpt.edu.vn.");
+					errors.add("Email của thực tập sinh bắt buộc phải có đuôi @fpt.edu.vn.");
 				}
 			} else {
 				// MENTOR / LAB_MANAGER / ADMIN: chấp nhận email thường (@gmail.com, v.v.)
@@ -240,7 +240,7 @@ public class UserController extends HttpServlet {
 		}
 
 		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
-			errors.add("Mã sinh viên là bắt buộc đối với sinh viên thực tập (Intern).");
+			errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
 		}
 		if ("INTERN".equals(user.getRole()) && user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
 			errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");

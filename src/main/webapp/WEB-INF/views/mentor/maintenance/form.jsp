@@ -1,11 +1,12 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core"%>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Propose Asset Maintenance | LAB Asset</title>
+    <title>Đề xuất bảo trì thiết bị | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
 <body class="mentor-page">
@@ -15,9 +16,9 @@
 
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>Propose Equipment Maintenance</h1><p>Submit repair request to Lab Manager for authorization</p></div></div>
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1>Đề xuất bảo trì thiết bị</h1><p>Gửi yêu cầu sửa chữa để quản lý phòng LAB phê duyệt</p></div></div>
             <div class="topbar-actions">
-                <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Back to Proposals</a>
+                <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Quay lại danh sách đề xuất</a>
             </div>
         </header>
 
@@ -34,7 +35,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Số lượng (Quantity) *</label>
+                        <label>Số lượng *</label>
                         <input class="form-control" type="number" name="quantity" value="1" min="1" required>
                     </div>
 
@@ -44,8 +45,8 @@
                     </div>
 
                     <div class="form-group full-width" style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button class="primary-button" type="submit">Submit Maintenance Proposal</button>
-                        <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">Cancel</a>
+                        <button class="primary-button" type="submit">Gửi đề xuất bảo trì</button>
+                        <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">Hủy</a>
                     </div>
                 </form>
             </article>

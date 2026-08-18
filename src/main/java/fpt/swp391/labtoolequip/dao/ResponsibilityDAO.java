@@ -1,15 +1,13 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.Responsibility;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -85,7 +83,7 @@ public class ResponsibilityDAO {
 			while (result.next()) {
 				Responsibility item = new Responsibility();
 				item.setIncidentId(result.getLong("incident_id"));
-				item.setReportedAt(local(result.getTimestamp("reported_at")));
+				item.setReportedAt(ViewFormat.fromUtc(result.getTimestamp("reported_at")));
 				item.setIncidentType(result.getString("incident_type"));
 				item.setIncidentSeverity(result.getString("incident_severity"));
 				item.setIncidentStatus(result.getString("incident_status"));
@@ -156,7 +154,8 @@ public class ResponsibilityDAO {
 			statement.setLong(6, id);
 			statement.setLong(7, mentorUserId);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Responsibility not found or cannot be edited by this Mentor.");
+				throw new IllegalStateException(
+						"Không tìm thấy hồ sơ trách nhiệm hoặc người hướng dẫn này không được phép sửa.");
 		}
 	}
 
@@ -167,7 +166,8 @@ public class ResponsibilityDAO {
 			statement.setLong(1, id);
 			statement.setLong(2, mentorUserId);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Responsibility not found or cannot be deleted by this Mentor.");
+				throw new IllegalStateException(
+						"Không tìm thấy hồ sơ trách nhiệm hoặc người hướng dẫn này không được phép xóa.");
 		}
 	}
 
@@ -216,13 +216,13 @@ public class ResponsibilityDAO {
 				record.setDecision(result.getString("decision"));
 				record.setStatus(result.getString("status"));
 				record.setReviewedBy(nullableLong(result, "reviewed_by"));
-				record.setReviewedAt(local(result.getTimestamp("reviewed_at")));
+				record.setReviewedAt(ViewFormat.fromUtc(result.getTimestamp("reviewed_at")));
 				record.setReviewNote(result.getString("review_note"));
 				record.setResolutionNote(result.getString("resolution_note"));
-				record.setDeterminedAt(local(result.getTimestamp("determined_at")));
-				record.setResolvedAt(local(result.getTimestamp("resolved_at")));
-				record.setCreatedAt(local(result.getTimestamp("created_at")));
-				record.setUpdatedAt(local(result.getTimestamp("updated_at")));
+				record.setDeterminedAt(ViewFormat.fromUtc(result.getTimestamp("determined_at")));
+				record.setResolvedAt(ViewFormat.fromUtc(result.getTimestamp("resolved_at")));
+				record.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+				record.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 				record.setInternCode(result.getString("intern_code"));
 				record.setInternName(result.getString("intern_name"));
 				record.setInternEmail(result.getString("intern_email"));
@@ -234,16 +234,16 @@ public class ResponsibilityDAO {
 				record.setIncidentStatus(result.getString("incident_status"));
 				record.setInvestigationNote(result.getString("investigation_note"));
 				record.setHandlingResult(result.getString("handling_result"));
-				record.setOccurredAt(local(result.getTimestamp("occurred_at")));
-				record.setReportedAt(local(result.getTimestamp("reported_at")));
+				record.setOccurredAt(ViewFormat.fromUtc(result.getTimestamp("occurred_at")));
+				record.setReportedAt(ViewFormat.fromUtc(result.getTimestamp("reported_at")));
 				record.setAssetId(result.getLong("asset_id"));
 				record.setAssetCode(result.getString("asset_code"));
 				record.setAssetName(result.getString("asset_name"));
 				record.setAssetUsageId(nullableLong(result, "asset_usage_id"));
 				record.setUsageStatus(result.getString("usage_status"));
-				record.setBorrowedAt(local(result.getTimestamp("borrowed_at")));
-				record.setDueAt(local(result.getTimestamp("due_at")));
-				record.setReturnedAt(local(result.getTimestamp("returned_at")));
+				record.setBorrowedAt(ViewFormat.fromUtc(result.getTimestamp("borrowed_at")));
+				record.setDueAt(ViewFormat.fromUtc(result.getTimestamp("due_at")));
+				record.setReturnedAt(ViewFormat.fromUtc(result.getTimestamp("returned_at")));
 				records.add(record);
 			}
 			return records;
@@ -252,20 +252,14 @@ public class ResponsibilityDAO {
 
 	private void validate(String conclusion, String status) {
 		if (conclusion == null || conclusion.isBlank())
-			throw new IllegalArgumentException("Mentor finding is required.");
+			throw new IllegalArgumentException("Vui lòng nhập kết luận của người hướng dẫn.");
 		if (!MENTOR_STATUSES.contains(status))
-			throw new IllegalArgumentException("Invalid responsibility status.");
+			throw new IllegalArgumentException("Trạng thái trách nhiệm không hợp lệ.");
 	}
 
 	private Long nullableLong(ResultSet result, String column) throws SQLException {
 		long value = result.getLong(column);
 		return result.wasNull() ? null : value;
-	}
-
-	private LocalDateTime local(Timestamp value) {
-		return value == null
-				? null
-				: value.toLocalDateTime().atZone(ZoneOffset.UTC).withZoneSameInstant(labZone).toLocalDateTime();
 	}
 
 	private String blankToNull(String value) {

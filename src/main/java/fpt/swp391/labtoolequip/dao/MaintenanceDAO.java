@@ -1,13 +1,13 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -150,7 +150,7 @@ public class MaintenanceDAO {
 				if (keys.next()) {
 					return keys.getLong(1);
 				}
-				throw new SQLException("Creating maintenance record failed: no ID generated.");
+				throw new SQLException("Không thể tạo phiếu bảo trì: cơ sở dữ liệu không trả về mã phiếu.");
 			}
 		}
 	}
@@ -191,8 +191,8 @@ public class MaintenanceDAO {
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, status);
-			statement.setTimestamp(2, startedAt != null ? Timestamp.valueOf(startedAt) : null);
-			statement.setTimestamp(3, completedAt != null ? Timestamp.valueOf(completedAt) : null);
+			statement.setTimestamp(2, ViewFormat.toUtc(startedAt));
+			statement.setTimestamp(3, ViewFormat.toUtc(completedAt));
 			statement.setString(4, repairResult);
 			statement.setString(5, note);
 			statement.setLong(6, maintenanceId);
@@ -209,18 +209,18 @@ public class MaintenanceDAO {
 		m.setQuantity(rs.getInt("quantity"));
 		m.setRequestedBy(rs.getLong("requested_by"));
 		m.setDescription(rs.getString("description"));
-		m.setRequestedAt(toLocalDateTime(rs.getTimestamp("requested_at")));
+		m.setRequestedAt(ViewFormat.fromUtc(rs.getTimestamp("requested_at")));
 		m.setStatus(rs.getString("status"));
 		long appBy = rs.getLong("approved_by");
 		m.setApprovedBy(rs.wasNull() ? null : appBy);
-		m.setApprovedAt(toLocalDateTime(rs.getTimestamp("approved_at")));
+		m.setApprovedAt(ViewFormat.fromUtc(rs.getTimestamp("approved_at")));
 		m.setApprovalNote(rs.getString("approval_note"));
-		m.setRepairStartedAt(toLocalDateTime(rs.getTimestamp("repair_started_at")));
-		m.setRepairCompletedAt(toLocalDateTime(rs.getTimestamp("repair_completed_at")));
+		m.setRepairStartedAt(ViewFormat.fromUtc(rs.getTimestamp("repair_started_at")));
+		m.setRepairCompletedAt(ViewFormat.fromUtc(rs.getTimestamp("repair_completed_at")));
 		m.setRepairResult(rs.getString("repair_result"));
 		m.setNote(rs.getString("note"));
-		m.setCreatedAt(toLocalDateTime(rs.getTimestamp("created_at")));
-		m.setUpdatedAt(toLocalDateTime(rs.getTimestamp("updated_at")));
+		m.setCreatedAt(ViewFormat.fromUtc(rs.getTimestamp("created_at")));
+		m.setUpdatedAt(ViewFormat.fromUtc(rs.getTimestamp("updated_at")));
 
 		m.setAssetName(rs.getString("asset_name"));
 		m.setAssetCode(rs.getString("asset_code"));
@@ -229,7 +229,4 @@ public class MaintenanceDAO {
 		return m;
 	}
 
-	private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-		return timestamp == null ? null : timestamp.toLocalDateTime();
-	}
 }
