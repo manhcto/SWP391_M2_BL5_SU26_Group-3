@@ -8,7 +8,7 @@
     <title>User Details (#USR-${user.userId}) | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
-<body>
+<body class="admin-page">
 <c:set var="activeMenu" value="users" scope="request"/>
 <div class="app-shell">
     <%@ include file="../includes/sidebar.jspf"%>

@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
 import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
+import fpt.swp391.labtoolequip.dao.UserDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -11,10 +12,21 @@ import java.io.IOException;
 @WebServlet("/admin/dashboard")
 public class AdminDashboardController extends HttpServlet {
 	private final LabUsageRequestDAO requestDAO = new LabUsageRequestDAO();
+	private final UserDAO userDAO = new UserDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		try {
+			request.setAttribute("internCount", userDAO.findAll("", "INTERN", "").size());
+			request.setAttribute("mentorCount", userDAO.findAll("", "MENTOR", "").size());
+			request.setAttribute("labManagerCount", userDAO.findAll("", "LAB_MANAGER", "").size());
+		} catch (Exception exception) {
+			getServletContext().log("Could not load admin user counts", exception);
+			request.setAttribute("internCount", 0);
+			request.setAttribute("mentorCount", 0);
+			request.setAttribute("labManagerCount", 0);
+		}
 		try {
 			request.setAttribute("pendingLabRequestCount", requestDAO.countByStatus("PENDING"));
 		} catch (Exception exception) {

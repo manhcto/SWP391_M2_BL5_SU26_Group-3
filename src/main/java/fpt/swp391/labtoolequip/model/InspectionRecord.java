@@ -14,6 +14,10 @@ public class InspectionRecord {
 	private String note;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	private String semesterCode;
+	private String semesterName;
+	private String inspectorName;
+	private String inspectorEmail;
 
 	public InspectionRecord() {
 	}
@@ -120,5 +124,37 @@ public class InspectionRecord {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getSemesterCode() {
+		return semesterCode;
+	}
+
+	public void setSemesterCode(String semesterCode) {
+		this.semesterCode = semesterCode;
+	}
+
+	public String getSemesterName() {
+		return semesterName;
+	}
+
+	public void setSemesterName(String semesterName) {
+		this.semesterName = semesterName;
+	}
+
+	public String getInspectorName() {
+		return inspectorName;
+	}
+
+	public void setInspectorName(String inspectorName) {
+		this.inspectorName = inspectorName;
+	}
+
+	public String getInspectorEmail() {
+		return inspectorEmail;
+	}
+
+	public void setInspectorEmail(String inspectorEmail) {
+		this.inspectorEmail = inspectorEmail;
 	}
 }

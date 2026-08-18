@@ -11,6 +11,7 @@ public class User {
 	private String role;
 	private String status;
 	private String studentCode;
+	private Long majorId;
 	private String major;
 	private String cohort;
 	private LocalDateTime createdAt;
@@ -102,6 +103,14 @@ public class User {
 
 	public String getMajor() {
 		return major;
+	}
+
+	public Long getMajorId() {
+		return majorId;
+	}
+
+	public void setMajorId(Long majorId) {
+		this.majorId = majorId;
 	}
 
 	public void setMajor(String major) {

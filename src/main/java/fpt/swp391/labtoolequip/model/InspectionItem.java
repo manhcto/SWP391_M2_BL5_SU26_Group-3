@@ -13,6 +13,8 @@ public class InspectionItem {
 	private String discrepancyType;
 	private String discrepancyNote;
 	private LocalDateTime createdAt;
+	private String assetCode;
+	private String assetName;
 
 	public InspectionItem() {
 	}
@@ -110,5 +112,31 @@ public class InspectionItem {
 
 	public void setCreatedAt(LocalDateTime createdAt) {
 		this.createdAt = createdAt;
+	}
+
+	public String getAssetCode() {
+		return assetCode;
+	}
+
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+
+	public String getAssetName() {
+		return assetName;
+	}
+
+	public void setAssetName(String assetName) {
+		this.assetName = assetName;
+	}
+
+	public boolean isAbnormal() {
+		if (discrepancyType != null && !discrepancyType.isBlank()) {
+			return true;
+		}
+		if (expectedQuantity != null && actualQuantity != null && !expectedQuantity.equals(actualQuantity)) {
+			return true;
+		}
+		return expectedCondition != null && actualCondition != null && !expectedCondition.equals(actualCondition);
 	}
 }

@@ -4,7 +4,7 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Intern Lists | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-lab-requests.css"></head>
-<body>
+<body class="mentor-page">
 <div class="app-shell"><c:set var="activeMenu" value="labRequests"/><%@ include file="../includes/sidebar.jspf"%><main class="main-content">
     <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Manage Intern List</h1><p>One Mentor-managed list per semester</p></div></div></header>
     <section class="request-page"><div class="page-title-row"><div><h2>Intern Lists</h2><p>Pending lists can be edited or deleted. Approved lists are locked.</p></div><a class="primary-button" href="${pageContext.request.contextPath}/mentor/interns/add">＋ Add intern list</a></div>

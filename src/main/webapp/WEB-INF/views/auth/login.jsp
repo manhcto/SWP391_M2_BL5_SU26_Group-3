@@ -2,13 +2,13 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core"%>
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Login | LAB ASSET MANAGEMENT</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css?v=20260817-login"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Login | LAB ASSET MANAGEMENT</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css?v=20260818-campus"></head>
 <body class="login-page">
 <main class="login-shell">
     <section class="login-panel">
         <div class="login-box">
             <div class="login-brand"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"><span>LAB ASSET MANAGEMENT</span></div>
-            <div class="login-welcome"><div class="welcome-icon" aria-hidden="true">⌂</div><h1>Welcome home</h1><p>Please enter your details.</p></div>
+            <div class="login-welcome"><h1>FPT University Internal Login</h1><p>Please enter your details.</p></div>
             <c:if test="${not empty message}"><p class="login-alert" role="alert"><c:out value="${message}"/></p></c:if>
             <c:if test="${devAuthEnabled}"><form class="login-form" method="post" action="${pageContext.request.contextPath}/login">
                 <label class="login-field" for="email"><span>Email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Enter your email" required><span class="field-icon">✉</span></label>

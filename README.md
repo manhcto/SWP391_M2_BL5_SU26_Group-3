@@ -104,17 +104,19 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 Đã triển khai:
 
 - Schema SQL Server gồm các bảng nghiệp vụ cho một phòng LAB, danh sách intern theo học kỳ và các model Java tương ứng.
+- Danh mục `majors` được lưu riêng trong database; hồ sơ intern tham chiếu `major_id` và form Admin hiển thị các major đang `ACTIVE` bằng dropdown.
 - Cấu hình `.env` qua `AppConfig`; kết nối SQL Server qua `DBConnection`.
 - Google OAuth/OIDC, bind Google subject, session, logout và Filter phân quyền theo role.
 - FE-01 Manage User ở mức MVC/JDBC cơ bản: `UserController`, `UserDAO` và các JSP danh sách, chi tiết, thêm, sửa.
 - FE-04 Manage Asset Usage: Intern mượn/trả/xem lịch sử; Lab Manager xem và lọc toàn bộ lịch sử; transaction khóa asset chống over-borrow.
+- FE-07 Manage Responsibilities: Mentor tạo, xem, sửa, xóa kết luận trách nhiệm; Lab Manager xem toàn bộ danh sách/chi tiết; Intern chỉ xem trách nhiệm gắn với tài khoản của mình.
 - FE-09 Manage Asset Disposal: Lab Manager tạo, sửa, hủy và hoàn tất quy trình `PENDING/CANCELLED/COMPLETED`.
 - Controller và JSP khung cho dashboard của Admin, Lab Manager, Mentor và Intern.
 - Mentor Dashboard responsive; dữ liệu trên dashboard hiện là dữ liệu trình diễn.
 
 Chưa triển khai đầy đủ:
 
-- DAO, Controller và JSP nghiệp vụ cho FE-02, FE-03, FE-05 đến FE-08.
+- DAO, Controller và JSP nghiệp vụ cho FE-02, FE-03, FE-05, FE-06 và FE-08.
 - Dữ liệu động cho các dashboard và kiểm thử tự động; `src/test` hiện chỉ có file giữ package.
 
 ## Công nghệ
@@ -156,7 +158,7 @@ DEV_AUTH_ENABLED=false
 
 ### Khởi tạo database local
 
-Để tạo toàn bộ bảng và dữ liệu đăng nhập demo, chạy trực tiếp `database/lab_asset_management_full.sql` trong SQL Server Management Studio hoặc bằng `sqlcmd`. Đây là file standalone, không cần thêm file SQL nào khác.
+Để tạo database nền và dữ liệu đăng nhập demo, chạy `database/lab_asset_management_full.sql`. Sau đó chạy `database/migrate_major_to_lookup.sql` để thêm bảng danh mục Major và chuyển dữ liệu major dạng text sang `major_id`. File Major được tách riêng để không thay đổi file full database.
 
 Các tài khoản demo đều dùng mật khẩu `123` khi `DEV_AUTH_ENABLED=true`:
 
@@ -168,7 +170,7 @@ Các tài khoản demo đều dùng mật khẩu `123` khi `DEV_AUTH_ENABLED=tru
 | `intern@gmail.com` | `INTERN` |
 | `intern2@gmail.com` | `INTERN` |
 
-File SQL cũng tạo sẵn học kỳ `FA26`, một danh sách intern đã `APPROVED` do Mentor gửi và hai intern thuộc khóa `K17`.
+File SQL cũng tạo sẵn học kỳ `FA26`, một danh sách intern đã `APPROVED` do Mentor gửi, hai intern thuộc khóa `K17` và hai hồ sơ trách nhiệm FE-07 để kiểm tra phân quyền theo actor.
 
 Khởi tạo database và dữ liệu demo:
 
