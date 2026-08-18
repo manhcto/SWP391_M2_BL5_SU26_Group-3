@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Inspection Detail | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"></head>
-<body class="inspection-page">
+<body class="inspection-page${roleBase == '/mentor' ? ' mentor-page' : ' lab-manager-page'}">
 <c:set var="activeMenu" value="inspections" scope="request"/>
 <div class="app-shell">
     <c:choose><c:when test="${roleBase == '/mentor'}"><%@ include file="../../mentor/includes/sidebar.jspf"%></c:when><c:otherwise><%@ include file="../../labmanager/includes/sidebar.jspf"%></c:otherwise></c:choose>

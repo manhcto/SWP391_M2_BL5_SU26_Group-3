@@ -8,7 +8,7 @@
     <title><c:choose><c:when test="${formMode == 'edit'}">Update Maintenance Ticket</c:when><c:otherwise>Create Maintenance Ticket</c:otherwise></c:choose> | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
-<body>
+<body class="lab-manager-page">
 <c:set var="activeMenu" value="maintenance" scope="request"/>
 <div class="app-shell">
     <%@ include file="../includes/sidebar.jspf"%>

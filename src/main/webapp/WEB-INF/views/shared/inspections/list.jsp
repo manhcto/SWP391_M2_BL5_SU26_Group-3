@@ -8,7 +8,7 @@
     <title>Inspections | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
-<body class="inspection-page">
+<body class="inspection-page${roleBase == '/mentor' ? ' mentor-page' : ' lab-manager-page'}">
 <c:set var="activeMenu" value="inspections" scope="request"/>
 <div class="app-shell">
     <c:choose>

@@ -16,9 +16,9 @@
     </a>
     <nav class="side-nav" aria-label="Intern navigation">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/intern/usages/borrow"><svg><use href="#i-box"/></svg><span>Borrow Asset</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/intern/usages"><svg><use href="#i-calendar"/></svg><span>My Usage History</span></a>
-        <a class="nav-link" href="#"><svg><use href="#i-alert"/></svg><span>My Incidents</span></a>
+        <a class="nav-link${activeMenu == 'borrow' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages/borrow"><svg><use href="#i-box"/></svg><span>Borrow Asset</span></a>
+        <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages"><svg><use href="#i-calendar"/></svg><span>My Usage History</span></a>
+        <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="#"><svg><use href="#i-alert"/></svg><span>My Incidents</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/responsibilities"><svg><use href="#i-list"/></svg><span>My Responsibilities</span></a>
     </nav>
     <div class="sidebar-footer">

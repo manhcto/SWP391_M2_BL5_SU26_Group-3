@@ -12,14 +12,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.sql.Types;
 
 public class UserDAO {
 	private static final String SELECT_USER = """
 			SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
 			       u.role, u.status, u.created_at, u.updated_at,
-			       sp.student_code, sp.major, sp.cohort
+			       sp.student_code, sp.major_id, m.major_name AS major, sp.cohort
 			FROM dbo.users u
 			LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+			LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
 			""";
 
 	private final DBConnection dbConnection = new DBConnection();
@@ -246,13 +248,13 @@ public class UserDAO {
 
 	private void insertStudentProfile(Connection connection, long userId, User user) throws SQLException {
 		String sql = """
-				INSERT INTO dbo.student_profiles (user_id, student_code, major, cohort, status)
+				INSERT INTO dbo.student_profiles (user_id, student_code, major_id, cohort, status)
 				VALUES (?, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, userId);
 			statement.setString(2, user.getStudentCode());
-			statement.setString(3, emptyToNull(user.getMajor()));
+			setNullableLong(statement, 3, user.getMajorId());
 			statement.setString(4, emptyToNull(user.getCohort()));
 			statement.setString(5, user.getStatus());
 			statement.executeUpdate();
@@ -262,12 +264,12 @@ public class UserDAO {
 	private void upsertStudentProfile(Connection connection, User user) throws SQLException {
 		String update = """
 				UPDATE dbo.student_profiles
-				SET student_code = ?, major = ?, cohort = ?, status = ?, updated_at = SYSUTCDATETIME()
+				SET student_code = ?, major_id = ?, cohort = ?, status = ?, updated_at = SYSUTCDATETIME()
 				WHERE user_id = ?
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(update)) {
 			statement.setString(1, user.getStudentCode());
-			statement.setString(2, emptyToNull(user.getMajor()));
+			setNullableLong(statement, 2, user.getMajorId());
 			statement.setString(3, emptyToNull(user.getCohort()));
 			statement.setString(4, user.getStatus());
 			statement.setLong(5, user.getUserId());
@@ -295,6 +297,7 @@ public class UserDAO {
 		user.setRole(result.getString("role"));
 		user.setStatus(result.getString("status"));
 		user.setStudentCode(result.getString("student_code"));
+		user.setMajorId(nullableLong(result, "major_id"));
 		user.setMajor(result.getString("major"));
 		user.setCohort(result.getString("cohort"));
 		user.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
@@ -312,5 +315,18 @@ public class UserDAO {
 
 	private String emptyToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
+	}
+
+	private Long nullableLong(ResultSet result, String column) throws SQLException {
+		long value = result.getLong(column);
+		return result.wasNull() ? null : value;
+	}
+
+	private void setNullableLong(PreparedStatement statement, int index, Long value) throws SQLException {
+		if (value == null) {
+			statement.setNull(index, Types.BIGINT);
+		} else {
+			statement.setLong(index, value);
+		}
 	}
 }

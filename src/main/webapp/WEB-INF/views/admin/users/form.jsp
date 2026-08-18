@@ -12,7 +12,7 @@
         .lock-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9.5px; color: #8a938f; font-weight: 600; }
     </style>
 </head>
-<body>
+<body class="admin-page">
 <c:set var="activeMenu" value="users" scope="request"/>
 <div class="app-shell">
     <%@ include file="../includes/sidebar.jspf"%>
@@ -139,7 +139,14 @@
 
                             <div class="form-group" id="majorGroup">
                                 <label>Chuyên ngành (Major)</label>
-                                <input class="form-control" type="text" name="major" value="<c:out value='${user.major}'/>" placeholder="e.g. Software Engineering">
+                                <select class="form-control" name="majorId" id="majorInput">
+                                    <option value="">-- Chọn chuyên ngành --</option>
+                                    <c:forEach var="major" items="${majors}">
+                                        <option value="${major.majorId}" ${user.majorId == major.majorId ? 'selected' : ''}>
+                                            <c:out value="${major.majorCode}"/> - <c:out value="${major.majorName}"/>
+                                        </option>
+                                    </c:forEach>
+                                </select>
                             </div>
 
                             <div class="form-group" id="cohortGroup">

@@ -8,7 +8,7 @@
     <title>Maintenance Ticket Details | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
-<body>
+<body class="mentor-page">
 <c:set var="activeMenu" value="maintenance" scope="request"/>
 <div class="app-shell">
     <%@ include file="../includes/sidebar.jspf"%>

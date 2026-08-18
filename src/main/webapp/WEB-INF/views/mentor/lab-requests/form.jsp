@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-lab-requests.css">
 </head>
-<body>
+<body class="mentor-page">
 <div class="app-shell">
     <c:set var="activeMenu" value="labRequests"/>
     <%@ include file="../includes/sidebar.jspf"%>

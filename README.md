@@ -104,6 +104,7 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 Đã triển khai:
 
 - Schema SQL Server gồm các bảng nghiệp vụ cho một phòng LAB, danh sách intern theo học kỳ và các model Java tương ứng.
+- Danh mục `majors` được lưu riêng trong database; hồ sơ intern tham chiếu `major_id` và form Admin hiển thị các major đang `ACTIVE` bằng dropdown.
 - Cấu hình `.env` qua `AppConfig`; kết nối SQL Server qua `DBConnection`.
 - Google OAuth/OIDC, bind Google subject, session, logout và Filter phân quyền theo role.
 - FE-01 Manage User ở mức MVC/JDBC cơ bản: `UserController`, `UserDAO` và các JSP danh sách, chi tiết, thêm, sửa.
@@ -157,7 +158,7 @@ DEV_AUTH_ENABLED=false
 
 ### Khởi tạo database local
 
-Để tạo toàn bộ bảng và dữ liệu đăng nhập demo, chạy trực tiếp `database/lab_asset_management_full.sql` trong SQL Server Management Studio hoặc bằng `sqlcmd`. Đây là file standalone, không cần thêm file SQL nào khác.
+Để tạo database nền và dữ liệu đăng nhập demo, chạy `database/lab_asset_management_full.sql`. Sau đó chạy `database/migrate_major_to_lookup.sql` để thêm bảng danh mục Major và chuyển dữ liệu major dạng text sang `major_id`. File Major được tách riêng để không thay đổi file full database.
 
 Các tài khoản demo đều dùng mật khẩu `123` khi `DEV_AUTH_ENABLED=true`:
 

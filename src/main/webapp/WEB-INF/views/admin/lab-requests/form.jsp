@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Edit Intern List | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-lab-requests.css"></head>
-<body>
+<body class="admin-page">
 <c:set var="activeMenu" value="labRequests" scope="request"/><div class="app-shell"><%@ include file="../includes/sidebar.jspf"%><main class="main-content">
     <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Edit Intern List</h1><p>Admin can update this list in any status</p></div></div></header>
     <section class="request-page"><div class="page-title-row"><div><h2>Update intern list</h2><p>Admin changes to an approved list are synchronized with its intern memberships.</p></div><a class="secondary-button" href="${pageContext.request.contextPath}/admin/interns">Back to list</a></div>

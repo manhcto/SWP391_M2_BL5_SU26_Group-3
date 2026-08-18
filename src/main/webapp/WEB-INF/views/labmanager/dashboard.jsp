@@ -8,7 +8,7 @@
     <title>Lab Manager Dashboard | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
-<body>
+<body class="lab-manager-page">
 <c:set var="activeMenu" value="dashboard" scope="request"/>
 <div class="app-shell">
     <%@ include file="includes/sidebar.jspf"%>

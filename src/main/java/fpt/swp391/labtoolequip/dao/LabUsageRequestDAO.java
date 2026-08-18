@@ -338,10 +338,8 @@ public class LabUsageRequestDAO {
 					connection.rollback();
 					return false;
 				}
-				if (hasAssetUsage(connection, requestId)) {
-					throw new SQLException("Không thể xóa danh sách đã có lịch sử sử dụng tài sản.");
-				}
 				Map<Long, Long> internAccounts = findInternAccounts(connection, requestId);
+				deleteRequestHistory(connection, requestId);
 				try (PreparedStatement memberships = connection
 						.prepareStatement("DELETE dbo.lab_usage_request_students WHERE request_id = ?")) {
 					memberships.setLong(1, requestId);
@@ -402,12 +400,32 @@ public class LabUsageRequestDAO {
 		return studentIds;
 	}
 
-	private boolean hasAssetUsage(Connection connection, long requestId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE request_id = ?")) {
-			statement.setLong(1, requestId);
-			try (ResultSet result = statement.executeQuery()) {
-				return result.next();
+	private void deleteRequestHistory(Connection connection, long requestId) throws SQLException {
+		List<String> statements = List.of("""
+				DELETE d FROM dbo.disposal_records d
+				JOIN dbo.maintenance_records m ON m.maintenance_id = d.maintenance_id
+				JOIN dbo.incidents i ON i.incident_id = m.incident_id
+				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
+				WHERE au.request_id = ?
+				""", """
+				DELETE m FROM dbo.maintenance_records m
+				JOIN dbo.incidents i ON i.incident_id = m.incident_id
+				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
+				WHERE au.request_id = ?
+				""", """
+				DELETE r FROM dbo.responsibilities r
+				JOIN dbo.incidents i ON i.incident_id = r.incident_id
+				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
+				WHERE au.request_id = ?
+				""", """
+				DELETE i FROM dbo.incidents i
+				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
+				WHERE au.request_id = ?
+				""", "DELETE dbo.asset_usages WHERE request_id = ?");
+		for (String sql : statements) {
+			try (PreparedStatement statement = connection.prepareStatement(sql)) {
+				statement.setLong(1, requestId);
+				statement.executeUpdate();
 			}
 		}
 	}
@@ -628,7 +646,7 @@ public class LabUsageRequestDAO {
 
 		if (studentId == null) {
 			try (PreparedStatement statement = connection.prepareStatement("""
-					INSERT dbo.student_profiles (user_id, student_code, major, cohort, status)
+					INSERT dbo.student_profiles (user_id, student_code, major_id, cohort, status)
 					VALUES (?, ?, NULL, ?, 'ACTIVE')
 					""", Statement.RETURN_GENERATED_KEYS)) {
 				statement.setLong(1, userId);

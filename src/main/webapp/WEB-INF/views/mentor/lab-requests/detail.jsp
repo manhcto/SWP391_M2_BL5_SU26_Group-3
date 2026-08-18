@@ -3,7 +3,7 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Intern List #${labRequest.requestId} | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-lab-requests.css"></head>
-<body>
+<body class="mentor-page">
 <div class="app-shell"><c:set var="activeMenu" value="labRequests"/><%@ include file="../includes/sidebar.jspf"%><main class="main-content">
     <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Intern List #<c:out value="${labRequest.requestId}"/></h1><p>Semester intern access list</p></div></div></header>
     <section class="request-page"><div class="page-title-row"><div><h2><c:out value="${labRequest.groupName}"/></h2><p><c:out value="${labRequest.semesterCode}"/> — <c:out value="${labRequest.semesterName}"/></p></div><div class="row-actions"><a class="secondary-button" href="${pageContext.request.contextPath}/mentor/interns">Back</a><c:if test="${labRequest.status == 'PENDING'}"><a class="primary-button" href="${pageContext.request.contextPath}/mentor/interns/edit?id=${labRequest.requestId}">Edit list</a></c:if></div></div>
