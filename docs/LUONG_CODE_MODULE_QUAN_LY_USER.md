@@ -1,5 +1,5 @@
 # 🚀 HƯỚNG DẪN CHI TIẾT LUỒNG CHẠY MODULE QUẢN LÝ NGƯỜI DÙNG (USER MANAGEMENT)
-*(Trình bày chi tiết và trực quan: **NƠI GỬI (Frontend dòng mấy)** ➔ **NƠI NHẬN (Backend dòng mấy)** ➔ **NƠI TRUY VẤN (DAO/SQL dòng mấy)** ➔ **NƠI HIỂN THỊ KẾT QUẢ**)*
+*(Tài liệu chuẩn dành cho thuyết trình và bảo vệ đồ án: **NƠI GỬI (Frontend)** ➔ **NƠI NHẬN (Backend)** ➔ **NƠI XỬ LÝ (DAO/SQL)** ➔ **NƠI HIỂN THỊ KẾT QUẢ** - Kèm giải thích chi tiết từng dòng code và câu lệnh SQL)*
 
 ---
 
@@ -15,7 +15,7 @@
 
 # HÀNH ĐỘNG 1: Admin bấm vào mục "Người dùng" trên Menu Sidebar
 
-### 📤 1. NƠI GỬI (Frontend):
+### 📤 1. NƠI GỬI (Frontend - Giao diện người dùng):
 - **File:** `src/main/webapp/WEB-INF/views/admin/includes/sidebar.jspf`
 - **Vị trí code (Dòng 26-29):**
   ```html
@@ -24,51 +24,97 @@
       <span>Người dùng</span>
   </a>
   ```
-- **Hành động:** Admin click chuột vào link "Người dùng".
-- **Gói tin gửi đi:** HTTP Request dạng `GET /admin/users`.
+- **Giải thích:**
+  - `${pageContext.request.contextPath}/admin/users`: Tạo ra đường link tuyệt đối dẫn tới route `/admin/users` của ứng dụng.
+  - Khi Admin click vào link này, trình duyệt sẽ gửi đi một HTTP Request bằng phương thức **`GET`** tới URL: `/admin/users`.
 
 ---
 
 ### 📥 2. NƠI NHẬN & ĐIỀU PHỐI (Backend Controller):
 - **File:** `src/main/java/fpt/swp391/labtoolequip/controller/admin/UserController.java`
-- **Dòng 15:** Nhận diện URL `@WebServlet({"/admin/users", ...})` ➔ Tomcat chuyển request vào `UserController`.
-- **Dòng 28:** Phương thức `doGet(HttpServletRequest request, HttpServletResponse response)` tiếp nhận phương thức `GET`.
-- **Dòng 31 & Dòng 37:** Lệnh `switch (request.getServletPath())` kiểm tra URL `/admin/users` ➔ Rơi vào nhánh `default` (Dòng 37) và gọi hàm `showList(request, response)`.
+- **Dòng 15:** `@WebServlet({"/admin/users", ...})` ➔ Máy chủ Tomcat nhận biết URL `/admin/users` được ánh xạ vào class `UserController`.
+- **Dòng 28:** Phương thức `doGet(HttpServletRequest request, HttpServletResponse response)` được Tomcat tự động gọi để đón request `GET`.
+- **Dòng 31-38:** Lệnh `switch (request.getServletPath())` kiểm tra đường dẫn:
+  ```java
+  switch (request.getServletPath()) {
+      case "/admin/users/view" -> showDetail(request, response);
+      case "/admin/users/add" -> showAddForm(request, response);
+      case "/admin/users/edit" -> showEditForm(request, response);
+      case "/admin/users/toggle-status" -> toggleStatus(request, response);
+      case "/admin/users/change-role" -> changeRole(request, response);
+      default -> showList(request, response); // <── ĐÓN /admin/users TẠI DÒNG 37
+  }
+  ```
+  *(Vì URL là `/admin/users`, không khớp với `/view`, `/add`, `/edit`... nên rơi vào nhánh `default` ở dòng 37 và gọi hàm `showList`).*
 
 ---
 
-### ⚙️ 3. NƠI XỬ LÝ NGHIỆP VỤ & TRUY VẤN CSDL:
-- **Tại Controller (Dòng 63-73):**
-  ```java
-  private void showList(HttpServletRequest request, HttpServletResponse response) throws SQLException, ServletException, IOException {
-      String keyword = trim(request.getParameter("keyword")); // Nhận keyword = ""
-      String role = normalize(request.getParameter("role"));       // Nhận role = ""
-      String status = normalize(request.getParameter("status"));   // Nhận status = ""
-      
-      // Gọi DAO lấy danh sách từ CSDL và lưu vào attribute "users"
-      request.setAttribute("users", userDAO.findAll(keyword, role, status));
-      
-      // Chuyển tiếp (forward) dữ liệu sang file JSP
-      request.getRequestDispatcher("/WEB-INF/views/admin/users/list.jsp").forward(request, response);
-  }
-  ```
-- **Tại DAO (`UserDAO.java` - Dòng 28-59):**
-  - Thực thi hàm `userDAO.findAll("", "", "")` chạy câu truy vấn SQL:
-    ```sql
-    SELECT u.user_id, u.full_name, u.email, u.role, u.status,
-           sp.student_code, sp.cohort, m.major_name AS major
-    FROM dbo.users u
-    LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
-    LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
-    WHERE u.role != 'ADMIN'
-    ORDER BY u.user_id ASC;
-    ```
+### ⚙️ 3. NƠI XỬ LÝ NGHIỆP VỤ & TRUY VẤN CSDL (Controller & DAO):
+
+#### 🔹 A. Tại Controller (`UserController.java` - Dòng 63-73):
+```java
+private void showList(HttpServletRequest request, HttpServletResponse response) 
+        throws SQLException, ServletException, IOException {
+    // Dòng 65-67: Đọc tham số tìm kiếm (lúc mới vào chưa tìm gì nên nhận giá trị rỗng "")
+    String keyword = trim(request.getParameter("keyword"));
+    String role = normalize(request.getParameter("role"));
+    String status = normalize(request.getParameter("status"));
+    
+    // Dòng 68: Gọi DAO truy vấn CSDL và gắn danh sách người dùng vào biến "users" gửi sang JSP
+    request.setAttribute("users", userDAO.findAll(keyword, role, status));
+    
+    // Dòng 69-71: Lưu lại trạng thái lọc để form không bị mất giá trị
+    request.setAttribute("keyword", keyword);
+    request.setAttribute("selectedRole", role);
+    request.setAttribute("selectedStatus", status);
+    
+    // Dòng 72: Chuyển tiếp (forward) toàn bộ dữ liệu sang file list.jsp để vẽ giao diện
+    request.getRequestDispatcher("/WEB-INF/views/admin/users/list.jsp").forward(request, response);
+}
+```
+
+#### 🔹 B. Tại DAO (`UserDAO.java` - Dòng 28-59):
+Hàm `userDAO.findAll("", "", "")` chạy câu lệnh SQL nối bảng để lấy dữ liệu:
+```sql
+SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
+       u.role, u.status, u.created_at, u.updated_at,
+       sp.student_code, sp.major_id, m.major_name AS major, sp.cohort
+FROM dbo.users u
+LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
+WHERE u.role != 'ADMIN'
+ORDER BY u.user_id ASC;
+```
+
+#### 📝 GIẢI THÍCH CHI TIẾT TỪNG DÒNG SQL TRÊN:
+- **`SELECT u.user_id, u.full_name, ...`**: Chọn lấy các cột cần thiết từ bảng tài khoản `users` (ID, Họ tên, Email, Vai trò, Trạng thái, Ngày tạo).
+- **`FROM dbo.users u`**: Bảng chính chứa thông tin tài khoản người dùng.
+- **`LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id`**: Nối bảng `student_profiles` với bảng `users` qua khóa ngoại `user_id`. Dùng `LEFT JOIN` để nếu là Mentor hoặc Lab Manager (không có hồ sơ sinh viên) thì vẫn lấy được tài khoản ra (các cột sinh viên sẽ mang giá trị `NULL`).
+- **`LEFT JOIN dbo.majors m ON m.major_id = sp.major_id`**: Nối bảng danh mục `majors` để lấy tên chuyên ngành tiếng Anh chuẩn (`Software Engineering`, `IoT Embedded`...).
+- **`WHERE u.role != 'ADMIN'`**: Loại trừ tài khoản Quản trị viên hệ thống để danh sách chỉ hiển thị nhân sự và sinh viên cần quản lý.
+- **`ORDER BY u.user_id ASC`**: Sắp xếp danh sách theo ID người dùng tăng dần từ nhỏ đến lớn (từ người tạo trước đến người tạo sau).
 
 ---
 
 ### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ (View):
 - **File:** `src/main/webapp/WEB-INF/views/admin/users/list.jsp`
-- **Vị trí hiển thị (Dòng 145-218):** Thẻ `<c:forEach var="u" items="${users}">` duyệt qua danh sách và vẽ ra bảng danh sách người dùng gồm 8 cột rõ ràng.
+- **Vị trí code (Dòng 145-218):**
+  ```jsp
+  <!-- Vòng lặp duyệt từng user trong danh sách ${users} do Servlet gửi sang -->
+  <c:forEach var="u" items="${users}">
+      <tr>
+          <td><strong>#USR-${u.userId}</strong></td> <!-- Cột 1: Mã người dùng ID -->
+          <td>${u.fullName}</td>                     <!-- Cột 2: Họ và tên -->
+          <td>${u.email}</td>                        <!-- Cột 3: Email -->
+          <td>${u.role}</td>                         <!-- Cột 4: Vai trò -->
+          <td>${u.studentCode != null ? u.studentCode : '---'}</td> <!-- Cột 5: Mã SV (Staff hiện '---') -->
+          <td>${u.major != null ? u.major : '---'}</td>             <!-- Cột 6: Chuyên ngành (Staff hiện '---') -->
+          <td>${u.status == 'ACTIVE' ? 'Đang hoạt động' : 'Không hoạt động'}</td> <!-- Cột 7: Trạng thái -->
+          <td><!-- Cột 8: Các nút bấm Xem, Sửa --></td>
+      </tr>
+  </c:forEach>
+  ```
+- **Kết quả trên màn hình:** Bảng danh sách 8 cột hiển thị đầy đủ toàn bộ người dùng trong hệ thống.
 
 ---
 ---
@@ -77,26 +123,32 @@
 
 ### 📤 1. NƠI GỬI (Frontend):
 - **File:** `src/main/webapp/WEB-INF/views/admin/users/list.jsp`
-- **Vị trí code (Dòng 50-95):** Form tìm kiếm & bộ lọc:
+- **Vị trí code (Dòng 50-95):**
   ```html
   <form method="get" action="${pageContext.request.contextPath}/admin/users">
+      <!-- Ô nhập từ khóa tìm kiếm -->
       <input type="text" name="keyword" value="${keyword}" placeholder="Tìm theo tên, email, MSSV...">
+      
+      <!-- Dropdown chọn vai trò cần lọc -->
       <select name="role">
           <option value="">Tất cả vai trò</option>
           <option value="INTERN" ${selectedRole == 'INTERN' ? 'selected' : ''}>Thực tập sinh</option>
           <option value="MENTOR" ${selectedRole == 'MENTOR' ? 'selected' : ''}>Người hướng dẫn</option>
           <option value="LAB_MANAGER" ${selectedRole == 'LAB_MANAGER' ? 'selected' : ''}>Quản lý phòng LAB</option>
       </select>
+
+      <!-- Dropdown chọn trạng thái cần lọc -->
       <select name="status">
           <option value="">Tất cả trạng thái</option>
           <option value="ACTIVE" ${selectedStatus == 'ACTIVE' ? 'selected' : ''}>Đang hoạt động</option>
           <option value="INACTIVE" ${selectedStatus == 'INACTIVE' ? 'selected' : ''}>Không hoạt động</option>
       </select>
+
       <button type="submit">Lọc</button>
   </form>
   ```
-- **Hành động:** Admin gõ từ khóa (ví dụ: `minh`) hoặc chọn vai trò `INTERN` ➔ Bấm nút **"Lọc"**.
-- **Gói tin gửi đi:** HTTP Request dạng `GET /admin/users?keyword=minh&role=INTERN&status=ACTIVE`.
+- **Hành động:** Admin gõ từ khóa `minh`, chọn vai trò `INTERN` ➔ Bấm nút **"Lọc"**.
+- **Gói tin gửi đi:** Request `GET /admin/users?keyword=minh&role=INTERN&status=ACTIVE`.
 
 ---
 
@@ -108,24 +160,34 @@
 
 ### ⚙️ 3. NƠI XỬ LÝ NGHIỆP VỤ & TRUY VẤN CSDL:
 - **Tại Controller (Dòng 65-68):**
-  - Lấy tham số: `keyword = "minh"`, `role = "INTERN"`, `status = "ACTIVE"`.
+  - `request.getParameter("keyword")` ➔ lấy chuỗi `"minh"`.
+  - `request.getParameter("role")` ➔ lấy chuỗi `"INTERN"`.
+  - `request.getParameter("status")` ➔ lấy chuỗi `"ACTIVE"`.
   - Gọi `userDAO.findAll("minh", "INTERN", "ACTIVE")`.
 - **Tại DAO (`UserDAO.java` - Dòng 28-59):**
-  - Chạy câu lệnh SQL lọc dữ liệu:
+  - Chạy câu lệnh SQL lọc có điều kiện:
     ```sql
-    ...
+    SELECT u.user_id, u.full_name, u.email, u.role, u.status,
+           sp.student_code, sp.cohort, m.major_name AS major
+    FROM dbo.users u
+    LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+    LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
     WHERE u.role != 'ADMIN'
-      AND (u.full_name LIKE '%minh%' OR u.email LIKE '%minh%' OR sp.student_code LIKE '%minh%')
-      AND (u.role = 'INTERN')
-      AND (u.status = 'ACTIVE')
+      AND (? = '' OR u.full_name LIKE ? OR u.email LIKE ? OR sp.student_code LIKE ?)
+      AND (? = '' OR u.role = ?)
+      AND (? = '' OR u.status = ?)
     ORDER BY u.user_id ASC;
     ```
+  - **Giải thích:**
+    - `(? = '' OR u.full_name LIKE ? ...)`: Nếu có truyền từ khóa `"minh"`, SQL sẽ tìm kiếm tương đối `%minh%` trên cả 3 cột Họ tên, Email và Mã sinh viên.
+    - `(? = '' OR u.role = ?)`: Lọc chính xác vai trò là `INTERN`.
+    - `(? = '' OR u.status = ?)`: Lọc chính xác trạng thái là `ACTIVE`.
 
 ---
 
-### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ (View):
+### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ:
 - **File:** `list.jsp`
-- Bảng tự động cập nhật chỉ hiển thị những người dùng khớp với điều kiện tìm kiếm.
+- Bảng danh sách lập tức chỉ hiển thị những sinh viên có tên/email/mã SV chứa chữ `minh`, vai trò là Thực tập sinh và đang hoạt động.
 
 ---
 ---
@@ -134,19 +196,19 @@
 
 ### 📤 1. NƠI GỬI (Frontend):
 - **File:** `src/main/webapp/WEB-INF/views/admin/users/list.jsp`
-- **Vị trí code (Dòng 211-212):** Nút Xem trong từng dòng của bảng:
+- **Vị trí code (Dòng 211-212):**
   ```html
   <a class="btn-action" href="${pageContext.request.contextPath}/admin/users/view?id=${u.userId}">Xem</a>
   ```
-- **Hành động:** Admin click nút **"Xem"** của người dùng có `id = 5`.
-- **Gói tin gửi đi:** HTTP Request dạng `GET /admin/users/view?id=5`.
+- **Hành động:** Admin click nút **"Xem"** của người dùng có ID là `5`.
+- **Gói tin gửi đi:** Request `GET /admin/users/view?id=5`.
 
 ---
 
 ### 📥 2. NƠI NHẬN & ĐIỀU PHỐI (Backend Controller):
 - **File:** `UserController.java`
 - **Dòng 28 (`doGet`)**: Tiếp nhận request `GET`.
-- **Dòng 32 (`switch` case `"/admin/users/view"`):** Khớp URL và gọi hàm `showDetail(request, response)`.
+- **Dòng 32 (`case "/admin/users/view"`):** Khớp URL và gọi hàm `showDetail(request, response)`.
 
 ---
 
@@ -154,26 +216,36 @@
 - **Tại Controller (Dòng 75-88):**
   ```java
   private void showDetail(HttpServletRequest request, HttpServletResponse response) throws SQLException, ServletException, IOException {
-      long userId = requireId(request, response); // Dòng 77: Ép kiểu và lấy số 5 từ tham số "id"
-      User user = userDAO.findById(userId).orElse(null); // Dòng 81: Tìm user trong CSDL
+      long userId = requireId(request, response); // Dòng 77: Ép kiểu "5" sang số long 5L
+      User user = userDAO.findById(userId).orElse(null); // Dòng 81: Tìm kiếm trong DB
       
       if (user == null) {
-          response.sendError(HttpServletResponse.SC_NOT_FOUND); // Báo lỗi 404 nếu không tìm thấy
+          response.sendError(HttpServletResponse.SC_NOT_FOUND); // Báo 404 nếu không tìm thấy
           return;
       }
       
-      request.setAttribute("user", user); // Đóng gói dữ liệu user
+      request.setAttribute("user", user); // Dòng 86: Gắn đối tượng user vào request
       request.getRequestDispatcher("/WEB-INF/views/admin/users/detail.jsp").forward(request, response); // Dòng 87
   }
   ```
 - **Tại DAO (`UserDAO.java` - Dòng 61-70):**
-  - Chạy SQL: `SELECT ... WHERE u.user_id = 5;`.
+  - Chạy câu lệnh SQL:
+    ```sql
+    SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
+           u.role, u.status, u.created_at, u.updated_at,
+           sp.student_code, sp.major_id, m.major_name AS major, sp.cohort
+    FROM dbo.users u
+    LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+    LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
+    WHERE u.user_id = 5;
+    ```
+  - **Giải thích:** Lấy toàn bộ thông tin chi tiết của riêng người dùng có mã `user_id = 5`.
 
 ---
 
-### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ (View):
+### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ:
 - **File:** `src/main/webapp/WEB-INF/views/admin/users/detail.jsp`
-- Hiển thị toàn bộ thông tin chi tiết của người dùng: Họ tên, Email, Vai trò, Trạng thái, Google Subject ID, Mã SV, Chuyên ngành, Khóa học.
+- Màn hình hiển thị thẻ hồ sơ cá nhân đầy đủ: Mã người dùng `#USR-5`, Họ tên, Email, Google Subject ID (nếu đã liên kết Google), Mã sinh viên, Chuyên ngành, Khóa học, Ngày tạo và Ngày sửa đổi gần nhất.
 
 ---
 ---
@@ -185,22 +257,19 @@
 ### 📍 GIAI ĐOẠN 4.1: Mở form thêm mới (GET)
 
 #### 📤 1. Nơi gửi (Frontend):
-- **File:** `list.jsp` (Dòng 122-125):
-  ```html
-  <a class="primary-button" href="${pageContext.request.contextPath}/admin/users/add">+ Thêm Người Dùng</a>
-  ```
+- **File:** `list.jsp` (Dòng 122-125): Thẻ link `<a class="primary-button" href="${pageContext.request.contextPath}/admin/users/add">+ Thêm Người Dùng</a>`.
 - **Gửi đi:** `GET /admin/users/add`.
 
-#### 📥 2. Nơi nhận & Điều phối (Backend Controller):
-- **File:** `UserController.java`
-- **Dòng 28 (`doGet`)** ➔ **Dòng 33 (`case "/admin/users/add"`)** ➔ Gọi hàm `showAddForm(request, response)` (Dòng 90-102).
+#### 📥 2. Nơi nhận (Backend Controller):
+- **File:** `UserController.java` (Dòng 28 `doGet` ➔ Dòng 33 `case "/admin/users/add"` ➔ gọi `showAddForm`).
 
-#### ⚙️ 3. Nơi xử lý:
-- Tạo `new User()` mặc định, gọi `majorDAO.findActive()` lấy danh mục chuyên ngành.
-- Chuyển tiếp (forward) sang `form.jsp` với `formMode = "add"`.
+#### ⚙️ 3. Nơi xử lý (Dòng 90-102):
+- Tạo đối tượng `new User()` mặc định vai trò `INTERN`, trạng thái `ACTIVE`.
+- Gọi `majorDAO.findActive()` chạy `SELECT major_id, major_code, major_name FROM dbo.majors WHERE is_active = 1` lấy danh sách chuyên ngành đang mở.
+- Chuyển tiếp sang `form.jsp` với biến `formMode = "add"`.
 
 #### 🎯 4. Màn hình hiển thị:
-- `form.jsp` hiển thị form trống để Admin nhập thông tin.
+- `form.jsp` mở ra giao diện thêm mới người dùng với các ô nhập liệu còn trống.
 
 ---
 
@@ -211,56 +280,89 @@
 - **Vị trí code (Dòng 116-169):**
   ```html
   <form method="post" action="${pageContext.request.contextPath}/admin/users/add" class="form-grid">
-      <input type="text" name="fullName" required placeholder="Họ và tên...">
-      <select name="role" id="roleSelect">...</select>
-      <input type="text" name="studentCode" placeholder="Ví dụ: SE160123">
-      <input type="email" name="email" required placeholder="Ví dụ: anhnmse160123@fpt.edu.vn">
-      <select name="majorId">...</select>
-      <input type="text" name="cohort" placeholder="Ví dụ: K16">
+      <input type="text" name="fullName" value="Nguyễn Văn A" required>
+      <select name="role" id="roleSelect"><option value="INTERN">Thực tập sinh</option></select>
+      <input type="text" name="studentCode" value="SE160999">
+      <input type="email" name="email" value="anvse160999@fpt.edu.vn" required>
+      <select name="majorId"><option value="1">SE - Software Engineering</option></select>
+      <input type="text" name="cohort" value="K16">
       <select name="status"><option value="ACTIVE">Hoạt động ngay</option></select>
       
       <button class="primary-button" type="submit">Tạo tài khoản</button>
   </form>
   ```
 - **Hành động:** Admin click nút **"Tạo tài khoản"**.
-- **Gói tin gửi đi:** HTTP Request dạng `POST /admin/users/add` chứa toàn bộ dữ liệu trong form.
+- **Gói tin gửi đi:** HTTP Request dạng `POST /admin/users/add` chứa toàn bộ dữ liệu điền trong form.
 
 ---
 
 #### 📥 2. Nơi nhận & Điều phối (Backend Controller):
 - **File:** `UserController.java`
-- **Dòng 45:** Phương thức `doPost(HttpServletRequest request, HttpServletResponse response)` tiếp nhận request `POST`.
-- **Dòng 50:** Lệnh `switch` khớp `case "/admin/users/add"` ➔ Gọi hàm `createUser(request, response)`.
+- **Dòng 45:** Phương thức `doPost(HttpServletRequest request, HttpServletResponse response)` đón nhận request `POST`.
+- **Dòng 50:** `switch` khớp `case "/admin/users/add"` ➔ Gọi hàm `createUser(request, response)`.
 
 ---
 
 #### ⚙️ 3. Nơi xử lý nghiệp vụ & Lưu Database:
-- **Tại Controller (Dòng 128-142):**
-  ```java
-  private void createUser(HttpServletRequest request, HttpServletResponse response) throws SQLException, ServletException, IOException {
-      User user = extractUser(request); // Dòng 130: Đọc fullName, email, role, studentCode, majorId, cohort từ form
-      List<String> errors = validate(user, true); // Dòng 131: Validate dữ liệu 3 lớp (chống trùng email, trùng mã SV, email FPT)
 
-      if (!errors.isEmpty()) {
-          forwardWithErrors(request, response, user, errors, "add"); // Dòng 134: Trả lại form kèm lỗi nếu không hợp lệ
-          return;
-      }
+##### 🔸 Tại Controller (`UserController.java` - Dòng 128-142):
+```java
+private void createUser(HttpServletRequest request, HttpServletResponse response) throws SQLException, ServletException, IOException {
+    // 1. Đọc dữ liệu từ form
+    User user = extractUser(request); 
+    
+    // 2. Validate dữ liệu 3 lớp
+    List<String> errors = validate(user, true); 
+    if (!errors.isEmpty()) {
+        // Nếu có lỗi -> Trả về lại form.jsp kèm danh sách thông báo lỗi
+        forwardWithErrors(request, response, user, errors, "add"); 
+        return;
+    }
 
-      userDAO.create(user); // Dòng 138: Gọi DAO lưu vào CSDL
-      response.sendRedirect(request.getContextPath() + "/admin/users?success=created"); // Dòng 139: Chuyển hướng
-  }
-  ```
-- **Tại DAO (`UserDAO.java` - Dòng 113-149):**
-  - Mở Database Transaction (`connection.setAutoCommit(false)`).
-  - Dòng 115-137: `INSERT INTO dbo.users (full_name, email, role, status)` ➔ Lấy `userId` mới sinh.
-  - Dòng 139-141: Nếu là `INTERN`, chạy tiếp `INSERT INTO dbo.student_profiles (user_id, student_code, major_id, cohort)`.
-  - Dòng 142: `connection.commit()` hoàn tất.
+    // 3. Gọi DAO lưu vào CSDL
+    userDAO.create(user); 
+    
+    // 4. Chuyển hướng về trang danh sách
+    response.sendRedirect(request.getContextPath() + "/admin/users?success=created"); 
+}
+```
+
+##### 🔸 Tại DAO (`UserDAO.java` - Dòng 113-149):
+```java
+public long create(User user) throws SQLException {
+    try (Connection connection = dbConnection.getConnection()) {
+        connection.setAutoCommit(false); // Mở Database Transaction
+        try {
+            // Bước 1: Chèn vào bảng dbo.users
+            String sql1 = "INSERT INTO dbo.users (full_name, email, role, status) VALUES (?, ?, ?, ?)";
+            // Thực thi chèn và lấy ID mới sinh userId ...
+
+            // Bước 2: Nếu là INTERN, chèn tiếp thông tin học vụ vào dbo.student_profiles
+            if ("INTERN".equals(user.getRole())) {
+                String sql2 = "INSERT INTO dbo.student_profiles (user_id, student_code, major_id, cohort, status) VALUES (?, ?, ?, ?, ?)";
+                // Thực thi chèn student_profiles ...
+            }
+            
+            connection.commit(); // Bước 3: Commit lưu vĩnh viễn cả 2 bảng
+            return userId;
+        } catch (SQLException exception) {
+            connection.rollback(); // Nếu lỗi -> Rollback hủy bỏ toàn bộ
+            throw exception;
+        }
+    }
+}
+```
+
+#### 📝 GIẢI THÍCH CHI TIẾT CÁC CÂU LỆNH SQL:
+1. **`INSERT INTO dbo.users (full_name, email, role, status) VALUES (?, ?, ?, ?)`**: Chèn thông tin tài khoản cơ sở vào bảng `users`. CSDL tự động sinh mã khóa chính `user_id` qua cơ chế `IDENTITY(1,1)`.
+2. **`INSERT INTO dbo.student_profiles (user_id, student_code, major_id, cohort, status) VALUES (?, ?, ?, ?, ?)`**: Chèn bản ghi hồ sơ sinh viên liên kết với `user_id` vừa sinh ở trên.
+3. **`connection.commit()` / `connection.rollback()`**: Đảm bảo tính toàn vẹn dữ liệu (ACID). Nếu chèn bảng thứ 2 bị lỗi, bảng 1 cũng sẽ bị hủy để không sinh ra tài khoản rác mồ côi.
 
 ---
 
-#### 🎯 4. Nơi nhận kết quả & Hiển thị (View):
-- Trình duyệt chuyển hướng về trang `list.jsp`.
-- Màn hình hiển thị thông báo màu xanh lá: **"Tạo người dùng mới thành công!"** và tài khoản mới xuất hiện trên bảng.
+#### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ:
+- Trình duyệt chuyển hướng về URL: `/admin/users?success=created`.
+- `list.jsp` nhận tham số `success=created` ➔ Hiển thị thanh thông báo màu xanh lá: **"Tạo người dùng mới thành công!"** và người dùng mới vừa tạo xuất hiện ngay ở dòng cuối cùng của bảng.
 
 ---
 ---
@@ -272,22 +374,19 @@
 ### 📍 GIAI ĐOẠN 5.1: Mở form chỉnh sửa (GET)
 
 #### 📤 1. Nơi gửi (Frontend):
-- **File:** `list.jsp` (Dòng 213-216):
-  ```html
-  <a class="btn-action" href="${pageContext.request.contextPath}/admin/users/edit?id=8">Sửa</a>
-  ```
+- **File:** `list.jsp` (Dòng 213-216): Thẻ link `<a class="btn-action" href="${pageContext.request.contextPath}/admin/users/edit?id=8">Sửa</a>`.
 - **Gửi đi:** `GET /admin/users/edit?id=8`.
 
-#### 📥 2. Nơi nhận & Điều phối (Backend Controller):
-- **File:** `UserController.java`
-- **Dòng 28 (`doGet`)** ➔ **Dòng 34 (`case "/admin/users/edit"`)** ➔ Gọi hàm `showEditForm(request, response)` (Dòng 104-118).
+#### 📥 2. Nơi nhận (Backend Controller):
+- **File:** `UserController.java` (Dòng 28 `doGet` ➔ Dòng 34 `case "/admin/users/edit"` ➔ gọi `showEditForm`).
 
-#### ⚙️ 3. Nơi xử lý:
-- Lấy thông tin user ID = 8 từ `userDAO.findById(8)`, lấy danh sách chuyên ngành `majorDAO.findActive()`.
-- Chuyển tiếp (forward) sang `form.jsp` với `formMode = "edit"`.
+#### ⚙️ 3. Nơi xử lý (Dòng 104-118):
+- Lấy thông tin user có ID = `8` từ CSDL bằng `userDAO.findById(8)`.
+- Nạp danh mục chuyên ngành `majorDAO.findActive()`.
+- Chuyển tiếp sang `form.jsp` với biến `formMode = "edit"`.
 
 #### 🎯 4. Màn hình hiển thị:
-- `form.jsp` hiển thị form có sẵn dữ liệu cũ của user số 8 để Admin chỉnh sửa.
+- `form.jsp` mở ra với các ô Họ tên, Mã SV, Chuyên ngành, Khóa học... đã được điền sẵn dữ liệu cũ của user số 8 để Admin chỉnh sửa. Ô Email hiển thị dạng `readonly` cố định.
 
 ---
 
@@ -298,77 +397,117 @@
 - **Vị trí code (Dòng 50-111):**
   ```html
   <form method="post" action="${pageContext.request.contextPath}/admin/users/edit" class="form-grid">
-      <input type="hidden" name="id" value="${user.userId}">
+      <input type="hidden" name="id" value="8">
       
-      <!-- Cho phép sửa Họ tên -->
-      <input class="form-control" type="text" name="fullName" value="${user.fullName}" required>
+      <!-- Sửa Họ tên có dấu -->
+      <input class="form-control" type="text" name="fullName" value="Trần Bình Minh" required>
       
-      <!-- Email cố định không cho sửa -->
-      <input class="form-control readonly-field" type="email" value="${user.email}" readonly disabled>
+      <!-- Email bị khóa cố định để bảo toàn Google OAuth -->
+      <input class="form-control readonly-field" type="email" value="minhtbh@fpt.edu.vn" readonly disabled>
       
-      <!-- Cho phép sửa Mã SV, Chuyên ngành, Khóa (khi là Intern) -->
-      <input class="form-control" type="text" name="studentCode" value="${user.studentCode}">
-      <select class="form-control" name="majorId">...</select>
-      <input class="form-control" type="text" name="cohort" value="${user.cohort}">
+      <!-- Sửa Mã sinh viên -->
+      <input class="form-control" type="text" name="studentCode" value="SE186275">
       
-      <!-- Cho phép đổi Vai trò và Trạng thái -->
-      <select class="form-control" name="role">...</select>
-      <select class="form-control" name="status">...</select>
-
+      <!-- Đổi Chuyên ngành mới -->
+      <select class="form-control" name="majorId">
+          <option value="2" selected>IA - Information Assurance</option>
+      </select>
+      
+      <!-- Sửa Khóa học -->
+      <input class="form-control" type="text" name="cohort" value="K18">
+      
       <button class="primary-button" type="submit">Lưu thay đổi</button>
   </form>
   ```
 - **Hành động:** Admin click nút **"Lưu thay đổi"**.
-- **Gói tin gửi đi:** HTTP Request dạng `POST /admin/users/edit` chứa các giá trị mới.
+- **Gói tin gửi đi:** HTTP Request dạng `POST /admin/users/edit` chứa ID và các giá trị mới.
 
 ---
 
 #### 📥 2. Nơi nhận & Điều phối (Backend Controller):
 - **File:** `UserController.java`
-- **Dòng 45 (`doPost`)** ➔ **Dòng 51 (`case "/admin/users/edit"`)** ➔ Gọi hàm `updateUser(request, response)` (Dòng 143-187).
+- **Dòng 45:** `doPost()` tiếp nhận request `POST`.
+- **Dòng 51:** `switch` khớp `case "/admin/users/edit"` ➔ Gọi hàm `updateUser(request, response)`.
 
 ---
 
 #### ⚙️ 3. Nơi xử lý nghiệp vụ & Cập nhật Database:
-- **Tại Controller (Dòng 143-187):**
-  ```java
-  private void updateUser(HttpServletRequest request, HttpServletResponse response) throws SQLException, ServletException, IOException {
-      long userId = requireId(request, response); // Dòng 144: Lấy ID người dùng
-      User user = userDAO.findById(userId).orElse(null);
-      
-      // Dòng 154-159: Đọc dữ liệu mới (fullName, studentCode, majorId, cohort, role, status)
-      // Dòng 160-167: Ràng buộc nghiệp vụ (ADMIN, INTERN không bị đổi sai vai trò)
-      // Dòng 170-177: Gán dữ liệu mới vào model
-      
-      List<String> errors = validate(user, false); // Dòng 179: Validate (kiểm tra mã SV mới không trùng với SV khác)
-      if (!errors.isEmpty()) {
-          forwardWithErrors(request, response, user, errors, "edit");
-          return;
-      }
-      
-      userDAO.update(user); // Dòng 185: Lưu cập nhật vào CSDL
-      response.sendRedirect(request.getContextPath() + "/admin/users?success=updated"); // Dòng 186
-  }
-  ```
-- **Tại DAO (`UserDAO.java` - Dòng 209-233):**
-  - Mở Transaction (`connection.setAutoCommit(false)`).
-  - Dòng 224-247: `UPDATE dbo.users SET full_name = ?, role = ?, status = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?`.
-  - Dòng 264-280: Nếu là Intern, chạy tiếp `UPDATE dbo.student_profiles SET student_code = ?, major_id = ?, cohort = ? WHERE user_id = ?`.
-  - Dòng 227: `connection.commit()`.
+
+##### 🔸 Tại Controller (`UserController.java` - Dòng 143-187):
+```java
+private void updateUser(HttpServletRequest request, HttpServletResponse response) throws SQLException, ServletException, IOException {
+    long userId = requireId(request, response); // Dòng 144: Lấy ID = 8
+    User user = userDAO.findById(userId).orElse(null);
+    
+    // Dòng 154-159: Đọc dữ liệu mới (Họ tên, Mã SV, Chuyên ngành, Khóa, Vai trò, Trạng thái)
+    String fullName = trim(request.getParameter("fullName"));
+    String studentCode = trim(request.getParameter("studentCode"));
+    Long majorId = optionalLong(request.getParameter("majorId"));
+    String cohort = trim(request.getParameter("cohort"));
+    String status = normalize(request.getParameter("status"));
+    
+    // Gán dữ liệu mới vào model
+    user.setFullName(fullName);
+    user.setStatus(status);
+    if ("INTERN".equals(user.getRole())) {
+        user.setStudentCode(studentCode);
+        user.setMajorId(majorId);
+        user.setCohort(cohort);
+    }
+    
+    // Dòng 179: Validate kiểm tra (Mã SV mới không được trùng với sinh viên khác trong DB)
+    List<String> errors = validate(user, false);
+    if (!errors.isEmpty()) {
+        forwardWithErrors(request, response, user, errors, "edit");
+        return;
+    }
+    
+    // Dòng 185: Gọi DAO cập nhật CSDL
+    userDAO.update(user);
+    
+    // Dòng 186: Chuyển hướng về trang danh sách
+    response.sendRedirect(request.getContextPath() + "/admin/users?success=updated");
+}
+```
+
+##### 🔸 Tại DAO (`UserDAO.java` - Dòng 209-233 & Dòng 264-280):
+Thực thi các câu lệnh SQL cập nhật trong Database:
+```sql
+-- Cập nhật bảng users (Họ tên, vai trò, trạng thái, thời gian sửa đổi)
+UPDATE dbo.users
+SET full_name = N'Trần Bình Minh',
+    role = 'INTERN',
+    status = 'ACTIVE',
+    updated_at = SYSUTCDATETIME()
+WHERE user_id = 8;
+
+-- Cập nhật bảng student_profiles (Mã sinh viên, chuyên ngành, khóa học)
+UPDATE dbo.student_profiles
+SET student_code = 'SE186275',
+    major_id = 2,
+    cohort = 'K18',
+    status = 'ACTIVE',
+    updated_at = SYSUTCDATETIME()
+WHERE user_id = 8;
+```
+
+#### 📝 GIẢI THÍCH CHI TIẾT CÁC CÂU LỆNH SQL:
+- **`UPDATE dbo.users SET full_name = ...`**: Cập nhật lại Họ và tên hiển thị trong hệ thống và tự động cập nhật mốc thời gian `updated_at = SYSUTCDATETIME()`.
+- **`UPDATE dbo.student_profiles SET student_code = ..., major_id = ..., cohort = ...`**: Cập nhật mã sinh viên mới, mã định danh chuyên ngành mới (`major_id`) và khóa học mới.
 
 ---
 
-#### 🎯 4. Nơi nhận kết quả & Hiển thị (View):
-- Trình duyệt chuyển hướng về lại trang `list.jsp`.
-- Màn hình hiển thị thông báo màu xanh lá: **"Cập nhật thông tin người dùng thành công!"** và các thông tin sửa đổi được cập nhật trực tiếp trên bảng.
+#### 🎯 4. NƠI NHẬN KẾT QUẢ & HIỂN THỊ:
+- Trình duyệt chuyển hướng về `/admin/users?success=updated`.
+- `list.jsp` hiển thị thanh thông báo màu xanh lá: **"Cập nhật thông tin người dùng thành công!"** và bảng danh sách thể hiện ngay thông tin mới sửa.
 
 ---
 ---
 
 # HÀNH ĐỘNG 6: Khóa / Mở khóa tài khoản hoặc Đổi vai trò nhanh
 
-### 1. Khóa / Mở khóa tài khoản:
-- **📤 Nơi gửi:** Link tại `list.jsp` hoặc `detail.jsp` gửi `GET /admin/users/toggle-status?id=5`.
+### 1. Khóa / Mở khóa nhanh tài khoản:
+- **📤 Nơi gửi:** Link trên giao diện gửi request `GET /admin/users/toggle-status?id=5`.
 - **📥 Nơi nhận:** `UserController.java` dòng 28 (`doGet`) ➔ dòng 35 (`case "/admin/users/toggle-status"`) ➔ gọi `toggleStatus()` (Dòng 118-126).
 - **⚙️ Nơi xử lý CSDL (`UserDAO.java` - Dòng 166-178):**
   ```sql
@@ -377,21 +516,24 @@
       updated_at = SYSUTCDATETIME()
   WHERE user_id = 5;
   ```
-- **🎯 Kết quả:** Đổi trạng thái tức thì từ `ACTIVE` ➔ `INACTIVE` (hoặc ngược lại) và load lại trang với thông báo thành công.
+  - **Giải thích:** Sử dụng biểu thức `CASE WHEN` trực tiếp trong SQL Server: Nếu tài khoản đang là `ACTIVE` thì đổi sang `INACTIVE`, ngược lại nếu đang `INACTIVE` thì mở lại thành `ACTIVE` trong 1 lượt truy vấn duy nhất.
+- **🎯 Kết quả:** Trạng thái tài khoản được đảo ngược tức thì và trang web tự động load lại danh sách.
 
 ---
 
 ### 2. Đổi nhanh vai trò Mentor ⇄ Lab Manager:
-- **📤 Nơi gửi:** `GET /admin/users/change-role?id=5&role=LAB_MANAGER`.
+- **📤 Nơi gửi:** Link gửi request `GET /admin/users/change-role?id=5&role=LAB_MANAGER`.
 - **📥 Nơi nhận:** `UserController.java` dòng 36 (`case "/admin/users/change-role"`) ➔ gọi `changeRole()` (Dòng 189-201).
 - **⚙️ Nơi xử lý CSDL (`UserDAO.java` - Dòng 180-192):**
   ```sql
   UPDATE dbo.users
-  SET role = 'LAB_MANAGER', updated_at = SYSUTCDATETIME()
+  SET role = 'LAB_MANAGER',
+      updated_at = SYSUTCDATETIME()
   WHERE user_id = 5 AND role IN ('MENTOR', 'LAB_MANAGER');
   ```
-- **🎯 Kết quả:** Đổi vai trò công tác thành công mà không làm ảnh hưởng đến các vai trò khác.
+  - **Giải thích:** Cập nhật vai trò mới cho nhân sự, có điều kiện chặn `role IN ('MENTOR', 'LAB_MANAGER')` để đảm bảo không bao giờ đổi nhầm vai trò của `ADMIN` hoặc `INTERN`.
+- **🎯 Kết quả:** Người dùng được chuyển đổi vai trò công tác thành công.
 
 ---
 
-*Tài liệu đã được chuẩn hóa chỉ rõ chính xác từng dòng NƠI GỬI và NƠI NHẬN của từng hành động.* 🎯
+*Tài liệu đã được cập nhật đầy đủ toàn bộ giải thích chi tiết cho từng dòng code và câu lệnh SQL.* 🎯
