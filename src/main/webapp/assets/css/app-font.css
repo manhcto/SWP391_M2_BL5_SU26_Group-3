@@ -1,0 +1,12 @@
+:root {
+    --app-font: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea {
+    font-family: var(--app-font);
+}

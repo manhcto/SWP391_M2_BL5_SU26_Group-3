@@ -39,7 +39,7 @@ public class GoogleCallbackController extends HttpServlet {
 		HttpSession session = request.getSession(false);
 		String state = request.getParameter("state");
 		if (session == null || state == null || !state.equals(session.getAttribute("oauthState"))) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid OAuth state.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Trạng thái xác thực OAuth không hợp lệ.");
 			return;
 		}
 		session.removeAttribute("oauthState");
@@ -83,7 +83,7 @@ public class GoogleCallbackController extends HttpServlet {
 
 	private String exchangeCode(String code) throws IOException, InterruptedException {
 		if (code == null)
-			throw new IllegalArgumentException("Missing authorization code.");
+			throw new IllegalArgumentException("Thiếu mã xác thực Google.");
 		String body = "code=" + encode(code) + "&client_id=" + encode(required("GOOGLE_CLIENT_ID")) + "&client_secret="
 				+ encode(required("GOOGLE_CLIENT_SECRET")) + "&redirect_uri=" + encode(required("GOOGLE_REDIRECT_URI"))
 				+ "&grant_type=authorization_code";
@@ -92,10 +92,10 @@ public class GoogleCallbackController extends HttpServlet {
 				.POST(HttpRequest.BodyPublishers.ofString(body)).build();
 		HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 		if (response.statusCode() != 200)
-			throw new IllegalStateException("Google token exchange failed.");
+			throw new IllegalStateException("Không thể trao đổi mã xác thực với Google.");
 		Matcher matcher = ID_TOKEN.matcher(response.body());
 		if (!matcher.find())
-			throw new IllegalStateException("Google response did not contain an ID token.");
+			throw new IllegalStateException("Phản hồi từ Google không có ID token.");
 		return matcher.group(1);
 	}
 
@@ -105,7 +105,7 @@ public class GoogleCallbackController extends HttpServlet {
 				.setIssuers(java.util.List.of("accounts.google.com", "https://accounts.google.com")).build();
 		GoogleIdToken verified = verifier.verify(token);
 		if (verified == null)
-			throw new IllegalArgumentException("Invalid Google ID token.");
+			throw new IllegalArgumentException("ID token của Google không hợp lệ.");
 		return verified;
 	}
 
@@ -118,7 +118,7 @@ public class GoogleCallbackController extends HttpServlet {
 	private String required(String key) {
 		String value = AppConfig.get(key);
 		if (value == null || value.isBlank())
-			throw new IllegalStateException("Missing " + key);
+			throw new IllegalStateException("Thiếu cấu hình " + key);
 		return value;
 	}
 

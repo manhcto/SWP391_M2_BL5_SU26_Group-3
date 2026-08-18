@@ -1,18 +1,17 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.DisposalRecord;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import util.AppConfig;
 
 public class DisposalRecordDAO {
@@ -75,13 +74,13 @@ public class DisposalRecordDAO {
 
 	public long create(long userId, long assetId, String reason) throws SQLException {
 		if (reason == null || reason.isBlank())
-			throw new IllegalArgumentException("Reason is required.");
+			throw new IllegalArgumentException("Vui lòng nhập lý do thanh lý.");
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				Asset asset = lockAsset(connection, assetId);
 				if ("DISPOSED".equals(asset.getStatus()))
-					throw new IllegalStateException("Asset is already disposed.");
+					throw new IllegalStateException("Thiết bị đã được thanh lý.");
 				String sql = """
 						INSERT dbo.disposal_records (asset_id, quantity, requested_by, reason, status)
 						OUTPUT INSERTED.disposal_id VALUES (?, ?, ?, ?, 'PENDING')
@@ -107,14 +106,14 @@ public class DisposalRecordDAO {
 
 	public void updatePending(long id, String reason) throws SQLException {
 		if (reason == null || reason.isBlank())
-			throw new IllegalArgumentException("Reason is required.");
+			throw new IllegalArgumentException("Vui lòng nhập lý do thanh lý.");
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(
 						"UPDATE dbo.disposal_records SET reason = ?, updated_at = SYSUTCDATETIME() WHERE disposal_id = ? AND status = 'PENDING'")) {
 			statement.setString(1, reason.trim());
 			statement.setLong(2, id);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Only pending disposal can be edited.");
+				throw new IllegalStateException("Chỉ có thể sửa yêu cầu thanh lý đang chờ xử lý.");
 		}
 	}
 
@@ -125,7 +124,7 @@ public class DisposalRecordDAO {
 			statement.setString(1, blankToNull(note));
 			statement.setLong(2, id);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Only pending disposal can be cancelled.");
+				throw new IllegalStateException("Chỉ có thể hủy yêu cầu thanh lý đang chờ xử lý.");
 		}
 	}
 
@@ -137,15 +136,16 @@ public class DisposalRecordDAO {
 				Asset asset = lockAsset(connection, assetId);
 				disposalAssetId(connection, id, true);
 				if ("DISPOSED".equals(asset.getStatus()))
-					throw new IllegalStateException("Asset is already disposed.");
+					throw new IllegalStateException("Thiết bị đã được thanh lý.");
 				if (hasActiveUsage(connection, assetId))
-					throw new IllegalStateException("Return all active usages before disposal.");
+					throw new IllegalStateException(
+							"Phải hoàn trả tất cả lượt mượn đang hoạt động trước khi thanh lý.");
 				try (PreparedStatement statement = connection.prepareStatement(
 						"UPDATE dbo.disposal_records SET status = 'COMPLETED', completed_at = SYSUTCDATETIME(), completion_note = ?, updated_at = SYSUTCDATETIME() WHERE disposal_id = ? AND status = 'PENDING'")) {
 					statement.setString(1, blankToNull(note));
 					statement.setLong(2, id);
 					if (statement.executeUpdate() != 1)
-						throw new IllegalStateException("Only pending disposal can be completed.");
+						throw new IllegalStateException("Chỉ có thể hoàn tất yêu cầu thanh lý đang chờ xử lý.");
 				}
 				try (PreparedStatement statement = connection.prepareStatement(
 						"UPDATE dbo.assets SET status = 'DISPOSED', is_borrowable = 0, updated_at = SYSUTCDATETIME() WHERE asset_id = ?")) {
@@ -167,7 +167,7 @@ public class DisposalRecordDAO {
 			statement.setLong(1, id);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
-					throw new IllegalStateException("Only pending disposal can be completed.");
+					throw new IllegalStateException("Chỉ có thể hoàn tất yêu cầu thanh lý đang chờ xử lý.");
 				return result.getLong(1);
 			}
 		}
@@ -179,7 +179,7 @@ public class DisposalRecordDAO {
 			statement.setLong(1, id);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
-					throw new IllegalArgumentException("Asset not found.");
+					throw new IllegalArgumentException("Không tìm thấy thiết bị.");
 				Asset asset = new Asset();
 				asset.setAssetId(result.getLong(1));
 				asset.setTotalQuantity(result.getInt(2));
@@ -209,9 +209,9 @@ public class DisposalRecordDAO {
 				record.setQuantity(result.getInt("quantity"));
 				record.setRequestedBy(result.getLong("requested_by"));
 				record.setReason(result.getString("reason"));
-				record.setRequestedAt(time(result.getTimestamp("requested_at")));
+				record.setRequestedAt(ViewFormat.fromUtc(result.getTimestamp("requested_at")));
 				record.setStatus(result.getString("status"));
-				record.setCompletedAt(time(result.getTimestamp("completed_at")));
+				record.setCompletedAt(ViewFormat.fromUtc(result.getTimestamp("completed_at")));
 				record.setCompletionNote(result.getString("completion_note"));
 				record.setAssetCode(result.getString("asset_code"));
 				record.setAssetName(result.getString("asset_name"));
@@ -222,11 +222,6 @@ public class DisposalRecordDAO {
 		}
 	}
 
-	private java.time.LocalDateTime time(Timestamp timestamp) {
-		return timestamp == null
-				? null
-				: timestamp.toLocalDateTime().atZone(ZoneOffset.UTC).withZoneSameInstant(labZone).toLocalDateTime();
-	}
 	private String blankToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
 	}

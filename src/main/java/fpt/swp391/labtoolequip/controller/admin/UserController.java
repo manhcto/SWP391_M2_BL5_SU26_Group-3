@@ -1,5 +1,6 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
+import fpt.swp391.labtoolequip.dao.MajorDAO;
 import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
@@ -24,6 +25,7 @@ public class UserController extends HttpServlet {
 	private static final String FORM_VIEW = "/WEB-INF/views/admin/users/form.jsp";
 
 	private final UserDAO userDAO = new UserDAO();
+	private final MajorDAO majorDAO = new MajorDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -89,12 +91,13 @@ public class UserController extends HttpServlet {
 	}
 
 	private void showAddForm(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+			throws SQLException, ServletException, IOException {
 		User user = new User();
 		user.setStatus("ACTIVE");
 		user.setRole("INTERN");
 		request.setAttribute("user", user);
 		request.setAttribute("formMode", "add");
+		request.setAttribute("majors", majorDAO.findActive());
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
@@ -203,12 +206,12 @@ public class UserController extends HttpServlet {
 		user.setRole(normalize(request.getParameter("role")));
 		user.setStatus(normalize(request.getParameter("status")));
 		user.setStudentCode(trim(request.getParameter("studentCode")));
-		user.setMajor(trim(request.getParameter("major")));
+		user.setMajorId(optionalLong(request.getParameter("majorId")));
 		user.setCohort(trim(request.getParameter("cohort")));
 		return user;
 	}
 
-	private List<String> validate(User user, boolean isAdd) {
+	private List<String> validate(User user, boolean isAdd) throws SQLException {
 		List<String> errors = new ArrayList<>();
 		if (user.getFullName().isEmpty()) {
 			errors.add("Họ và tên không được để trống.");
@@ -226,7 +229,7 @@ public class UserController extends HttpServlet {
 		} else {
 			if ("INTERN".equals(user.getRole())) {
 				if (!user.getEmail().toLowerCase().endsWith("@fpt.edu.vn")) {
-					errors.add("Email của sinh viên thực tập (Intern) bắt buộc phải có định dạng @fpt.edu.vn.");
+					errors.add("Email của thực tập sinh bắt buộc phải có đuôi @fpt.edu.vn.");
 				}
 			} else {
 				// MENTOR / LAB_MANAGER / ADMIN: chấp nhận email thường (@gmail.com, v.v.)
@@ -237,17 +240,21 @@ public class UserController extends HttpServlet {
 		}
 
 		if ("INTERN".equals(user.getRole()) && (user.getStudentCode() == null || user.getStudentCode().isEmpty())) {
-			errors.add("Mã sinh viên là bắt buộc đối với sinh viên thực tập (Intern).");
+			errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
+		}
+		if ("INTERN".equals(user.getRole()) && user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
+			errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");
 		}
 
 		return errors;
 	}
 
 	private void forwardWithErrors(HttpServletRequest request, HttpServletResponse response, User user,
-			List<String> errors, String formMode) throws ServletException, IOException {
+			List<String> errors, String formMode) throws SQLException, ServletException, IOException {
 		request.setAttribute("user", user);
 		request.setAttribute("errors", errors);
 		request.setAttribute("formMode", formMode);
+		request.setAttribute("majors", majorDAO.findActive());
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
@@ -269,6 +276,15 @@ public class UserController extends HttpServlet {
 
 	private String trim(String value) {
 		return value == null ? "" : value.trim();
+	}
+
+	private Long optionalLong(String value) {
+		try {
+			long parsed = Long.parseLong(trim(value));
+			return parsed > 0 ? parsed : null;
+		} catch (NumberFormatException exception) {
+			return null;
+		}
 	}
 
 	private String normalize(String value) {

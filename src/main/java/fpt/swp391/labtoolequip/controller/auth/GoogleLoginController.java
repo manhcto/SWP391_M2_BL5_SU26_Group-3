@@ -16,7 +16,8 @@ public class GoogleLoginController extends HttpServlet {
 		String clientId = AppConfig.get("GOOGLE_CLIENT_ID");
 		String redirectUri = AppConfig.get("GOOGLE_REDIRECT_URI");
 		if (clientId == null || redirectUri == null) {
-			response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Google login is not configured.");
+			response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+					"Chức năng đăng nhập Google chưa được cấu hình.");
 			return;
 		}
 		String state = new LoginController().newState();
