@@ -1,15 +1,14 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.User;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,10 +17,10 @@ public class UserDAO {
 	private static final String SELECT_USER = """
 			SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
 			       u.role, u.status, u.created_at, u.updated_at,
-			       sp.student_code, sp.major_id, m.major_name AS major, sp.cohort
+			       ip.intern_code, ip.major_id, m.major_name AS major, ip.cohort
 			FROM dbo.users u
-			LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
-			LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
+			LEFT JOIN dbo.intern_profiles ip ON ip.user_id = u.user_id
+			LEFT JOIN dbo.majors m ON m.major_id = ip.major_id
 			""";
 
 	private final DBConnection dbConnection = new DBConnection();
@@ -29,7 +28,7 @@ public class UserDAO {
 	public List<User> findAll(String keyword, String role, String status) throws SQLException {
 		String sql = SELECT_USER + """
 				WHERE u.role != 'ADMIN'
-				  AND (? = '' OR u.full_name LIKE ? OR u.email LIKE ? OR sp.student_code LIKE ?)
+				  AND (? = '' OR u.full_name LIKE ? OR u.email LIKE ? OR ip.intern_code LIKE ?)
 				  AND (? = '' OR u.role = ?)
 				  AND (? = '' OR u.status = ?)
 				ORDER BY u.created_at DESC, u.user_id DESC
@@ -81,6 +80,40 @@ public class UserDAO {
 		}
 	}
 
+	public Optional<User> findAuthorizedInternByEmail(String email) throws SQLException {
+		String sql = SELECT_USER + """
+				WHERE LOWER(u.email) = LOWER(?) AND u.role = 'INTERN' AND u.status = 'ACTIVE'
+				  AND ip.status = 'ACTIVE' AND EXISTS (
+				      SELECT 1 FROM dbo.lab_usage_request_interns luri
+				      JOIN dbo.lab_usage_requests lur ON lur.request_id = luri.request_id
+				          AND lur.semester_id = luri.semester_id
+				     WHERE luri.intern_id = ip.intern_id AND lur.status = 'APPROVED'
+				  )
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, valueOrEmpty(email));
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
+			}
+		}
+	}
+
+	public boolean changePassword(long userId, String hash) throws SQLException {
+		String sql = """
+				UPDATE dbo.users
+				SET password_hash = ?, must_change_password = 0, password_expires_at = NULL,
+				    password_changed_at = SYSUTCDATETIME(), updated_at = SYSUTCDATETIME()
+				WHERE user_id = ? AND role IN ('ADMIN', 'LAB_MANAGER', 'MENTOR') AND status = 'ACTIVE'
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, hash);
+			statement.setLong(2, userId);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
 	public boolean linkGoogleSubject(long userId, String googleSubject) throws SQLException {
 		String sql = """
 				UPDATE dbo.users
@@ -119,14 +152,15 @@ public class UserDAO {
 					statement.executeUpdate();
 					try (ResultSet keys = statement.getGeneratedKeys()) {
 						if (!keys.next()) {
-							throw new SQLException("Creating user failed: no generated ID.");
+							throw new SQLException(
+									"Không thể tạo người dùng: cơ sở dữ liệu không trả về mã người dùng.");
 						}
 						userId = keys.getLong(1);
 					}
 				}
 
 				if ("INTERN".equals(user.getRole())) {
-					insertStudentProfile(connection, userId, user);
+					insertInternProfile(connection, userId, user);
 				}
 				connection.commit();
 				return userId;
@@ -200,7 +234,7 @@ public class UserDAO {
 			connection.setAutoCommit(false);
 			try {
 				if (!"INTERN".equals(user.getRole())) {
-					deleteStudentProfile(connection, user.getUserId());
+					deleteInternProfile(connection, user.getUserId());
 				}
 
 				boolean updated = updateUser(connection, user);
@@ -210,7 +244,7 @@ public class UserDAO {
 				}
 
 				if ("INTERN".equals(user.getRole())) {
-					upsertStudentProfile(connection, user);
+					upsertInternProfile(connection, user);
 				}
 				connection.commit();
 				return true;
@@ -246,9 +280,9 @@ public class UserDAO {
 		}
 	}
 
-	private void insertStudentProfile(Connection connection, long userId, User user) throws SQLException {
+	private void insertInternProfile(Connection connection, long userId, User user) throws SQLException {
 		String sql = """
-				INSERT INTO dbo.student_profiles (user_id, student_code, major_id, cohort, status)
+				INSERT INTO dbo.intern_profiles (user_id, intern_code, major_id, cohort, status)
 				VALUES (?, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -261,10 +295,10 @@ public class UserDAO {
 		}
 	}
 
-	private void upsertStudentProfile(Connection connection, User user) throws SQLException {
+	private void upsertInternProfile(Connection connection, User user) throws SQLException {
 		String update = """
-				UPDATE dbo.student_profiles
-				SET student_code = ?, major_id = ?, cohort = ?, status = ?, updated_at = SYSUTCDATETIME()
+				UPDATE dbo.intern_profiles
+				SET intern_code = ?, major_id = ?, cohort = ?, status = ?, updated_at = SYSUTCDATETIME()
 				WHERE user_id = ?
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(update)) {
@@ -274,14 +308,14 @@ public class UserDAO {
 			statement.setString(4, user.getStatus());
 			statement.setLong(5, user.getUserId());
 			if (statement.executeUpdate() == 0) {
-				insertStudentProfile(connection, user.getUserId(), user);
+				insertInternProfile(connection, user.getUserId(), user);
 			}
 		}
 	}
 
-	private void deleteStudentProfile(Connection connection, long userId) throws SQLException {
+	private void deleteInternProfile(Connection connection, long userId) throws SQLException {
 		try (PreparedStatement statement = connection
-				.prepareStatement("DELETE FROM dbo.student_profiles WHERE user_id = ?")) {
+				.prepareStatement("DELETE FROM dbo.intern_profiles WHERE user_id = ?")) {
 			statement.setLong(1, userId);
 			statement.executeUpdate();
 		}
@@ -296,17 +330,13 @@ public class UserDAO {
 		user.setGoogleSubject(result.getString("google_subject"));
 		user.setRole(result.getString("role"));
 		user.setStatus(result.getString("status"));
-		user.setStudentCode(result.getString("student_code"));
+		user.setStudentCode(result.getString("intern_code"));
 		user.setMajorId(nullableLong(result, "major_id"));
 		user.setMajor(result.getString("major"));
 		user.setCohort(result.getString("cohort"));
-		user.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
-		user.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
+		user.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+		user.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 		return user;
-	}
-
-	private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-		return timestamp == null ? null : timestamp.toLocalDateTime();
 	}
 
 	private String valueOrEmpty(String value) {

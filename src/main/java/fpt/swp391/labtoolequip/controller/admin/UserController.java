@@ -300,13 +300,13 @@ public class UserController extends HttpServlet {
 			errors.add("Email không được để trống.");
 		} else if ("INTERN".equals(user.getRole())) {
 			if (!user.getEmail().toLowerCase(Locale.ROOT).endsWith("@fpt.edu.vn")) {
-				errors.add("Email của sinh viên thực tập (Intern) bắt buộc phải có định dạng @fpt.edu.vn.");
+				errors.add("Email của thực tập sinh bắt buộc phải có đuôi @fpt.edu.vn.");
 			}
 		} else if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
 			errors.add("Email không đúng định dạng hợp lệ.");
 		}
 		if ("INTERN".equals(user.getRole()) && user.getStudentCode().isEmpty()) {
-			errors.add("Mã sinh viên là bắt buộc đối với sinh viên thực tập (Intern).");
+			errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
 		}
 		if ("INTERN".equals(user.getRole()) && user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
 			errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");

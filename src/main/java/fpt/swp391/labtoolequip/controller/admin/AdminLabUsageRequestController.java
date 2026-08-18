@@ -56,7 +56,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!validCsrf(request)) {
-			response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token.");
+			response.sendError(HttpServletResponse.SC_FORBIDDEN, "Mã bảo vệ CSRF không hợp lệ.");
 			return;
 		}
 		try {
@@ -143,12 +143,12 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		}
 		String decision = normalize(request.getParameter("decision"));
 		if (!Set.of("APPROVED", "REJECTED").contains(decision)) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid decision.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Quyết định phê duyệt không hợp lệ.");
 			return;
 		}
 		if (!requestDAO.decidePending(requestId, AuthSession.userId(request), decision,
 				trim(request.getParameter("approvalNote")))) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái PENDING.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái chờ duyệt.");
 			return;
 		}
 		response.sendRedirect(
@@ -169,7 +169,8 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!requestDAO.updateByAdmin(internList, AuthSession.userId(request))) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn tồn tại hoặc Admin không hợp lệ.");
+			response.sendError(HttpServletResponse.SC_CONFLICT,
+					"Danh sách không còn tồn tại hoặc quản trị viên không hợp lệ.");
 			return;
 		}
 		response.sendRedirect(request.getContextPath() + "/admin/interns/view?id=" + requestId + "&updated=1");
@@ -181,7 +182,8 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!requestDAO.deleteByAdmin(requestId, AuthSession.userId(request))) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn tồn tại hoặc Admin không hợp lệ.");
+			response.sendError(HttpServletResponse.SC_CONFLICT,
+					"Danh sách không còn tồn tại hoặc quản trị viên không hợp lệ.");
 			return;
 		}
 		response.sendRedirect(request.getContextPath() + "/admin/interns?deleted=1");
@@ -227,7 +229,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			errors.add("Tên danh sách là bắt buộc và không được vượt quá 100 ký tự.");
 		}
 		if (internList.getStudents().isEmpty()) {
-			errors.add("Danh sách phải có ít nhất một intern.");
+			errors.add("Danh sách phải có ít nhất một thực tập sinh.");
 		}
 		Set<String> codes = new LinkedHashSet<>();
 		Set<String> emails = new LinkedHashSet<>();
@@ -236,11 +238,11 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			String email = trim(intern.getEmail()).toLowerCase(Locale.ROOT);
 			if (code.isBlank() || trim(intern.getFullName()).isBlank() || trim(intern.getCohort()).isBlank()
 					|| !EMAIL.matcher(email).matches()) {
-				errors.add("Mỗi intern phải có mã, họ tên, Gmail và khóa hợp lệ.");
+				errors.add("Mỗi thực tập sinh phải có mã, họ tên, Gmail và khóa hợp lệ.");
 				break;
 			}
 			if (!codes.add(code) || !emails.add(email)) {
-				errors.add("Mã intern và Gmail không được trùng trong cùng danh sách.");
+				errors.add("Mã thực tập sinh và Gmail không được trùng trong cùng danh sách.");
 				break;
 			}
 			intern.setStudentCode(code);
@@ -287,7 +289,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			}
 			return id;
 		} catch (NumberFormatException exception) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid intern list ID.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã danh sách thực tập sinh không hợp lệ.");
 			return 0;
 		}
 	}
@@ -304,13 +306,13 @@ public class AdminLabUsageRequestController extends HttpServlet {
 	private String databaseMessage(SQLException exception) {
 		String message = exception.getMessage();
 		return message == null || message.isBlank()
-				? "Không thể lưu danh sách intern."
-				: "Không thể lưu danh sách intern: " + message;
+				? "Không thể lưu danh sách thực tập sinh."
+				: "Không thể lưu danh sách thực tập sinh: " + message;
 	}
 
 	private void handleDatabaseError(HttpServletResponse response, SQLException exception) throws IOException {
 		getServletContext().log("Loading Admin Intern Lists failed", exception);
-		response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải danh sách intern.");
+		response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải danh sách thực tập sinh.");
 	}
 
 	private int length(String[] values) {

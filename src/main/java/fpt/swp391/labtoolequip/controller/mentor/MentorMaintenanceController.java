@@ -111,7 +111,7 @@ public class MentorMaintenanceController extends HttpServlet {
 	private void handleError(HttpServletRequest request, HttpServletResponse response, SQLException ex)
 			throws ServletException, IOException {
 		getServletContext().log("MentorMaintenanceController error", ex);
-		request.setAttribute("errorMessage", "Database error: " + ex.getMessage());
+		request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu: " + ex.getMessage());
 		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
 	}
 }

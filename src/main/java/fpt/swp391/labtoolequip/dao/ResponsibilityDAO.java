@@ -1,15 +1,13 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.Responsibility;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,14 +19,14 @@ public class ResponsibilityDAO {
 	private static final String SELECT = """
 			SELECT r.*, i.asset_id, i.asset_usage_id, i.incident_type, i.description AS incident_description,
 			       i.severity AS incident_severity, i.status AS incident_status, i.occurred_at, i.reported_at,
-			       i.investigation_note, i.handling_result, sp.student_code AS intern_code,
+			       i.investigation_note, i.handling_result, ip.intern_code,
 			       intern.full_name AS intern_name, intern.email AS intern_email, mentor.full_name AS mentor_name,
 			       reviewer.full_name AS reviewer_name, a.asset_code, a.asset_name, au.status AS usage_status,
 			       au.borrowed_at, au.due_at, au.returned_at
 			FROM dbo.responsibilities r
 			JOIN dbo.incidents i ON i.incident_id = r.incident_id
-			JOIN dbo.student_profiles sp ON sp.student_id = r.student_id
-			JOIN dbo.users intern ON intern.user_id = sp.user_id
+			JOIN dbo.intern_profiles ip ON ip.intern_id = r.intern_id
+			JOIN dbo.users intern ON intern.user_id = ip.user_id
 			JOIN dbo.users mentor ON mentor.user_id = r.determined_by
 			LEFT JOIN dbo.users reviewer ON reviewer.user_id = r.reviewed_by
 			JOIN dbo.assets a ON a.asset_id = i.asset_id
@@ -47,7 +45,7 @@ public class ResponsibilityDAO {
 	}
 
 	public List<Responsibility> findForIntern(long userId, String keyword, String status) throws SQLException {
-		String sql = SELECT + searchWhere("sp.user_id = ? AND ") + " ORDER BY r.determined_at DESC";
+		String sql = SELECT + searchWhere("ip.user_id = ? AND ") + " ORDER BY r.determined_at DESC";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, userId);
@@ -61,19 +59,19 @@ public class ResponsibilityDAO {
 	}
 
 	public Optional<Responsibility> findByIdForIntern(long id, long userId) throws SQLException {
-		return findOne(SELECT + " WHERE r.responsibility_id = ? AND sp.user_id = ?", id, userId);
+		return findOne(SELECT + " WHERE r.responsibility_id = ? AND ip.user_id = ?", id, userId);
 	}
 
 	public List<Responsibility> findEligibleIncidents() throws SQLException {
 		String sql = """
 				SELECT i.incident_id, i.reported_at, i.incident_type, i.severity AS incident_severity,
 				       i.status AS incident_status, i.description AS incident_description, i.asset_id,
-				       i.asset_usage_id, a.asset_code, a.asset_name, au.student_id,
-				       sp.student_code AS intern_code, u.full_name AS intern_name, u.email AS intern_email
+				       i.asset_usage_id, a.asset_code, a.asset_name, au.intern_id,
+				       ip.intern_code, u.full_name AS intern_name, u.email AS intern_email
 				FROM dbo.incidents i
 				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
-				JOIN dbo.student_profiles sp ON sp.student_id = au.student_id
-				JOIN dbo.users u ON u.user_id = sp.user_id
+				JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+				JOIN dbo.users u ON u.user_id = ip.user_id
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
 				WHERE NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
 				ORDER BY i.reported_at DESC
@@ -85,7 +83,7 @@ public class ResponsibilityDAO {
 			while (result.next()) {
 				Responsibility item = new Responsibility();
 				item.setIncidentId(result.getLong("incident_id"));
-				item.setReportedAt(local(result.getTimestamp("reported_at")));
+				item.setReportedAt(ViewFormat.fromUtc(result.getTimestamp("reported_at")));
 				item.setIncidentType(result.getString("incident_type"));
 				item.setIncidentSeverity(result.getString("incident_severity"));
 				item.setIncidentStatus(result.getString("incident_status"));
@@ -94,7 +92,7 @@ public class ResponsibilityDAO {
 				item.setAssetUsageId(result.getLong("asset_usage_id"));
 				item.setAssetCode(result.getString("asset_code"));
 				item.setAssetName(result.getString("asset_name"));
-				item.setInternId(result.getLong("student_id"));
+				item.setInternId(result.getLong("intern_id"));
 				item.setInternCode(result.getString("intern_code"));
 				item.setInternName(result.getString("intern_name"));
 				item.setInternEmail(result.getString("intern_email"));
@@ -109,9 +107,9 @@ public class ResponsibilityDAO {
 		validate(conclusion, status);
 		String sql = """
 				INSERT dbo.responsibilities
-				    (incident_id, student_id, determined_by, conclusion, decision, status, resolution_note, resolved_at)
+				    (incident_id, intern_id, determined_by, conclusion, decision, status, resolution_note, resolved_at)
 				OUTPUT INSERTED.responsibility_id
-				SELECT i.incident_id, au.student_id, ?, ?, ?, ?, ?,
+				SELECT i.incident_id, au.intern_id, ?, ?, ?, ?, ?,
 				       CASE WHEN ? = 'RESOLVED' THEN SYSUTCDATETIME() ELSE NULL END
 				FROM dbo.incidents i
 				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
@@ -156,7 +154,8 @@ public class ResponsibilityDAO {
 			statement.setLong(6, id);
 			statement.setLong(7, mentorUserId);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Responsibility not found or cannot be edited by this Mentor.");
+				throw new IllegalStateException(
+						"Không tìm thấy hồ sơ trách nhiệm hoặc người hướng dẫn này không được phép sửa.");
 		}
 	}
 
@@ -167,7 +166,8 @@ public class ResponsibilityDAO {
 			statement.setLong(1, id);
 			statement.setLong(2, mentorUserId);
 			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Responsibility not found or cannot be deleted by this Mentor.");
+				throw new IllegalStateException(
+						"Không tìm thấy hồ sơ trách nhiệm hoặc người hướng dẫn này không được phép xóa.");
 		}
 	}
 
@@ -175,7 +175,7 @@ public class ResponsibilityDAO {
 		return """
 				 WHERE %s(? = '' OR CAST(r.responsibility_id AS varchar(30)) LIKE ?
 				    OR CAST(r.incident_id AS varchar(30)) LIKE ? OR intern.full_name LIKE ?
-				    OR sp.student_code LIKE ? OR a.asset_code LIKE ? OR a.asset_name LIKE ?
+				    OR ip.intern_code LIKE ? OR a.asset_code LIKE ? OR a.asset_name LIKE ?
 				    OR r.conclusion LIKE ? OR r.decision LIKE ?)
 				 AND (? = '' OR r.status = ?)
 				""".formatted(prefix);
@@ -210,19 +210,19 @@ public class ResponsibilityDAO {
 				Responsibility record = new Responsibility();
 				record.setResponsibilityId(result.getLong("responsibility_id"));
 				record.setIncidentId(result.getLong("incident_id"));
-				record.setInternId(result.getLong("student_id"));
+				record.setInternId(result.getLong("intern_id"));
 				record.setDeterminedBy(result.getLong("determined_by"));
 				record.setConclusion(result.getString("conclusion"));
 				record.setDecision(result.getString("decision"));
 				record.setStatus(result.getString("status"));
 				record.setReviewedBy(nullableLong(result, "reviewed_by"));
-				record.setReviewedAt(local(result.getTimestamp("reviewed_at")));
+				record.setReviewedAt(ViewFormat.fromUtc(result.getTimestamp("reviewed_at")));
 				record.setReviewNote(result.getString("review_note"));
 				record.setResolutionNote(result.getString("resolution_note"));
-				record.setDeterminedAt(local(result.getTimestamp("determined_at")));
-				record.setResolvedAt(local(result.getTimestamp("resolved_at")));
-				record.setCreatedAt(local(result.getTimestamp("created_at")));
-				record.setUpdatedAt(local(result.getTimestamp("updated_at")));
+				record.setDeterminedAt(ViewFormat.fromUtc(result.getTimestamp("determined_at")));
+				record.setResolvedAt(ViewFormat.fromUtc(result.getTimestamp("resolved_at")));
+				record.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+				record.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 				record.setInternCode(result.getString("intern_code"));
 				record.setInternName(result.getString("intern_name"));
 				record.setInternEmail(result.getString("intern_email"));
@@ -234,16 +234,16 @@ public class ResponsibilityDAO {
 				record.setIncidentStatus(result.getString("incident_status"));
 				record.setInvestigationNote(result.getString("investigation_note"));
 				record.setHandlingResult(result.getString("handling_result"));
-				record.setOccurredAt(local(result.getTimestamp("occurred_at")));
-				record.setReportedAt(local(result.getTimestamp("reported_at")));
+				record.setOccurredAt(ViewFormat.fromUtc(result.getTimestamp("occurred_at")));
+				record.setReportedAt(ViewFormat.fromUtc(result.getTimestamp("reported_at")));
 				record.setAssetId(result.getLong("asset_id"));
 				record.setAssetCode(result.getString("asset_code"));
 				record.setAssetName(result.getString("asset_name"));
 				record.setAssetUsageId(nullableLong(result, "asset_usage_id"));
 				record.setUsageStatus(result.getString("usage_status"));
-				record.setBorrowedAt(local(result.getTimestamp("borrowed_at")));
-				record.setDueAt(local(result.getTimestamp("due_at")));
-				record.setReturnedAt(local(result.getTimestamp("returned_at")));
+				record.setBorrowedAt(ViewFormat.fromUtc(result.getTimestamp("borrowed_at")));
+				record.setDueAt(ViewFormat.fromUtc(result.getTimestamp("due_at")));
+				record.setReturnedAt(ViewFormat.fromUtc(result.getTimestamp("returned_at")));
 				records.add(record);
 			}
 			return records;
@@ -252,20 +252,14 @@ public class ResponsibilityDAO {
 
 	private void validate(String conclusion, String status) {
 		if (conclusion == null || conclusion.isBlank())
-			throw new IllegalArgumentException("Mentor finding is required.");
+			throw new IllegalArgumentException("Vui lòng nhập kết luận của người hướng dẫn.");
 		if (!MENTOR_STATUSES.contains(status))
-			throw new IllegalArgumentException("Invalid responsibility status.");
+			throw new IllegalArgumentException("Trạng thái trách nhiệm không hợp lệ.");
 	}
 
 	private Long nullableLong(ResultSet result, String column) throws SQLException {
 		long value = result.getLong(column);
 		return result.wasNull() ? null : value;
-	}
-
-	private LocalDateTime local(Timestamp value) {
-		return value == null
-				? null
-				: value.toLocalDateTime().atZone(ZoneOffset.UTC).withZoneSameInstant(labZone).toLocalDateTime();
 	}
 
 	private String blankToNull(String value) {

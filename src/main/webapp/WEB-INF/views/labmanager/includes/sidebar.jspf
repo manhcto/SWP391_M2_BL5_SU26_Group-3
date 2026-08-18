@@ -19,24 +19,24 @@
 </svg>
 
 <aside class="sidebar" id="sidebar">
-    <a class="brand" href="${pageContext.request.contextPath}/lab-manager/dashboard" aria-label="LAB Asset Lab Manager home">
+    <a class="brand" href="${pageContext.request.contextPath}/lab-manager/dashboard" aria-label="Trang chủ quản lý phòng LAB">
         <span class="brand-mark"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"></span>
-        <span><strong>LAB ASSET</strong><small>LAB MANAGER PORTAL</small></span>
+        <span><strong>LAB ASSET</strong><small>CỔNG QUẢN LÝ PHÒNG LAB</small></span>
     </a>
-    <nav class="side-nav" aria-label="Lab Manager navigation">
-        <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a>
-        <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/usages"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a>
-        <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/inspections"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a>
-        <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a>
-        <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg><span>Maintenance</span></a>
-        <a class="nav-link${activeMenu == 'disposals' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/disposals"><svg><use href="#i-trash"/></svg><span>Disposal</span></a>
+    <nav class="side-nav" aria-label="Điều hướng quản lý phòng LAB">
+        <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
+        <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/usages"><svg><use href="#i-calendar"/></svg><span>Sử dụng thiết bị</span></a>
+        <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/inspections"><svg><use href="#i-inspect"/></svg><span>Kiểm tra</span></a>
+        <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><svg><use href="#i-list"/></svg><span>Trách nhiệm</span></a>
+        <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg><span>Bảo trì</span></a>
+        <a class="nav-link${activeMenu == 'disposals' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/disposals"><svg><use href="#i-trash"/></svg><span>Thanh lý</span></a>
     </nav>
     <div class="sidebar-footer">
-        <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${currentUser.role}"/></span></div></div>
-        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Log out</span></button></form>
+        <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${app:label(currentUser.role)}"/></span></div></div>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
     </div>
 </aside>
-<button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>
+<button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Đóng thanh điều hướng"></button>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const menuButton = document.getElementById('menuButton');

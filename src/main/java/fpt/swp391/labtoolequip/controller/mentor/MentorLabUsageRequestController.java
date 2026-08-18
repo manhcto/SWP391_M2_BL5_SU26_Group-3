@@ -61,7 +61,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
 		if (!validCsrf(request)) {
-			response.sendError(HttpServletResponse.SC_FORBIDDEN, "Invalid CSRF token.");
+			response.sendError(HttpServletResponse.SC_FORBIDDEN, "Mã bảo vệ CSRF không hợp lệ.");
 			return;
 		}
 		String path = canonicalPath(request);
@@ -146,7 +146,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!"PENDING".equals(labRequest.getStatus())) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ danh sách PENDING mới được chỉnh sửa.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ danh sách chờ duyệt mới được chỉnh sửa.");
 			return;
 		}
 		request.setAttribute("labRequest", labRequest);
@@ -197,7 +197,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!requestDAO.updatePending(labRequest)) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái PENDING.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái chờ duyệt.");
 			return;
 		}
 		response.sendRedirect(request.getContextPath() + "/mentor/interns/view?id=" + requestId + "&updated=1");
@@ -209,7 +209,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			return;
 		}
 		if (!requestDAO.deletePending(requestId, mentorId(request))) {
-			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ danh sách PENDING mới được xóa.");
+			response.sendError(HttpServletResponse.SC_CONFLICT, "Chỉ danh sách chờ duyệt mới được xóa.");
 			return;
 		}
 		response.sendRedirect(request.getContextPath() + "/mentor/interns?deleted=1");
@@ -287,7 +287,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			errors.add("Tên danh sách là bắt buộc và không được vượt quá 100 ký tự.");
 		}
 		if (request.getStudents().isEmpty()) {
-			errors.add("Vui lòng nhập hoặc import ít nhất một intern.");
+			errors.add("Vui lòng nhập trực tiếp hoặc nhập từ tệp ít nhất một thực tập sinh.");
 		}
 		Set<String> codes = new LinkedHashSet<>();
 		Set<String> emails = new LinkedHashSet<>();
@@ -297,11 +297,11 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			String cohort = trim(intern.getCohort());
 			if (code.isBlank() || trim(intern.getFullName()).isBlank() || cohort.isBlank()
 					|| !EMAIL.matcher(email).matches()) {
-				errors.add("Mỗi intern phải có mã, họ tên, Gmail và khóa hợp lệ.");
+				errors.add("Mỗi thực tập sinh phải có mã, họ tên, Gmail và khóa hợp lệ.");
 				break;
 			}
 			if (!codes.add(code) || !emails.add(email)) {
-				errors.add("Mã intern và Gmail không được trùng trong cùng danh sách.");
+				errors.add("Mã thực tập sinh và Gmail không được trùng trong cùng danh sách.");
 				break;
 			}
 			intern.setStudentCode(code);
@@ -370,7 +370,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 			}
 			return id;
 		} catch (NumberFormatException exception) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid list ID.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Mã danh sách không hợp lệ.");
 			return 0;
 		}
 	}
@@ -395,7 +395,7 @@ public class MentorLabUsageRequestController extends HttpServlet {
 
 	private void handleDatabaseError(HttpServletResponse response, SQLException exception) throws IOException {
 		getServletContext().log("Loading intern lists failed", exception);
-		response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải danh sách intern.");
+		response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Không thể tải danh sách thực tập sinh.");
 	}
 
 	private String[] parameters(HttpServletRequest request, String primary, String fallback) {

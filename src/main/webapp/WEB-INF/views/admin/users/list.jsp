@@ -1,12 +1,13 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
     <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="vi">
 
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>User Management | LAB Asset</title>
+            <title>Quản lý người dùng | LAB Asset</title>
             <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
         </head>
 
@@ -18,20 +19,20 @@
                     <main class="main-content">
                         <header class="topbar">
                             <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button"
-                                    aria-label="Open navigation"><svg>
+                                    aria-label="Mở thanh điều hướng"><svg>
                                         <use href="#i-menu" />
                                     </svg></button>
                                 <div>
-                                    <h1>User Management (FE-01)</h1>
-                                    <p>Create accounts, assign roles, activate approved intern lists</p>
+                                    <h1>Quản lý người dùng (FE-01)</h1>
+                                    <p>Tạo tài khoản, phân quyền và kích hoạt thực tập sinh đã được phê duyệt</p>
                                 </div>
                             </div>
                             <div class="topbar-actions">
                                 <label class="search-box"><svg>
                                         <use href="#i-search" />
-                                    </svg><input type="search" placeholder="Search users..."
-                                        aria-label="Search"></label>
-                                <button class="icon-button notification" type="button" aria-label="Notifications"><svg>
+                                    </svg><input type="search" placeholder="Tìm người dùng..."
+                                        aria-label="Tìm kiếm"></label>
+                                <button class="icon-button notification" type="button" aria-label="Thông báo"><svg>
                                         <use href="#i-bell" />
                                     </svg><span>3</span></button>
                                 <div class="top-profile">
@@ -45,14 +46,14 @@
                         <section class="content-area">
                             <div class="content-heading">
                                 <div>
-                                    <p class="eyebrow">DIRECTORY</p>
-                                    <h2>All Managed Users (${users.size()})</h2>
+                                    <p class="eyebrow">DANH MỤC</p>
+                                    <h2>Tất cả người dùng được quản lý (${users.size()})</h2>
                                 </div>
                                 <div style="display:flex; align-items: center; gap: 10px;">
                                     <a class="primary-button"
                                         href="${pageContext.request.contextPath}/admin/users/add"><svg>
                                             <use href="#i-plus" />
-                                        </svg>Add New User</a>
+                                        </svg>Thêm người dùng</a>
                                 </div>
                             </div>
 
@@ -64,7 +65,7 @@
                             <c:if test="${param.success == 'role_updated'}">
                                 <div
                                     style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">
-                                    ✓ Vai trò của người dùng đã được chuyển đổi thành công (Mentor ↔ Lab Manager)!</div>
+                                    ✓ Vai trò của người dùng đã được chuyển đổi thành công (Người hướng dẫn ↔ Quản lý phòng LAB)!</div>
                             </c:if>
                             <c:if test="${param.success == 'status_updated'}">
                                 <div
@@ -74,35 +75,35 @@
                             <c:if test="${param.success == 'imported'}">
                                 <div
                                     style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">
-                                    ✓ Đã import thành công ${param.count} tài khoản vào hệ thống!</div>
+                                    ✓ Đã nhập thành công ${param.count} tài khoản vào hệ thống!</div>
                             </c:if>
 
                             <div class="filter-bar">
                                 <form method="get" action="${pageContext.request.contextPath}/admin/users"
                                     class="filter-group">
                                     <input class="form-control" type="search" name="keyword"
-                                        value="<c:out value='${keyword}'/>" placeholder="Search name, roll, email..."
+                                        value="<c:out value='${keyword}'/>" placeholder="Tìm theo tên, mã sinh viên hoặc email..."
                                         style="width: 240px;">
                                     <select class="form-control" name="role">
-                                        <option value="">All Roles (3)</option>
-                                        <option value="INTERN" ${selectedRole=='INTERN' ? 'selected' : '' }>Intern
+                                        <option value="">Tất cả vai trò (3)</option>
+                                        <option value="INTERN" ${selectedRole=='INTERN' ? 'selected' : '' }>Thực tập sinh
                                         </option>
-                                        <option value="MENTOR" ${selectedRole=='MENTOR' ? 'selected' : '' }>Mentor (2)
+                                        <option value="MENTOR" ${selectedRole=='MENTOR' ? 'selected' : '' }>Người hướng dẫn (2)
                                         </option>
                                         <option value="LAB_MANAGER" ${selectedRole=='LAB_MANAGER' ? 'selected' : '' }>
-                                            Lab Manager (3)</option>
+                                            Quản lý phòng LAB (3)</option>
                                     </select>
                                     <select class="form-control" name="status">
-                                        <option value="">All Status</option>
-                                        <option value="ACTIVE" ${selectedStatus=='ACTIVE' ? 'selected' : '' }>ACTIVE
+                                        <option value="">Tất cả trạng thái</option>
+                                        <option value="ACTIVE" ${selectedStatus=='ACTIVE' ? 'selected' : '' }>Đang hoạt động
                                         </option>
                                         <option value="INACTIVE" ${selectedStatus=='INACTIVE' ? 'selected' : '' }>
-                                            INACTIVE</option>
+                                            Không hoạt động</option>
                                     </select>
                                     <button class="primary-button" type="submit"
-                                        style="height: 36px; padding: 0 16px;">Filter</button>
+                                        style="height: 36px; padding: 0 16px;">Lọc</button>
                                     <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users"
-                                        style="height: 36px;">Reset</a>
+                                        style="height: 36px;">Đặt lại</a>
                                 </form>
                             </div>
 
@@ -114,7 +115,7 @@
                                                     <use href="#i-users" />
                                                 </svg></div>
                                             <h3>Chưa có dữ liệu người dùng</h3>
-                                            <p>Danh sách tài khoản sinh viên, mentor và quản lý lab đang trống.<br>Bạn
+                                            <p>Danh sách tài khoản thực tập sinh, người hướng dẫn và quản lý phòng LAB đang trống.<br>Bạn
                                                 có thể tạo tài khoản mới.</p>
                                             <div
                                                 style="display:flex; align-items: center; justify-content: center; gap: 12px; margin-top: 4px;">
@@ -130,13 +131,13 @@
                                             <table>
                                                 <thead>
                                                     <tr>
-                                                        <th>User ID</th>
-                                                        <th>Full Name</th>
+                                                        <th>Mã người dùng</th>
+                                                        <th>Họ và tên</th>
                                                         <th>Email (@fpt.edu.vn)</th>
-                                                        <th>Role</th>
-                                                        <th>Student Code / Scope</th>
-                                                        <th>Status</th>
-                                                        <th style="text-align: right;">Actions</th>
+                                                        <th>Vai trò</th>
+                                                        <th>Mã sinh viên / Phạm vi</th>
+                                                        <th>Trạng thái</th>
+                                                        <th style="text-align: right;">Thao tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="userTableBody">
@@ -153,19 +154,19 @@
                                                             <td>
                                                                 <c:choose>
                                                                     <c:when test="${u.role == 'INTERN'}">
-                                                                        <span class="badge badge-green">INTERN</span>
+                                                                        <span class="badge badge-green">Thực tập sinh</span>
                                                                     </c:when>
                                                                     <c:when test="${u.role == 'MENTOR'}">
                                                                         <span class="badge"
-                                                                            style="background:#e0f2fe; color:#0369a1; font-weight:700;">MENTOR</span>
+                                                                            style="background:#e0f2fe; color:#0369a1; font-weight:700;">Người hướng dẫn</span>
                                                                     </c:when>
                                                                     <c:when test="${u.role == 'LAB_MANAGER'}">
                                                                         <span class="badge"
-                                                                            style="background:#f3e8ff; color:#7e22ce; font-weight:700;">LAB_MANAGER</span>
+                                                                            style="background:#f3e8ff; color:#7e22ce; font-weight:700;">Quản lý phòng LAB</span>
                                                                     </c:when>
                                                                     <c:otherwise>
                                                                         <span class="badge"
-                                                                            style="background:#f1f5f9; color:#475569; font-weight:700;">ADMIN</span>
+                                                                            style="background:#f1f5f9; color:#475569; font-weight:700;">Quản trị viên</span>
                                                                     </c:otherwise>
                                                                 </c:choose>
                                                             </td>
@@ -182,19 +183,19 @@
                                                             <td>
                                                                 <c:choose>
                                                                     <c:when test="${u.status == 'ACTIVE'}"><span
-                                                                            class="status returned">ACTIVE</span>
+                                                                            class="status returned">Đang hoạt động</span>
                                                                     </c:when>
                                                                     <c:otherwise><span class="status review"
-                                                                            style="color:#c63d3d; background:#fbeaea;">INACTIVE</span>
+                                                                            style="color:#c63d3d; background:#fbeaea;">Không hoạt động</span>
                                                                     </c:otherwise>
                                                                 </c:choose>
                                                             </td>
                                                             <td style="text-align: right;">
                                                                 <a class="btn-action"
-                                                                    href="${pageContext.request.contextPath}/admin/users/view?id=${u.userId}">View</a>
+                                                                    href="${pageContext.request.contextPath}/admin/users/view?id=${u.userId}">Xem</a>
                                                                 <a class="btn-action"
                                                                     href="${pageContext.request.contextPath}/admin/users/edit?id=${u.userId}"
-                                                                    style="background:#e8f4ec; color:#188255; border-color:#bce1ce; font-weight:600;">Edit</a>
+                                                                    style="background:#e8f4ec; color:#188255; border-color:#bce1ce; font-weight:600;">Sửa</a>
                                                             </td>
                                                         </tr>
                                                     </c:forEach>
@@ -203,7 +204,7 @@
                                         </div>
                                         <div class="table-footer">
                                             <div class="page-size-selector">
-                                                <span>Show</span>
+                                                <span>Hiển thị</span>
                                                 <select class="form-control" id="pageSizeSelect"
                                                     style="width: auto; height: 28px;"
                                                     onchange="changePageSize(this.value)">
@@ -212,10 +213,10 @@
                                                     <option value="25">25</option>
                                                     <option value="50">50</option>
                                                 </select>
-                                                <span>entries per page</span>
+                                                <span>bản ghi mỗi trang</span>
                                             </div>
-                                            <span id="pageInfoText">Showing 1 to ${users.size()} of ${users.size()}
-                                                users</span>
+                                            <span id="pageInfoText">Hiển thị 1 đến ${users.size()} trong tổng số ${users.size()}
+                                                người dùng</span>
                                             <div class="pagination-controls" id="paginationControls"></div>
                                         </div>
                                     </c:otherwise>
@@ -248,7 +249,7 @@
                     // Update info text
                     const info = document.getElementById('pageInfoText');
                     if (info) {
-                        info.innerText = 'Showing ' + (start + 1) + ' to ' + end + ' of ' + totalRows + ' users';
+                        info.innerText = 'Hiển thị ' + (start + 1) + ' đến ' + end + ' trong tổng số ' + totalRows + ' người dùng';
                     }
 
                     // Render controls

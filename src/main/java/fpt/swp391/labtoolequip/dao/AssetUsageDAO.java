@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.AssetUsage;
 import java.sql.Connection;
@@ -20,17 +21,85 @@ import util.AppConfig;
 
 public class AssetUsageDAO {
 	private static final String SELECT_USAGE = """
-			SELECT au.*, a.asset_code, a.asset_name, u.full_name AS student_name
+			SELECT au.*, a.asset_code, a.asset_name, u.full_name AS intern_name
 			FROM dbo.asset_usages au
 			JOIN dbo.assets a ON a.asset_id = au.asset_id
-			JOIN dbo.student_profiles sp ON sp.student_id = au.student_id
-			JOIN dbo.users u ON u.user_id = sp.user_id
+			JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+			JOIN dbo.users u ON u.user_id = ip.user_id
 			""";
 	private final DBConnection db = new DBConnection();
 	private final ZoneId labZone = ZoneId.of(AppConfig.get("LAB_TIMEZONE", "Asia/Ho_Chi_Minh"));
 
 	public List<AssetUsage> findForStudent(long userId) throws SQLException {
-		return find(SELECT_USAGE + " WHERE sp.user_id = ? ORDER BY au.borrowed_at DESC", userId);
+		return findForIntern(userId, "", "");
+	}
+
+	public List<AssetUsage> findForIntern(long userId, String keyword, String status) throws SQLException {
+		String search = keyword == null ? "" : keyword.trim();
+		String state = status == null ? "" : status.trim();
+		String sql = SELECT_USAGE + """
+				WHERE ip.user_id = ?
+				  AND (? = '' OR a.asset_code LIKE ? OR a.asset_name LIKE ?)
+				  AND (? = '' OR au.status = ?)
+				ORDER BY au.borrowed_at DESC
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, userId);
+			statement.setString(2, search);
+			statement.setString(3, "%" + search + "%");
+			statement.setString(4, "%" + search + "%");
+			statement.setString(5, state);
+			statement.setString(6, state);
+			return readUsages(statement);
+		}
+	}
+
+	public List<AssetUsage> findForMentor(long mentorId, String keyword, String status) throws SQLException {
+		String search = keyword == null ? "" : keyword.trim();
+		String state = status == null ? "" : status.trim();
+		String sql = SELECT_USAGE + """
+				WHERE EXISTS (
+					SELECT 1 FROM dbo.lab_usage_requests lur
+					WHERE lur.request_id = au.request_id
+					  AND lur.semester_id = au.semester_id
+					  AND lur.mentor_id = ?
+					  AND lur.status = 'APPROVED'
+				)
+				AND (? = '' OR a.asset_code LIKE ? OR a.asset_name LIKE ? OR u.full_name LIKE ?)
+				AND (? = '' OR au.status = ?)
+				ORDER BY au.borrowed_at DESC
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, mentorId);
+			statement.setString(2, search);
+			statement.setString(3, "%" + search + "%");
+			statement.setString(4, "%" + search + "%");
+			statement.setString(5, "%" + search + "%");
+			statement.setString(6, state);
+			statement.setString(7, state);
+			return readUsages(statement);
+		}
+	}
+
+	public Optional<AssetUsage> findByIdForMentor(long usageId, long mentorId) throws SQLException {
+		String sql = SELECT_USAGE + """
+				WHERE au.asset_usage_id = ?
+				  AND EXISTS (
+					SELECT 1 FROM dbo.lab_usage_requests lur
+					WHERE lur.request_id = au.request_id
+					  AND lur.semester_id = au.semester_id
+					  AND lur.mentor_id = ?
+					  AND lur.status = 'APPROVED'
+				)
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, usageId);
+			statement.setLong(2, mentorId);
+			return readUsages(statement).stream().findFirst();
+		}
 	}
 
 	public List<AssetUsage> findAll(String keyword, String status) throws SQLException {
@@ -54,14 +123,14 @@ public class AssetUsageDAO {
 	}
 
 	public Optional<AssetUsage> findById(long usageId, Long ownerUserId) throws SQLException {
-		String sql = SELECT_USAGE + " WHERE au.asset_usage_id = ?" + (ownerUserId == null ? "" : " AND sp.user_id = ?");
+		String sql = SELECT_USAGE + " WHERE au.asset_usage_id = ?" + (ownerUserId == null ? "" : " AND ip.user_id = ?");
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, usageId);
-			if (ownerUserId != null)
+			if (ownerUserId != null) {
 				statement.setLong(2, ownerUserId);
-			List<AssetUsage> usages = readUsages(statement);
-			return usages.stream().findFirst();
+			}
+			return readUsages(statement).stream().findFirst();
 		}
 	}
 
@@ -70,7 +139,16 @@ public class AssetUsageDAO {
 				SELECT a.asset_id, a.asset_code, a.asset_name, a.total_quantity, a.condition
 				FROM dbo.assets a
 				WHERE a.status = 'AVAILABLE' AND a.is_borrowable = 1
-				  AND NOT EXISTS (SELECT 1 FROM dbo.disposal_records d WHERE d.asset_id = a.asset_id AND d.status = 'PENDING')
+				  AND a.condition IN ('GOOD', 'FAIR')
+				  AND a.total_quantity > (
+					SELECT COALESCE(SUM(au.quantity), 0)
+					FROM dbo.asset_usages au
+					WHERE au.asset_id = a.asset_id AND au.status = 'IN_USE'
+				  )
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.disposal_records d
+					WHERE d.asset_id = a.asset_id AND d.status IN ('PENDING', 'APPROVED')
+				  )
 				ORDER BY a.asset_name
 				""";
 		try (Connection connection = db.getConnection();
@@ -91,21 +169,18 @@ public class AssetUsageDAO {
 	}
 
 	public long borrow(long userId, long assetId, int quantity, String note) throws SQLException {
-		if (quantity <= 0)
-			throw new IllegalArgumentException("Quantity must be greater than zero.");
+		validateQuantity(quantity);
 		ZonedDateTime now = ZonedDateTime.now(labZone);
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				Asset asset = lockAsset(connection, assetId);
-				if (!"AVAILABLE".equals(asset.getStatus()) || !Boolean.TRUE.equals(asset.getBorrowable()))
-					throw new IllegalStateException("Asset is not available for borrowing.");
-				if (hasPendingDisposal(connection, assetId))
-					throw new IllegalStateException("Asset has a pending disposal.");
+				validateBorrowable(asset);
+				if (hasPendingDisposal(connection, assetId)) {
+					throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
+				}
 				Membership membership = currentMembership(connection, userId, now);
-				int active = activeQuantity(connection, assetId);
-				if (active + quantity > asset.getTotalQuantity())
-					throw new IllegalStateException("Insufficient available quantity.");
+				validateAvailableQuantity(activeQuantity(connection, assetId), quantity, asset.getTotalQuantity());
 				long id = insertUsage(connection, userId, asset, quantity, note, membership, now);
 				connection.commit();
 				return id;
@@ -116,15 +191,36 @@ public class AssetUsageDAO {
 		}
 	}
 
+	static void validateQuantity(int quantity) {
+		if (quantity <= 0) {
+			throw new IllegalArgumentException("Số lượng phải lớn hơn 0.");
+		}
+	}
+
+	static void validateBorrowable(Asset asset) {
+		if (!"AVAILABLE".equals(asset.getStatus()) || !Boolean.TRUE.equals(asset.getBorrowable())
+				|| !("GOOD".equals(asset.getCondition()) || "FAIR".equals(asset.getCondition()))) {
+			throw new IllegalStateException("Thiết bị hiện không thể cho mượn.");
+		}
+	}
+
+	static void validateAvailableQuantity(int active, int requested, int total) {
+		if (active + requested > total) {
+			throw new IllegalStateException("Số lượng thiết bị khả dụng không đủ.");
+		}
+	}
+
 	public void returnUsage(long userId, long usageId, String conditionAfter, String note) throws SQLException {
-		if (!List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(conditionAfter))
-			throw new IllegalArgumentException("A valid return condition is required.");
+		if (conditionAfter == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(conditionAfter)) {
+			throw new IllegalArgumentException("Vui lòng chọn tình trạng hợp lệ khi trả thiết bị.");
+		}
 		String sql = """
 				UPDATE au WITH (UPDLOCK, ROWLOCK)
-				SET returned_at = SYSUTCDATETIME(), condition_after = ?, note = ?, status = 'RETURNED', updated_at = SYSUTCDATETIME()
+				SET returned_at = SYSUTCDATETIME(), condition_after = ?, return_note = ?, status = 'RETURNED',
+				    updated_at = SYSUTCDATETIME()
 				FROM dbo.asset_usages au
-				JOIN dbo.student_profiles sp ON sp.student_id = au.student_id
-				WHERE au.asset_usage_id = ? AND sp.user_id = ? AND au.status = 'IN_USE' AND au.returned_at IS NULL
+				JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+				WHERE au.asset_usage_id = ? AND ip.user_id = ? AND au.status = 'IN_USE' AND au.returned_at IS NULL
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -132,18 +228,21 @@ public class AssetUsageDAO {
 			statement.setString(2, blankToNull(note));
 			statement.setLong(3, usageId);
 			statement.setLong(4, userId);
-			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Usage cannot be returned or is not yours.");
+			if (statement.executeUpdate() != 1) {
+				throw new IllegalStateException("Không thể trả lượt mượn này hoặc lượt mượn không thuộc về bạn.");
+			}
 		}
 	}
 
 	private Asset lockAsset(Connection connection, long assetId) throws SQLException {
-		String sql = "SELECT asset_id, total_quantity, condition, status, is_borrowable FROM dbo.assets WITH (UPDLOCK, HOLDLOCK) WHERE asset_id = ?";
+		String sql = "SELECT asset_id, total_quantity, condition, status, is_borrowable FROM dbo.assets "
+				+ "WITH (UPDLOCK, HOLDLOCK) WHERE asset_id = ?";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
-				if (!result.next())
-					throw new IllegalArgumentException("Asset not found.");
+				if (!result.next()) {
+					throw new IllegalArgumentException("Không tìm thấy thiết bị.");
+				}
 				Asset asset = new Asset();
 				asset.setAssetId(result.getLong("asset_id"));
 				asset.setTotalQuantity(result.getInt("total_quantity"));
@@ -157,13 +256,14 @@ public class AssetUsageDAO {
 
 	private Membership currentMembership(Connection connection, long userId, ZonedDateTime now) throws SQLException {
 		String sql = """
-				SELECT TOP 1 lurs.request_id, lurs.semester_id, lurs.student_id, s.end_date
+				SELECT TOP 1 luri.request_id, luri.semester_id, luri.intern_id, s.end_date
 				FROM dbo.users u
-				JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
-				JOIN dbo.lab_usage_request_students lurs ON lurs.student_id = sp.student_id
-				JOIN dbo.lab_usage_requests lur ON lur.request_id = lurs.request_id AND lur.semester_id = lurs.semester_id
+				JOIN dbo.intern_profiles ip ON ip.user_id = u.user_id
+				JOIN dbo.lab_usage_request_interns luri ON luri.intern_id = ip.intern_id
+				JOIN dbo.lab_usage_requests lur
+				  ON lur.request_id = luri.request_id AND lur.semester_id = luri.semester_id
 				JOIN dbo.semesters s ON s.semester_id = lur.semester_id
-				WHERE u.user_id = ? AND u.role = 'INTERN' AND u.status = 'ACTIVE' AND sp.status = 'ACTIVE'
+				WHERE u.user_id = ? AND u.role = 'INTERN' AND u.status = 'ACTIVE' AND ip.status = 'ACTIVE'
 				  AND lur.status = 'APPROVED' AND s.status = 'ACTIVE' AND ? BETWEEN s.start_date AND s.end_date
 				ORDER BY s.end_date
 				""";
@@ -171,8 +271,10 @@ public class AssetUsageDAO {
 			statement.setLong(1, userId);
 			statement.setDate(2, java.sql.Date.valueOf(now.toLocalDate()));
 			try (ResultSet result = statement.executeQuery()) {
-				if (!result.next())
-					throw new IllegalStateException("No approved intern list for the current semester.");
+				if (!result.next()) {
+					throw new IllegalStateException(
+							"Bạn chưa thuộc danh sách thực tập sinh được duyệt của học kỳ hiện tại.");
+				}
 				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3),
 						result.getDate(4).toLocalDate());
 			}
@@ -180,8 +282,9 @@ public class AssetUsageDAO {
 	}
 
 	private boolean hasPendingDisposal(Connection connection, long assetId) throws SQLException {
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.disposal_records WITH (UPDLOCK, HOLDLOCK) WHERE asset_id = ? AND status = 'PENDING'")) {
+		try (PreparedStatement statement = connection
+				.prepareStatement("SELECT 1 FROM dbo.disposal_records WITH (UPDLOCK, HOLDLOCK) "
+						+ "WHERE asset_id = ? AND status IN ('PENDING', 'APPROVED')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -203,7 +306,7 @@ public class AssetUsageDAO {
 	private long insertUsage(Connection connection, long userId, Asset asset, int quantity, String note,
 			Membership membership, ZonedDateTime now) throws SQLException {
 		String sql = """
-				INSERT dbo.asset_usages (request_id, semester_id, student_id, asset_id, quantity, borrowed_at, due_at,
+				INSERT dbo.asset_usages (request_id, semester_id, intern_id, asset_id, quantity, borrowed_at, due_at,
 				 condition_before, status, note, created_by) OUTPUT INSERTED.asset_usage_id
 				VALUES (?, ?, ?, ?, ?, SYSUTCDATETIME(), ?, ?, 'IN_USE', ?, ?)
 				""";
@@ -211,7 +314,7 @@ public class AssetUsageDAO {
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, membership.requestId());
 			statement.setLong(2, membership.semesterId());
-			statement.setLong(3, membership.studentId());
+			statement.setLong(3, membership.internId());
 			statement.setLong(4, asset.getAssetId());
 			statement.setInt(5, quantity);
 			statement.setTimestamp(6, Timestamp.valueOf(LocalDateTime.ofInstant(due, java.time.ZoneOffset.UTC)));
@@ -225,14 +328,6 @@ public class AssetUsageDAO {
 		}
 	}
 
-	private List<AssetUsage> find(String sql, long id) throws SQLException {
-		try (Connection connection = db.getConnection();
-				PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.setLong(1, id);
-			return readUsages(statement);
-		}
-	}
-
 	private List<AssetUsage> readUsages(PreparedStatement statement) throws SQLException {
 		try (ResultSet result = statement.executeQuery()) {
 			List<AssetUsage> usages = new ArrayList<>();
@@ -241,12 +336,12 @@ public class AssetUsageDAO {
 				usage.setAssetUsageId(result.getLong("asset_usage_id"));
 				usage.setRequestId(result.getLong("request_id"));
 				usage.setSemesterId(result.getLong("semester_id"));
-				usage.setStudentId(result.getLong("student_id"));
+				usage.setStudentId(result.getLong("intern_id"));
 				usage.setAssetId(result.getLong("asset_id"));
 				usage.setQuantity(result.getInt("quantity"));
-				usage.setBorrowedAt(local(result.getTimestamp("borrowed_at")));
-				usage.setDueAt(local(result.getTimestamp("due_at")));
-				usage.setReturnedAt(local(result.getTimestamp("returned_at")));
+				usage.setBorrowedAt(ViewFormat.fromUtc(result.getTimestamp("borrowed_at")));
+				usage.setDueAt(ViewFormat.fromUtc(result.getTimestamp("due_at")));
+				usage.setReturnedAt(ViewFormat.fromUtc(result.getTimestamp("returned_at")));
 				usage.setConditionBefore(result.getString("condition_before"));
 				usage.setConditionAfter(result.getString("condition_after"));
 				usage.setStatus(result.getString("status"));
@@ -254,23 +349,17 @@ public class AssetUsageDAO {
 				usage.setCreatedBy(result.getLong("created_by"));
 				usage.setAssetCode(result.getString("asset_code"));
 				usage.setAssetName(result.getString("asset_name"));
-				usage.setStudentName(result.getString("student_name"));
+				usage.setStudentName(result.getString("intern_name"));
 				usages.add(usage);
 			}
 			return usages;
 		}
 	}
 
-	private LocalDateTime local(Timestamp value) {
-		return value == null
-				? null
-				: value.toLocalDateTime().atZone(java.time.ZoneOffset.UTC).withZoneSameInstant(labZone)
-						.toLocalDateTime();
-	}
-
 	private String blankToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
 	}
-	private record Membership(long requestId, long semesterId, long studentId, LocalDate endDate) {
+
+	private record Membership(long requestId, long semesterId, long internId, LocalDate endDate) {
 	}
 }

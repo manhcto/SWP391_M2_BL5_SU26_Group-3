@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.LabUsageRequest;
 import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
 import fpt.swp391.labtoolequip.model.Semester;
@@ -9,9 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -176,8 +175,8 @@ public class LabUsageRequestDAO {
 				semester.setStartDate(result.getDate("start_date").toLocalDate());
 				semester.setEndDate(result.getDate("end_date").toLocalDate());
 				semester.setStatus(result.getString("status"));
-				semester.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
-				semester.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
+				semester.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+				semester.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 				semesters.add(semester);
 			}
 			return semesters;
@@ -201,7 +200,7 @@ public class LabUsageRequestDAO {
 					statement.executeUpdate();
 					try (ResultSet keys = statement.getGeneratedKeys()) {
 						if (!keys.next()) {
-							throw new SQLException("Không lấy được mã danh sách intern.");
+							throw new SQLException("Không lấy được mã danh sách thực tập sinh.");
 						}
 						requestId = keys.getLong(1);
 					}
@@ -299,7 +298,7 @@ public class LabUsageRequestDAO {
 					}
 				}
 				if ("APPROVED".equals(status) && currentSemesterId != request.getSemesterId()) {
-					throw new SQLException("Không thể đổi học kỳ của danh sách đã APPROVED.");
+					throw new SQLException("Không thể đổi học kỳ của danh sách đã được duyệt.");
 				}
 				if ("APPROVED".equals(status)) {
 					synchronizeApprovedMemberships(connection, request);
@@ -341,7 +340,7 @@ public class LabUsageRequestDAO {
 				Map<Long, Long> internAccounts = findInternAccounts(connection, requestId);
 				deleteRequestHistory(connection, requestId);
 				try (PreparedStatement memberships = connection
-						.prepareStatement("DELETE dbo.lab_usage_request_students WHERE request_id = ?")) {
+						.prepareStatement("DELETE dbo.lab_usage_request_interns WHERE request_id = ?")) {
 					memberships.setLong(1, requestId);
 					memberships.executeUpdate();
 				}
@@ -377,7 +376,7 @@ public class LabUsageRequestDAO {
 		for (Long studentId : previousStudentIds) {
 			if (!currentStudentIds.contains(studentId)) {
 				try (PreparedStatement statement = connection.prepareStatement(
-						"DELETE dbo.lab_usage_request_students WHERE request_id = ? AND student_id = ?")) {
+						"DELETE dbo.lab_usage_request_interns WHERE request_id = ? AND intern_id = ?")) {
 					statement.setLong(1, request.getRequestId());
 					statement.setLong(2, studentId);
 					statement.executeUpdate();
@@ -389,11 +388,11 @@ public class LabUsageRequestDAO {
 	private Set<Long> findMembershipStudentIds(Connection connection, long requestId) throws SQLException {
 		Set<Long> studentIds = new HashSet<>();
 		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT student_id FROM dbo.lab_usage_request_students WHERE request_id = ?")) {
+				.prepareStatement("SELECT intern_id FROM dbo.lab_usage_request_interns WHERE request_id = ?")) {
 			statement.setLong(1, requestId);
 			try (ResultSet result = statement.executeQuery()) {
 				while (result.next()) {
-					studentIds.add(result.getLong("student_id"));
+					studentIds.add(result.getLong("intern_id"));
 				}
 			}
 		}
@@ -433,24 +432,24 @@ public class LabUsageRequestDAO {
 	private Map<Long, Long> findInternAccounts(Connection connection, long requestId) throws SQLException {
 		Map<Long, Long> accounts = new java.util.LinkedHashMap<>();
 		try (PreparedStatement statement = connection.prepareStatement("""
-				SELECT DISTINCT u.user_id, sp.student_id
+				SELECT DISTINCT u.user_id, sp.intern_id
 				FROM dbo.users u
-				JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+				JOIN dbo.intern_profiles sp ON sp.user_id = u.user_id
 				WHERE u.role = 'INTERN'
 				  AND (EXISTS (
 						SELECT 1 FROM dbo.lab_usage_request_student_entries e
 						WHERE e.request_id = ? AND LOWER(e.email) = LOWER(u.email)
 					)
 					OR EXISTS (
-						SELECT 1 FROM dbo.lab_usage_request_students m
-						WHERE m.request_id = ? AND m.student_id = sp.student_id
+						SELECT 1 FROM dbo.lab_usage_request_interns m
+						WHERE m.request_id = ? AND m.intern_id = sp.intern_id
 					))
 				""")) {
 			statement.setLong(1, requestId);
 			statement.setLong(2, requestId);
 			try (ResultSet result = statement.executeQuery()) {
 				while (result.next()) {
-					accounts.put(result.getLong("user_id"), result.getLong("student_id"));
+					accounts.put(result.getLong("user_id"), result.getLong("intern_id"));
 				}
 			}
 		}
@@ -466,7 +465,7 @@ public class LabUsageRequestDAO {
 				continue;
 			}
 			try (PreparedStatement profile = connection
-					.prepareStatement("DELETE dbo.student_profiles WHERE student_id = ?")) {
+					.prepareStatement("DELETE dbo.intern_profiles WHERE intern_id = ?")) {
 				profile.setLong(1, studentId);
 				profile.executeUpdate();
 			}
@@ -485,10 +484,10 @@ public class LabUsageRequestDAO {
 						+ "WHERE e.request_id <> ? AND u.user_id = ?",
 				requestId, userId)
 				|| exists(connection,
-						"SELECT 1 FROM dbo.lab_usage_request_students WHERE request_id <> ? AND student_id = ?",
+						"SELECT 1 FROM dbo.lab_usage_request_interns WHERE request_id <> ? AND intern_id = ?",
 						requestId, studentId)
-				|| exists(connection, "SELECT 1 FROM dbo.asset_usages WHERE student_id = ?", studentId)
-				|| exists(connection, "SELECT 1 FROM dbo.responsibilities WHERE student_id = ?", studentId)) {
+				|| exists(connection, "SELECT 1 FROM dbo.asset_usages WHERE intern_id = ?", studentId)
+				|| exists(connection, "SELECT 1 FROM dbo.responsibilities WHERE intern_id = ?", studentId)) {
 			return true;
 		}
 		return exists(connection, "SELECT 1 FROM dbo.lab_usage_requests WHERE mentor_id = ? OR approved_by = ?", userId,
@@ -523,7 +522,7 @@ public class LabUsageRequestDAO {
 			connection.setAutoCommit(false);
 			try {
 				if (!isActiveAdmin(connection, adminId)) {
-					throw new SQLException("Tài khoản Admin không hợp lệ.");
+					throw new SQLException("Tài khoản quản trị viên không hợp lệ.");
 				}
 				if (!lockPendingForDecision(connection, requestId)) {
 					connection.rollback();
@@ -546,7 +545,7 @@ public class LabUsageRequestDAO {
 					statement.setString(3, emptyToNull(approvalNote));
 					statement.setLong(4, requestId);
 					if (statement.executeUpdate() != 1) {
-						throw new SQLException("Danh sách không còn ở trạng thái PENDING.");
+						throw new SQLException("Danh sách không còn ở trạng thái chờ duyệt.");
 					}
 				}
 				connection.commit();
@@ -594,9 +593,9 @@ public class LabUsageRequestDAO {
 		Long studentId = null;
 		String existingCode = null;
 		try (PreparedStatement statement = connection.prepareStatement("""
-				SELECT u.user_id, u.role, sp.student_id, sp.student_code
+				SELECT u.user_id, u.role, sp.intern_id, sp.intern_code
 				FROM dbo.users u WITH (UPDLOCK, HOLDLOCK)
-				LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
+				LEFT JOIN dbo.intern_profiles sp ON sp.user_id = u.user_id
 				WHERE LOWER(u.email) = LOWER(?)
 				""")) {
 			statement.setString(1, intern.getEmail());
@@ -606,14 +605,14 @@ public class LabUsageRequestDAO {
 						throw new SQLException("Email " + intern.getEmail() + " đã thuộc vai trò khác.");
 					}
 					userId = result.getLong("user_id");
-					studentId = nullableLong(result, "student_id");
-					existingCode = result.getString("student_code");
+					studentId = nullableLong(result, "intern_id");
+					existingCode = result.getString("intern_code");
 				}
 			}
 		}
 
 		if (studentId != null && !intern.getStudentCode().equalsIgnoreCase(existingCode)) {
-			throw new SQLException("Gmail " + intern.getEmail() + " không khớp mã intern hiện có.");
+			throw new SQLException("Gmail " + intern.getEmail() + " không khớp mã thực tập sinh hiện có.");
 		}
 		ensureInternCodeAvailable(connection, intern.getStudentCode(), userId);
 
@@ -627,7 +626,7 @@ public class LabUsageRequestDAO {
 				statement.executeUpdate();
 				try (ResultSet keys = statement.getGeneratedKeys()) {
 					if (!keys.next()) {
-						throw new SQLException("Không tạo được tài khoản intern.");
+						throw new SQLException("Không tạo được tài khoản thực tập sinh.");
 					}
 					userId = keys.getLong(1);
 				}
@@ -646,7 +645,7 @@ public class LabUsageRequestDAO {
 
 		if (studentId == null) {
 			try (PreparedStatement statement = connection.prepareStatement("""
-					INSERT dbo.student_profiles (user_id, student_code, major_id, cohort, status)
+					INSERT dbo.intern_profiles (user_id, intern_code, major_id, cohort, status)
 					VALUES (?, ?, NULL, ?, 'ACTIVE')
 					""", Statement.RETURN_GENERATED_KEYS)) {
 				statement.setLong(1, userId);
@@ -655,16 +654,16 @@ public class LabUsageRequestDAO {
 				statement.executeUpdate();
 				try (ResultSet keys = statement.getGeneratedKeys()) {
 					if (!keys.next()) {
-						throw new SQLException("Không tạo được hồ sơ intern.");
+						throw new SQLException("Không tạo được hồ sơ thực tập sinh.");
 					}
 					studentId = keys.getLong(1);
 				}
 			}
 		} else {
 			try (PreparedStatement statement = connection.prepareStatement("""
-					UPDATE dbo.student_profiles
+					UPDATE dbo.intern_profiles
 					SET cohort = ?, status = 'ACTIVE', updated_at = SYSUTCDATETIME()
-					WHERE student_id = ?
+					WHERE intern_id = ?
 					""")) {
 				statement.setString(1, intern.getCohort());
 				statement.setLong(2, studentId);
@@ -677,11 +676,11 @@ public class LabUsageRequestDAO {
 	private void insertMembership(Connection connection, LabUsageRequestStudent intern, long studentId)
 			throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement("""
-				INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
+				INSERT dbo.lab_usage_request_interns (request_id, semester_id, intern_id)
 				SELECT ?, ?, ?
 				WHERE NOT EXISTS (
-				    SELECT 1 FROM dbo.lab_usage_request_students
-				    WHERE semester_id = ? AND student_id = ?
+				    SELECT 1 FROM dbo.lab_usage_request_interns
+				    WHERE semester_id = ? AND intern_id = ?
 				)
 				""")) {
 			statement.setLong(1, intern.getRequestId());
@@ -695,13 +694,13 @@ public class LabUsageRequestDAO {
 
 	private void ensureInternCodeAvailable(Connection connection, String code, Long userId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement("""
-				SELECT user_id FROM dbo.student_profiles WITH (UPDLOCK, HOLDLOCK)
-				WHERE UPPER(student_code) = UPPER(?)
+				SELECT user_id FROM dbo.intern_profiles WITH (UPDLOCK, HOLDLOCK)
+				WHERE UPPER(intern_code) = UPPER(?)
 				""")) {
 			statement.setString(1, code);
 			try (ResultSet result = statement.executeQuery()) {
 				if (result.next() && (userId == null || result.getLong("user_id") != userId.longValue())) {
-					throw new SQLException("Mã intern " + code + " đã thuộc tài khoản khác.");
+					throw new SQLException("Mã thực tập sinh " + code + " đã thuộc tài khoản khác.");
 				}
 			}
 		}
@@ -747,13 +746,13 @@ public class LabUsageRequestDAO {
 
 	private List<LabUsageRequestStudent> findStudents(Connection connection, long requestId) throws SQLException {
 		String sql = """
-				SELECT e.request_id, e.semester_id, approved.student_id, e.added_at,
+				SELECT e.request_id, e.semester_id, approved.intern_id, e.added_at,
 				       e.student_code, e.full_name, e.email, e.cohort
 				FROM dbo.lab_usage_request_student_entries e
 				LEFT JOIN dbo.users u ON LOWER(u.email) = LOWER(e.email) AND u.role = 'INTERN'
-				LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
-				LEFT JOIN dbo.lab_usage_request_students approved
-				       ON approved.request_id = e.request_id AND approved.student_id = sp.student_id
+				LEFT JOIN dbo.intern_profiles sp ON sp.user_id = u.user_id
+				LEFT JOIN dbo.lab_usage_request_interns approved
+				       ON approved.request_id = e.request_id AND approved.intern_id = sp.intern_id
 				WHERE e.request_id = ?
 				ORDER BY e.student_code
 				""";
@@ -765,12 +764,12 @@ public class LabUsageRequestDAO {
 					LabUsageRequestStudent intern = new LabUsageRequestStudent();
 					intern.setRequestId(result.getLong("request_id"));
 					intern.setSemesterId(result.getLong("semester_id"));
-					intern.setStudentId(nullableLong(result, "student_id"));
+					intern.setStudentId(nullableLong(result, "intern_id"));
 					intern.setStudentCode(result.getString("student_code"));
 					intern.setFullName(result.getString("full_name"));
 					intern.setEmail(result.getString("email"));
 					intern.setCohort(result.getString("cohort"));
-					intern.setAddedAt(toLocalDateTime(result.getTimestamp("added_at")));
+					intern.setAddedAt(ViewFormat.fromUtc(result.getTimestamp("added_at")));
 					students.add(intern);
 				}
 				return students;
@@ -787,10 +786,10 @@ public class LabUsageRequestDAO {
 		request.setStatus(result.getString("status"));
 		request.setRequestNote(result.getString("request_note"));
 		request.setApprovedBy(nullableLong(result, "approved_by"));
-		request.setApprovedAt(toLocalDateTime(result.getTimestamp("approved_at")));
+		request.setApprovedAt(ViewFormat.fromUtc(result.getTimestamp("approved_at")));
 		request.setApprovalNote(result.getString("approval_note"));
-		request.setCreatedAt(toLocalDateTime(result.getTimestamp("created_at")));
-		request.setUpdatedAt(toLocalDateTime(result.getTimestamp("updated_at")));
+		request.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
+		request.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 		request.setSemesterCode(result.getString("semester_code"));
 		request.setSemesterName(result.getString("semester_name"));
 		request.setMentorName(result.getString("mentor_name"));
@@ -810,10 +809,6 @@ public class LabUsageRequestDAO {
 		} else {
 			statement.setLong(index, value);
 		}
-	}
-
-	private LocalDateTime toLocalDateTime(Timestamp timestamp) {
-		return timestamp == null ? null : timestamp.toLocalDateTime();
 	}
 
 	private String valueOrEmpty(String value) {

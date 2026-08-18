@@ -12,6 +12,6 @@ public class InspectionController extends InspectionControllerSupport {
 
 	@Override
 	protected String roleName() {
-		return "Lab Manager";
+		return "Quản lý phòng LAB";
 	}
 }
