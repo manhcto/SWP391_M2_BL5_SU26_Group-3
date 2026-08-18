@@ -30,7 +30,7 @@ public class UserDAO {
 				  AND (? = '' OR u.full_name LIKE ? OR u.email LIKE ? OR sp.student_code LIKE ?)
 				  AND (? = '' OR u.role = ?)
 				  AND (? = '' OR u.status = ?)
-				ORDER BY u.created_at DESC, u.user_id DESC
+				ORDER BY u.user_id ASC
 				""";
 		String search = valueOrEmpty(keyword);
 		String roleFilter = valueOrEmpty(role);
