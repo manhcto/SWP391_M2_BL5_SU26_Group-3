@@ -722,16 +722,6 @@ BEGIN
     CREATE INDEX IX_asset_items_asset ON dbo.asset_items (asset_id);
     CREATE INDEX IX_asset_items_status ON dbo.asset_items (status);
 
-    IF COL_LENGTH('dbo.asset_usages', 'asset_item_id') IS NULL
-    BEGIN
-        ALTER TABLE dbo.asset_usages ADD asset_item_id bigint NULL;
-        ALTER TABLE dbo.asset_usages
-            ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id)
-            REFERENCES dbo.asset_items(asset_item_id);
-        CREATE INDEX IX_asset_usages_asset_item ON dbo.asset_usages (asset_item_id)
-            WHERE asset_item_id IS NOT NULL;
-    END;
-
     ;WITH Numbers AS (
         SELECT TOP (SELECT COALESCE(MAX(total_quantity), 1) FROM dbo.assets)
                ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS item_number
@@ -750,7 +740,11 @@ GO
 
 /* Existing databases may already have asset_items; keep the usage link idempotent. */
 IF COL_LENGTH('dbo.asset_usages', 'asset_item_id') IS NULL
+BEGIN
     ALTER TABLE dbo.asset_usages ADD asset_item_id bigint NULL;
+END;
+GO
+
 IF NOT EXISTS (
     SELECT 1 FROM sys.foreign_keys
     WHERE name = 'FK_asset_usages_asset_item'

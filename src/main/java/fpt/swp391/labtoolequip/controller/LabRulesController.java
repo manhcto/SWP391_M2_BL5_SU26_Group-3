@@ -7,7 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-@WebServlet({"/admin/lab-rules", "/lab-manager/lab-rules", "/mentor/lab-rules", "/intern/lab-rules"})
+@WebServlet({"/lab-manager/lab-rules", "/mentor/lab-rules", "/intern/lab-rules"})
 public class LabRulesController extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)

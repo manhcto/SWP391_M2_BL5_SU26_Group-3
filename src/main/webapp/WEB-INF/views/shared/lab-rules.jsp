@@ -3,7 +3,6 @@
 <%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
 <c:set var="activeMenu" value="labRules" scope="request"/>
 <c:choose>
-    <c:when test="${roleBase == '/admin'}"><c:set var="pageClass" value="admin-page"/><c:set var="portalName" value="CỔNG QUẢN TRỊ"/></c:when>
     <c:when test="${roleBase == '/lab-manager'}"><c:set var="pageClass" value="lab-manager-page"/><c:set var="portalName" value="CỔNG QUẢN LÝ PHÒNG LAB"/></c:when>
     <c:when test="${roleBase == '/mentor'}"><c:set var="pageClass" value="mentor-page"/><c:set var="portalName" value="CỔNG NGƯỜI HƯỚNG DẪN"/></c:when>
     <c:otherwise><c:set var="pageClass" value="intern-dashboard-page"/><c:set var="portalName" value="CỔNG THỰC TẬP SINH"/></c:otherwise>
@@ -19,7 +18,6 @@
 <body class="${pageClass}">
 <div class="app-shell">
     <c:choose>
-        <c:when test="${roleBase == '/admin'}"><%@ include file="../admin/includes/sidebar.jspf"%></c:when>
         <c:when test="${roleBase == '/lab-manager'}"><%@ include file="../labmanager/includes/sidebar.jspf"%></c:when>
         <c:when test="${roleBase == '/mentor'}"><%@ include file="../mentor/includes/sidebar.jspf"%></c:when>
         <c:otherwise><%@ include file="../student/includes/sidebar.jspf"%></c:otherwise>
@@ -57,6 +55,16 @@
                     <section><h3>Quản Lý Phòng Lab</h3><p>Theo dõi tài sản toàn phòng, kiểm tra định kỳ, xử lý sự cố nghiêm trọng, duyệt trách nhiệm mức cao và quyết định bảo trì hoặc thanh lý khi cần.</p></section>
                     <section><h3>Người Hướng Dẫn</h3><p>Quản lý danh sách thực tập sinh, hướng dẫn sử dụng thiết bị, kiểm tra việc mượn trả, ghi nhận sự cố và lập kết luận trách nhiệm sau khi xác minh.</p></section>
                     <section><h3>Thực Tập Sinh</h3><p>Chỉ mượn thiết bị khi có nhu cầu hợp lệ, sử dụng cẩn thận, trả đúng hạn, báo cáo sự cố trung thực và theo dõi trách nhiệm cá nhân trên hệ thống.</p></section>
+                </div>
+            </article>
+
+            <article class="panel rules-panel">
+                <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-alert"/></svg></span><h3>Quy chế xử phạt</h3></div></header>
+                <div class="role-rules">
+                    <section><h3>Vi phạm nhẹ</h3><p>Các lỗi như quên cập nhật trạng thái mượn trả, để khu vực sử dụng chưa gọn hoặc vi phạm nội quy lần đầu sẽ được nhắc nhở và ghi nhận để theo dõi.</p></section>
+                    <section><h3>Hư hỏng nhẹ</h3><p>Nếu Mentor có thể khắc phục an toàn, Mentor trực tiếp xử lý và hướng dẫn lại người dùng. Trường hợp này không cần lập sự cố gửi Lab Manager.</p></section>
+                    <section><h3>Sự cố nghiêm trọng</h3><p>Mất thiết bị, hư hỏng không thể tự sửa, nguy cơ mất an toàn hoặc ảnh hưởng hoạt động LAB phải báo ngay cho Lab Manager để xác minh và lập hồ sơ trách nhiệm.</p></section>
+                    <section><h3>Đền bù và hạn chế quyền</h3><p>Mức đền bù dựa trên kết luận xác minh; chỉ Mentor hoặc Lab Manager được cập nhật quyết định này. Vi phạm lặp lại hoặc cố ý có thể bị tạm dừng quyền mượn thiết bị.</p></section>
                 </div>
             </article>
         </section>

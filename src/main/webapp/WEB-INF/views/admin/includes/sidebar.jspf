@@ -20,7 +20,6 @@
         <span><strong>LAB ASSET</strong><small>CỔNG QUẢN TRỊ</small></span>
     </a>
     <nav class="side-nav" aria-label="Điều hướng quản trị viên">
-        <a class="nav-link${activeMenu == 'labRules' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/lab-rules"><svg><use href="#i-clipboard"/></svg><span>Nội quy phòng lab</span></a>
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
         <a class="nav-link${activeMenu == 'users' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/users"><svg><use href="#i-users"/></svg><span>Quản lý người dùng</span></a>
 <a class="nav-link${activeMenu == 'internLists' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg><span>Danh sách thực tập sinh</span></a>

@@ -6,6 +6,7 @@ IF COL_LENGTH('dbo.asset_usages', 'asset_item_id') IS NULL
 BEGIN
     ALTER TABLE dbo.asset_usages ADD asset_item_id bigint NULL;
 END;
+GO
 
 IF NOT EXISTS (
     SELECT 1 FROM sys.foreign_keys

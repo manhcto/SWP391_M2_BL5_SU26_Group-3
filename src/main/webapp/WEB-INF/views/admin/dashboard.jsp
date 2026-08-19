@@ -40,7 +40,6 @@
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users"><span class="mentor-action-icon"><svg><use href="#i-users"/></svg></span><span><strong>Quản lý người dùng</strong><small>Xem tài khoản và trạng thái truy cập</small></span></a>
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users/add"><span class="mentor-action-icon"><svg><use href="#i-plus"/></svg></span><span><strong>Thêm người dùng</strong><small>Tạo tài khoản cho vai trò hệ thống</small></span></a>
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><span class="mentor-action-icon gold"><svg><use href="#i-clipboard"/></svg></span><span><strong>Duyệt danh sách thực tập sinh</strong><small>Xem các danh sách đang chờ quyết định</small></span></a>
-                        <a class="mentor-action" href="${pageContext.request.contextPath}/admin/lab-rules"><span class="mentor-action-icon rose"><svg><use href="#i-clipboard"/></svg></span><span><strong>Nội quy phòng LAB</strong><small>Xem quy định áp dụng cho các vai trò</small></span></a>
                     </div>
                 </article>
             </section>
