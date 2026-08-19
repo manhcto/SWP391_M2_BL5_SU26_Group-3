@@ -140,12 +140,22 @@
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>
-                                        <td>
+                                        <td style="white-space:nowrap;">
                                             <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
                                                href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}">Xem</a>
                                             <c:if test="${r.status == 'PENDING' && r.requestedBy == currentUser.userId}">
                                                 <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce"
                                                    href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}/edit">Sửa</a>
+                                                <form method="post" action="${pageContext.request.contextPath}/mentor/maintenance"
+                                                      onsubmit="return confirm('Bạn có chắc chắn muốn hủy và xóa đề xuất bảo trì này?');"
+                                                      style="display:inline;margin:0;">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="id" value="${r.maintenanceId}">
+                                                    <button class="btn-secondary" type="submit"
+                                                            style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;cursor:pointer;">
+                                                        Xóa
+                                                    </button>
+                                                </form>
                                             </c:if>
                                         </td>
                                     </tr>
