@@ -73,20 +73,20 @@
 
                             <div class="form-group full-width">
                                 <label>Quyết định phê duyệt *</label>
-                                <select class="form-control" name="decision" required>
+                                <select class="form-control" name="decision" id="decisionSelect" required>
                                     <option value="APPROVED">✅ Duyệt sửa chữa (Chuyển thiết bị sang Đang bảo trì)</option>
                                     <option value="REJECTED">❌ Từ chối yêu cầu bảo trì</option>
                                 </select>
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group approval-extra-field">
                                 <label>Ghi chú phê duyệt / Dự toán kinh phí dự kiến</label>
                                 <input class="form-control" type="text" name="approvalNote"
                                        value="<c:out value='${record.approvalNote}'/>"
                                        placeholder="Ví dụ: Duyệt chi phí 650.000 VNĐ mang sang FPT Tech Service">
                             </div>
 
-                            <div class="form-group">
+                            <div class="form-group approval-extra-field">
                                 <label>Đơn vị / Kỹ thuật viên sửa chữa (chỉ định nếu có)</label>
                                 <input class="form-control" type="text" name="note"
                                        value="<c:out value='${record.note}'/>"
@@ -98,6 +98,23 @@
                                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Hủy</a>
                             </div>
                         </form>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const decisionSelect = document.getElementById('decisionSelect');
+                                const extraFields = document.querySelectorAll('.approval-extra-field');
+                                if (decisionSelect) {
+                                    function toggleFields() {
+                                        const isRejected = decisionSelect.value === 'REJECTED';
+                                        extraFields.forEach(function(el) {
+                                            el.style.display = isRejected ? 'none' : '';
+                                        });
+                                    }
+                                    decisionSelect.addEventListener('change', toggleFields);
+                                    toggleFields();
+                                }
+                            });
+                        </script>
                     </c:when>
 
                     <%-- BƯỚC 2: CẬP NHẬT TIẾN ĐỘ & KẾT QUẢ SỬA CHỮA (KHI ĐÃ APPROVED / IN_PROGRESS) --%>
