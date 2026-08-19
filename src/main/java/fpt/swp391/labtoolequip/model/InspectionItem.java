@@ -15,6 +15,7 @@ public class InspectionItem {
 	private LocalDateTime createdAt;
 	private String assetCode;
 	private String assetName;
+	private String trackingMode;
 
 	public InspectionItem() {
 	}
@@ -128,6 +129,14 @@ public class InspectionItem {
 
 	public void setAssetName(String assetName) {
 		this.assetName = assetName;
+	}
+
+	public String getTrackingMode() {
+		return trackingMode;
+	}
+
+	public void setTrackingMode(String trackingMode) {
+		this.trackingMode = trackingMode;
 	}
 
 	public boolean isAbnormal() {

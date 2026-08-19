@@ -19,22 +19,23 @@
                     <div class="form-grid">
                         <div class="form-group"><label for="semesterId">Học kỳ</label><select class="form-control" id="semesterId" name="semesterId" required><option value="">Chọn học kỳ</option><c:forEach var="semester" items="${semesters}"><option value="${semester.semesterId}" ${inspection.semesterId == semester.semesterId ? 'selected' : ''}><c:out value="${semester.code}"/> - <c:out value="${semester.name}"/></option></c:forEach></select></div>
                         <div class="form-group"><label for="inspectionType">Loại kiểm tra</label><select class="form-control" id="inspectionType" name="inspectionType" required><option value="INSPECTION" ${inspection.inspectionType == 'INSPECTION' ? 'selected' : ''}>Kiểm tra</option><option value="INVENTORY" ${inspection.inspectionType == 'INVENTORY' ? 'selected' : ''}>Kiểm kê</option></select></div>
-                        <div class="form-group"><label for="scope">Phạm vi</label><select class="form-control" id="scope" name="scope" required><option value="WHOLE_LAB" ${inspection.scope == 'WHOLE_LAB' || empty inspection.scope ? 'selected' : ''}>Toàn bộ phòng LAB</option><option value="SELECTED_ASSETS" ${inspection.scope == 'SELECTED_ASSETS' ? 'selected' : ''}>Thiết bị được chọn</option></select></div>
+                        <div class="form-group"><label for="scope">Phạm vi</label><select class="form-control" id="scope" name="scope" required><option value="WHOLE_LAB" ${inspection.scope == 'WHOLE_LAB' || empty inspection.scope ? 'selected' : ''}>Toàn bộ phòng LAB</option><option value="SELECTED_ASSETS" ${inspection.scope == 'SELECTED_ASSETS' ? 'selected' : ''}>Thiết bị được chọn</option></select><small id="scopeHelp">Tất cả thiết bị chưa thanh lý sẽ được đưa vào đợt kiểm tra.</small></div>
                         <div class="form-group"><label for="inspectionDate">Thời gian kiểm tra</label><input class="form-control" id="inspectionDate" type="datetime-local" name="inspectionDate" value="${app:dateTimeInput(inspection.inspectionDate)}" required></div>
                         <div class="form-group full-width"><label for="note">Ghi chú</label><textarea class="form-control" id="note" name="note" placeholder="Ghi chú kiểm tra tùy chọn"><c:out value="${inspection.note}"/></textarea></div>
                     </div>
                 </article>
                 <article class="panel">
-                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-inspect"/></svg></span><h3>Thiết bị kiểm tra</h3></div><span class="hint">Với phạm vi thiết bị được chọn, hãy chọn ít nhất một thiết bị.</span></header>
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-inspect"/></svg></span><h3>Thiết bị kiểm tra</h3></div><span class="hint" id="assetSelectionHint">Tất cả thiết bị chưa thanh lý sẽ được đưa vào đợt kiểm tra.</span></header>
                     <div class="table-scroll inspection-form-scroll"><table class="inspection-table inspection-item-table"><thead><tr><th>Chọn</th><th>Thiết bị</th><th>Số lượng dự kiến</th><th>Số lượng thực tế</th><th>Tình trạng dự kiến</th><th>Tình trạng thực tế</th><th>Loại chênh lệch</th><th>Ghi chú chênh lệch</th></tr></thead><tbody>
                         <c:forEach var="asset" items="${assets}">
                             <c:set var="item" value="${itemByAsset[asset.assetId]}"/>
                             <c:set var="checked" value="${inspection.scope == 'WHOLE_LAB' || not empty item}"/>
-                            <tr>
+                            <c:set var="serialized" value="${asset.trackingMode == 'SERIALIZED'}"/>
+                            <tr data-tracking-mode="${asset.trackingMode}">
                                 <td><input class="asset-check" type="checkbox" name="selectedAssetId" value="${asset.assetId}" ${checked ? 'checked' : ''}><input type="hidden" name="assetId" value="${asset.assetId}"></td>
-                                <td class="asset-cell"><strong><c:out value="${asset.assetCode}"/></strong><small><c:out value="${asset.assetName}"/> · <c:out value="${app:label(asset.status)}"/></small></td>
-                                <td><input class="form-control compact-input" type="number" min="0" name="expectedQuantity_${asset.assetId}" value="${empty item ? asset.totalQuantity : item.expectedQuantity}"></td>
-                                <td><input class="form-control compact-input" type="number" min="0" name="actualQuantity_${asset.assetId}" value="${empty item ? asset.totalQuantity : item.actualQuantity}"></td>
+                                <td class="asset-cell"><strong><c:out value="${asset.assetCode}"/></strong><small><c:out value="${asset.assetName}"/> · <c:out value="${asset.trackingMode == 'SERIALIZED' ? 'Quản lý riêng lẻ' : 'Theo số lượng'}"/> · <c:out value="${app:label(asset.status)}"/></small></td>
+                                <td><input class="form-control compact-input" type="number" min="${serialized ? 1 : 0}" max="${serialized ? 1 : ''}" name="expectedQuantity_${asset.assetId}" value="${serialized ? 1 : (empty item ? asset.totalQuantity : item.expectedQuantity)}" ${serialized ? 'readonly' : ''}></td>
+                                <td><input class="form-control compact-input" type="number" min="0" max="${serialized ? 1 : ''}" name="actualQuantity_${asset.assetId}" value="${serialized ? (empty item ? 1 : item.actualQuantity) : (empty item ? asset.totalQuantity : item.actualQuantity)}"></td>
                                 <td><select class="form-control" name="expectedCondition_${asset.assetId}"><option value="">-</option><option value="GOOD" ${(empty item && asset.condition == 'GOOD') || item.expectedCondition == 'GOOD' ? 'selected' : ''}>Tốt</option><option value="FAIR" ${(empty item && asset.condition == 'FAIR') || item.expectedCondition == 'FAIR' ? 'selected' : ''}>Khá</option><option value="DAMAGED" ${(empty item && asset.condition == 'DAMAGED') || item.expectedCondition == 'DAMAGED' ? 'selected' : ''}>Hư hỏng</option><option value="BROKEN" ${(empty item && asset.condition == 'BROKEN') || item.expectedCondition == 'BROKEN' ? 'selected' : ''}>Không hoạt động</option></select></td>
                                 <td><select class="form-control" name="actualCondition_${asset.assetId}"><option value="">-</option><option value="GOOD" ${(empty item && asset.condition == 'GOOD') || item.actualCondition == 'GOOD' ? 'selected' : ''}>Tốt</option><option value="FAIR" ${(empty item && asset.condition == 'FAIR') || item.actualCondition == 'FAIR' ? 'selected' : ''}>Khá</option><option value="DAMAGED" ${(empty item && asset.condition == 'DAMAGED') || item.actualCondition == 'DAMAGED' ? 'selected' : ''}>Hư hỏng</option><option value="BROKEN" ${(empty item && asset.condition == 'BROKEN') || item.actualCondition == 'BROKEN' ? 'selected' : ''}>Không hoạt động</option></select></td>
                                 <td><input class="form-control" name="discrepancyType_${asset.assetId}" value="<c:out value='${item.discrepancyType}'/>" placeholder="Thiếu, hư hỏng..."></td>
@@ -48,5 +49,27 @@
         </section>
     </main>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const scope = document.getElementById('scope');
+        const hint = document.getElementById('assetSelectionHint');
+        const help = document.getElementById('scopeHelp');
+        const checks = Array.from(document.querySelectorAll('.asset-check'));
+        const wholeText = 'Tất cả thiết bị chưa thanh lý sẽ được đưa vào đợt kiểm tra.';
+        const selectedText = 'Chọn ít nhất một thiết bị. Thiết bị quản lý riêng lẻ chỉ cho phép số lượng thực tế 0 hoặc 1.';
+        const syncScope = () => {
+            const wholeLab = scope.value === 'WHOLE_LAB';
+            checks.forEach(check => {
+                check.disabled = wholeLab;
+                if (wholeLab) check.checked = true;
+            });
+            if (hint) hint.textContent = wholeLab ? wholeText : selectedText;
+            if (help) help.textContent = wholeLab ? wholeText : selectedText;
+            document.body.classList.toggle('whole-lab-scope', wholeLab);
+        };
+        scope.addEventListener('change', syncScope);
+        syncScope();
+    });
+</script>
 </body>
 </html>

@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class InspectionControllerSupport extends HttpServlet {
@@ -141,7 +140,7 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 	}
 
 	private List<InspectionItem> itemsFrom(HttpServletRequest request, String scope) {
-		Set<Long> selected = selectedAssets(request, scope);
+		List<Long> selected = selectedAssets(request, scope);
 		List<InspectionItem> items = new ArrayList<>();
 		for (Long assetId : selected) {
 			items.add(itemFrom(request, assetId));
@@ -157,14 +156,14 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 		}
 	}
 
-	private Set<Long> selectedAssets(HttpServletRequest request, String scope) {
+	private List<Long> selectedAssets(HttpServletRequest request, String scope) {
 		String parameter = "WHOLE_LAB".equals(scope) ? "assetId" : "selectedAssetId";
 		String[] values = request.getParameterValues(parameter);
 		if (values == null) {
-			return Set.of();
+			return List.of();
 		}
 		return java.util.Arrays.stream(values).filter(value -> value != null && !value.isBlank()).map(Long::parseLong)
-				.collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+				.collect(Collectors.toList());
 	}
 
 	private InspectionItem itemFrom(HttpServletRequest request, Long assetId) {

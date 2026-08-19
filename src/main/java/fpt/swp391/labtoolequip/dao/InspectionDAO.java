@@ -84,7 +84,7 @@ public class InspectionDAO {
 
 	public List<InspectionItem> findItems(long inspectionId) throws SQLException {
 		String sql = """
-				SELECT ii.*, a.asset_code, a.asset_name
+				SELECT ii.*, a.asset_code, a.asset_name, a.tracking_mode
 				FROM dbo.inspection_items ii
 				JOIN dbo.assets a ON a.asset_id = ii.asset_id
 				WHERE ii.inspection_id = ?
@@ -119,10 +119,10 @@ public class InspectionDAO {
 
 	public List<Asset> findInspectableAssets() throws SQLException {
 		String sql = """
-				SELECT asset_id, asset_code, asset_name, total_quantity, condition, status, storage_location
+				SELECT asset_id, asset_code, asset_name, tracking_mode, total_quantity, condition, status, storage_location
 				FROM dbo.assets
 				WHERE status <> 'DISPOSED'
-				ORDER BY asset_name
+				ORDER BY asset_name, asset_code
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql);
@@ -133,6 +133,7 @@ public class InspectionDAO {
 				asset.setAssetId(result.getLong("asset_id"));
 				asset.setAssetCode(result.getString("asset_code"));
 				asset.setAssetName(result.getString("asset_name"));
+				asset.setTrackingMode(result.getString("tracking_mode"));
 				asset.setTotalQuantity(result.getInt("total_quantity"));
 				asset.setCondition(result.getString("condition"));
 				asset.setStatus(result.getString("status"));
@@ -145,13 +146,15 @@ public class InspectionDAO {
 
 	public long create(long userId, InspectionRecord record, List<InspectionItem> items, boolean complete)
 			throws SQLException {
-		validate(record, items, complete);
-		String status = complete ? "COMPLETED" : "DRAFT";
-		String finalResult = complete ? resultFor(items) : null;
+		validateRecord(record);
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
+				items = normalizeItems(connection, record.getScope(), items);
+				validateItems(items, complete);
 				validateAssets(connection, items);
+				String status = complete ? "COMPLETED" : "DRAFT";
+				String finalResult = complete ? resultFor(items) : null;
 				String sql = """
 						INSERT dbo.inspection_records
 						    (semester_id, inspected_by, inspection_type, scope, inspection_date, status, result, note)
@@ -185,16 +188,18 @@ public class InspectionDAO {
 
 	public void updateDraft(long id, InspectionRecord record, List<InspectionItem> items, boolean complete)
 			throws SQLException {
-		validate(record, items, complete);
-		String status = complete ? "COMPLETED" : "DRAFT";
-		String finalResult = complete ? resultFor(items) : null;
+		validateRecord(record);
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				if (!isDraft(connection, id)) {
 					throw new IllegalStateException("Chỉ có thể sửa đợt kiểm tra ở trạng thái bản nháp.");
 				}
+				items = normalizeItems(connection, record.getScope(), items);
+				validateItems(items, complete);
 				validateAssets(connection, items);
+				String status = complete ? "COMPLETED" : "DRAFT";
+				String finalResult = complete ? resultFor(items) : null;
 				try (PreparedStatement statement = connection.prepareStatement("""
 						UPDATE dbo.inspection_records
 						SET semester_id = ?, inspection_type = ?, scope = ?, inspection_date = ?, status = ?,
@@ -227,7 +232,7 @@ public class InspectionDAO {
 		}
 	}
 
-	private void validate(InspectionRecord record, List<InspectionItem> items, boolean complete) {
+	private void validateRecord(InspectionRecord record) {
 		if (record.getSemesterId() == null) {
 			throw new IllegalArgumentException("Vui lòng chọn học kỳ.");
 		}
@@ -240,6 +245,38 @@ public class InspectionDAO {
 		if (record.getInspectionDate() == null) {
 			throw new IllegalArgumentException("Vui lòng nhập thời gian kiểm tra.");
 		}
+	}
+
+	private List<InspectionItem> normalizeItems(Connection connection, String scope,
+			List<InspectionItem> submittedItems) throws SQLException {
+		if ("WHOLE_LAB".equals(scope)) {
+			return wholeLabItems(connection, submittedItems);
+		}
+		return selectedAssetItems(connection, submittedItems);
+	}
+
+	private List<InspectionItem> wholeLabItems(Connection connection, List<InspectionItem> submittedItems)
+			throws SQLException {
+		List<Asset> assets = findInspectableAssets(connection);
+		List<InspectionItem> items = new ArrayList<>();
+		for (Asset asset : assets) {
+			InspectionItem submitted = findSubmittedItem(submittedItems, asset.getAssetId());
+			items.add(inspectionItemFor(asset, submitted));
+		}
+		return items;
+	}
+
+	private List<InspectionItem> selectedAssetItems(Connection connection, List<InspectionItem> submittedItems)
+			throws SQLException {
+		List<InspectionItem> items = new ArrayList<>();
+		for (InspectionItem submitted : submittedItems) {
+			Asset asset = lockAsset(connection, submitted.getAssetId());
+			items.add(inspectionItemFor(asset, submitted));
+		}
+		return items;
+	}
+
+	private void validateItems(List<InspectionItem> items, boolean complete) {
 		if (items.isEmpty()) {
 			throw new IllegalArgumentException("Vui lòng chọn ít nhất một thiết bị để kiểm tra.");
 		}
@@ -256,10 +293,119 @@ public class InspectionDAO {
 			if (!validCondition(item.getExpectedCondition()) || !validCondition(item.getActualCondition())) {
 				throw new IllegalArgumentException("Tình trạng thiết bị không hợp lệ.");
 			}
+			if ("SERIALIZED".equals(item.getTrackingMode())) {
+				if (item.getExpectedQuantity() != 1) {
+					throw new IllegalArgumentException("Thiết bị quản lý riêng lẻ phải có số lượng dự kiến bằng 1.");
+				}
+				if (item.getActualQuantity() != 0 && item.getActualQuantity() != 1) {
+					throw new IllegalArgumentException(
+							"Thiết bị quản lý riêng lẻ chỉ cho phép số lượng thực tế là 0 hoặc 1.");
+				}
+			}
 		}
 		if (!STATUSES.contains(complete ? "COMPLETED" : "DRAFT")) {
 			throw new IllegalArgumentException("Trạng thái kiểm tra không hợp lệ.");
 		}
+	}
+
+	private List<Asset> findInspectableAssets(Connection connection) throws SQLException {
+		String sql = """
+				SELECT asset_id, asset_code, asset_name, tracking_mode, total_quantity, condition, status, storage_location
+				FROM dbo.assets WITH (UPDLOCK, HOLDLOCK)
+				WHERE status <> 'DISPOSED'
+				ORDER BY asset_name, asset_code
+				""";
+		try (PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			List<Asset> assets = new ArrayList<>();
+			while (result.next()) {
+				assets.add(readAsset(result));
+			}
+			return assets;
+		}
+	}
+
+	private Asset lockAsset(Connection connection, Long assetId) throws SQLException {
+		if (assetId == null) {
+			throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
+		}
+		try (PreparedStatement statement = connection.prepareStatement(
+				"""
+						SELECT asset_id, asset_code, asset_name, tracking_mode, total_quantity, condition, status, storage_location
+						FROM dbo.assets WITH (UPDLOCK, HOLDLOCK)
+						WHERE asset_id = ?
+						""")) {
+			statement.setLong(1, assetId);
+			try (ResultSet result = statement.executeQuery()) {
+				if (!result.next()) {
+					throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
+				}
+				Asset asset = readAsset(result);
+				if ("DISPOSED".equals(asset.getStatus())) {
+					throw new IllegalStateException("Không thể chọn thiết bị đã thanh lý làm đối tượng kiểm tra.");
+				}
+				return asset;
+			}
+		}
+	}
+
+	private Asset readAsset(ResultSet result) throws SQLException {
+		Asset asset = new Asset();
+		asset.setAssetId(result.getLong("asset_id"));
+		asset.setAssetCode(result.getString("asset_code"));
+		asset.setAssetName(result.getString("asset_name"));
+		asset.setTrackingMode(result.getString("tracking_mode"));
+		asset.setTotalQuantity(result.getInt("total_quantity"));
+		asset.setCondition(result.getString("condition"));
+		asset.setStatus(result.getString("status"));
+		asset.setStorageLocation(result.getString("storage_location"));
+		return asset;
+	}
+
+	private InspectionItem inspectionItemFor(Asset asset, InspectionItem submitted) {
+		InspectionItem item = new InspectionItem();
+		item.setAssetId(asset.getAssetId());
+		item.setTrackingMode(asset.getTrackingMode());
+		item.setExpectedQuantity("SERIALIZED".equals(asset.getTrackingMode())
+				? 1
+				: positiveOrDefault(submitted == null ? null : submitted.getExpectedQuantity(),
+						asset.getTotalQuantity()));
+		item.setActualQuantity("SERIALIZED".equals(asset.getTrackingMode())
+				? serializedActual(submitted == null ? null : submitted.getActualQuantity())
+				: nonNegativeOrDefault(submitted == null ? null : submitted.getActualQuantity(),
+						asset.getTotalQuantity()));
+		item.setExpectedCondition(
+				firstNonBlank(submitted == null ? null : submitted.getExpectedCondition(), asset.getCondition()));
+		item.setActualCondition(
+				firstNonBlank(submitted == null ? null : submitted.getActualCondition(), asset.getCondition()));
+		item.setDiscrepancyType(submitted == null ? null : submitted.getDiscrepancyType());
+		item.setDiscrepancyNote(submitted == null ? null : submitted.getDiscrepancyNote());
+		return item;
+	}
+
+	private InspectionItem findSubmittedItem(List<InspectionItem> items, Long assetId) {
+		for (InspectionItem item : items) {
+			if (assetId.equals(item.getAssetId())) {
+				return item;
+			}
+		}
+		return null;
+	}
+
+	private int serializedActual(Integer value) {
+		return value == null ? 1 : value;
+	}
+
+	private int positiveOrDefault(Integer value, Integer defaultValue) {
+		return value == null ? defaultValue : value;
+	}
+
+	private int nonNegativeOrDefault(Integer value, Integer defaultValue) {
+		return value == null ? defaultValue : value;
+	}
+
+	private String firstNonBlank(String value, String fallback) {
+		return value == null || value.isBlank() ? fallback : value;
 	}
 
 	private void validateAssets(Connection connection, List<InspectionItem> items) throws SQLException {
@@ -367,6 +513,7 @@ public class InspectionDAO {
 				item.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
 				item.setAssetCode(result.getString("asset_code"));
 				item.setAssetName(result.getString("asset_name"));
+				item.setTrackingMode(result.getString("tracking_mode"));
 				items.add(item);
 			}
 			return items;
