@@ -93,6 +93,12 @@
                                        placeholder="Ví dụ: FPT Tech Services / Kỹ thuật viên nội bộ">
                             </div>
 
+                            <div class="form-group full-width reject-reason-field" style="display:none;">
+                                <label>Lý do từ chối yêu cầu bảo trì (tùy chọn)</label>
+                                <textarea class="form-control" name="rejectReason" rows="3"
+                                          placeholder="Ví dụ: Thiết bị chưa đến hạn bảo dưỡng / Không đủ kinh phí / Cần kiểm tra lại nguồn điện..."></textarea>
+                            </div>
+
                             <div class="form-group full-width" style="display: flex; gap: 10px; margin-top: 10px;">
                                 <button class="primary-button" type="submit">Gửi quyết định phê duyệt</button>
                                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Hủy</a>
@@ -103,12 +109,16 @@
                             document.addEventListener('DOMContentLoaded', function() {
                                 const decisionSelect = document.getElementById('decisionSelect');
                                 const extraFields = document.querySelectorAll('.approval-extra-field');
+                                const rejectField = document.querySelector('.reject-reason-field');
                                 if (decisionSelect) {
                                     function toggleFields() {
                                         const isRejected = decisionSelect.value === 'REJECTED';
                                         extraFields.forEach(function(el) {
                                             el.style.display = isRejected ? 'none' : '';
                                         });
+                                        if (rejectField) {
+                                            rejectField.style.display = isRejected ? '' : 'none';
+                                        }
                                     }
                                     decisionSelect.addEventListener('change', toggleFields);
                                     toggleFields();

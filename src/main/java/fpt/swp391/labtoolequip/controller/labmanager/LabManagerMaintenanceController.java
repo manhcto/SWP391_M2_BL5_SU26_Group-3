@@ -79,8 +79,12 @@ public class LabManagerMaintenanceController extends HttpServlet {
 				// Lab Manager phê duyệt hoặc từ chối
 				case "decide" -> {
 					id = Long.parseLong(request.getParameter("id"));
-					dao.decide(id, AuthSession.userId(request), request.getParameter("decision"),
-							request.getParameter("approvalNote"), request.getParameter("note"));
+					String decision = request.getParameter("decision");
+					String note = "REJECTED".equals(decision) ? null : request.getParameter("note");
+					String approvalNote = "REJECTED".equals(decision)
+							? request.getParameter("rejectReason")
+							: request.getParameter("approvalNote");
+					dao.decide(id, AuthSession.userId(request), decision, approvalNote, note);
 				}
 				// Lab Manager cập nhật tiến độ sửa chữa
 				case "updateProgress" -> {

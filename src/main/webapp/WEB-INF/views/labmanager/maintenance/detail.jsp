@@ -126,6 +126,27 @@
                                 <label>Mô tả tình trạng hỏng hóc</label>
                                 <p style="white-space:pre-line"><c:out value="${record.description}"/></p>
                             </div>
+                            <c:if test="${record.status == 'REJECTED'}">
+                                <div class="info-item" style="grid-column:1/-1;background:#fdf2f2;padding:12px 14px;border-radius:6px;border:1px solid #f8b4b4;">
+                                    <label style="color:#c62828;font-weight:700;">Lý do từ chối yêu cầu bảo trì</label>
+                                    <p style="color:#c62828;margin-top:4px;">
+                                        <c:choose>
+                                            <c:when test="${not empty record.approvalNote}">
+                                                <c:out value="${record.approvalNote}"/>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <i>(Không để lại lý do cụ thể)</i>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </p>
+                                </div>
+                            </c:if>
+                            <c:if test="${record.status != 'REJECTED' && record.status != 'PENDING' && not empty record.approvalNote}">
+                                <div class="info-item" style="grid-column:1/-1;">
+                                    <label>Ghi chú phê duyệt / Kinh phí dự kiến</label>
+                                    <p><c:out value="${record.approvalNote}"/></p>
+                                </div>
+                            </c:if>
                         </div>
                     </article>
 
@@ -245,7 +266,12 @@
                                         </b>
                                         <br><small style="color:#5a6662"><c:out value="${app:dateTime(record.approvedAt)}"/> – <c:out value="${record.approverName}"/></small>
                                         <c:if test="${not empty record.approvalNote}">
-                                            <br><small style="font-style:italic"><c:out value="${record.approvalNote}"/></small>
+                                            <br><small style="font-style:italic;color:${record.status == 'REJECTED' ? '#c62828' : '#5a6662'};">
+                                                <c:choose>
+                                                    <c:when test="${record.status == 'REJECTED'}">Lý do: <c:out value="${record.approvalNote}"/></c:when>
+                                                    <c:otherwise><c:out value="${record.approvalNote}"/></c:otherwise>
+                                                </c:choose>
+                                            </small>
                                         </c:if>
                                     </div>
                                 </div>
