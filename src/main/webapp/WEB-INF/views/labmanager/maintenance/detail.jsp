@@ -137,6 +137,29 @@
                             </div>
                             <div class="info-grid">
                                 <div class="info-item">
+                                    <label>Trạng thái sửa chữa</label>
+                                    <p>
+                                        <c:choose>
+                                            <c:when test="${record.status == 'COMPLETED'}">
+                                                <c:choose>
+                                                    <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
+                                                        <span class="status overdue">❌ Sửa thất bại</span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <span class="status returned">✅ Sửa thành công</span>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </c:when>
+                                            <c:when test="${record.status == 'IN_PROGRESS'}">
+                                                <span class="status maintenance">⏳ Đang sửa chữa</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="status in-use">Đã duyệt – Chờ sửa</span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </p>
+                                </div>
+                                <div class="info-item">
                                     <label>Đơn vị / Kỹ thuật viên</label>
                                     <p><c:choose>
                                         <c:when test="${not empty record.note}"><c:out value="${record.note}"/></c:when>
