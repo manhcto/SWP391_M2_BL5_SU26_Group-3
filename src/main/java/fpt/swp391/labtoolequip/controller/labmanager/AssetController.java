@@ -20,7 +20,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-@WebServlet(urlPatterns = {"/lab-manager/assets/*", "/mentor/assets/*"})
+@WebServlet("/lab-manager/assets/*")
 @MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = 6 * 1024 * 1024)
 public class AssetController extends HttpServlet {
 	private final AssetItemDAO dao = new AssetItemDAO();
@@ -184,10 +184,8 @@ public class AssetController extends HttpServlet {
 	}
 
 	private void setRoleContext(HttpServletRequest request) {
-		boolean mentor = request.getServletPath().startsWith("/mentor/");
-		request.setAttribute("assetRole", mentor ? "mentor" : "lab-manager");
-		request.setAttribute("assetBasePath",
-				request.getContextPath() + (mentor ? "/mentor/assets" : "/lab-manager/assets"));
+		request.setAttribute("assetRole", "lab-manager");
+		request.setAttribute("assetBasePath", request.getContextPath() + "/lab-manager/assets");
 	}
 
 	private String csrfToken(HttpServletRequest request) {

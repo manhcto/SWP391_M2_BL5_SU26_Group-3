@@ -121,7 +121,7 @@ Quy tắc tình trạng sản phẩm: `GOOD`/`FAIR` vẫn có thể dùng; lỗi
 
 Chưa triển khai đầy đủ:
 
-- Hoàn thiện FE-05 và FE-06; đồng bộ phân quyền FE-02 để Mentor chỉ xem `AssetItem` `AVAILABLE`; đồng bộ FE-07 để Lab Manager xử lý và cập nhật `Responsibility`; màn hình quản lý quy định xử phạt phòng LAB.
+- Hoàn thiện FE-05 và FE-06; đồng bộ FE-07 để Lab Manager xử lý và cập nhật `Responsibility`; màn hình quản lý quy định xử phạt phòng LAB.
 - Luồng mượn mới gắn từng lượt với `asset_item_id`; dữ liệu lịch sử cũ vẫn có thể chỉ có `asset_id` và hiển thị theo thiết bị chung. Các luồng sự cố, kiểm tra, bảo trì và thanh lý chưa có form chọn `asset_item_id` độc lập khi không đi qua lượt mượn.
 - Dữ liệu động cho các dashboard và kiểm thử tự động; `src/test` hiện chỉ có file giữ package.
 
