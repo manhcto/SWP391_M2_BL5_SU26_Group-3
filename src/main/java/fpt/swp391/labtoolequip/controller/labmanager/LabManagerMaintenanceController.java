@@ -82,6 +82,13 @@ public class LabManagerMaintenanceController extends HttpServlet {
 					dao.updateProgress(id, request.getParameter("status"), request.getParameter("approvalNote"),
 							request.getParameter("note"), request.getParameter("repairResult"));
 				}
+				// Lab Manager xóa phiếu bảo trì (trả thiết bị về AVAILABLE)
+				case "delete" -> {
+					id = Long.parseLong(request.getParameter("id"));
+					dao.delete(id);
+					response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance?success=deleted");
+					return;
+				}
 				default -> {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 					return;

@@ -258,6 +258,46 @@ public class MaintenanceDAO {
 		}
 	}
 
+	/**
+	 * Lab Manager xóa phiếu bảo trì và hoàn trả trạng thái thiết bị về AVAILABLE.
+	 */
+	public void delete(long maintenanceId) throws SQLException {
+		try (Connection connection = db.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				long assetId = -1;
+				try (PreparedStatement checkStmt = connection
+						.prepareStatement("SELECT asset_id FROM dbo.maintenance_records WHERE maintenance_id = ?")) {
+					checkStmt.setLong(1, maintenanceId);
+					try (ResultSet rs = checkStmt.executeQuery()) {
+						if (!rs.next()) {
+							throw new IllegalStateException("Không tìm thấy phiếu bảo trì cần xóa.");
+						}
+						assetId = rs.getLong(1);
+					}
+				}
+
+				try (PreparedStatement delStmt = connection
+						.prepareStatement("DELETE FROM dbo.maintenance_records WHERE maintenance_id = ?")) {
+					delStmt.setLong(1, maintenanceId);
+					delStmt.executeUpdate();
+				}
+
+				// Hoàn trả trạng thái thiết bị về AVAILABLE nếu thiết bị đang ở MAINTENANCE
+				try (PreparedStatement assetStmt = connection.prepareStatement(
+						"UPDATE dbo.assets SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME() WHERE asset_id = ? AND status = 'MAINTENANCE'")) {
+					assetStmt.setLong(1, assetId);
+					assetStmt.executeUpdate();
+				}
+
+				connection.commit();
+			} catch (SQLException | RuntimeException exception) {
+				connection.rollback();
+				throw exception;
+			}
+		}
+	}
+
 	// ─── PRIVATE HELPERS ────────────────────────────────────────────────────────
 
 	private boolean isIncidentMatchingAsset(Connection connection, long incidentId, long assetId) throws SQLException {

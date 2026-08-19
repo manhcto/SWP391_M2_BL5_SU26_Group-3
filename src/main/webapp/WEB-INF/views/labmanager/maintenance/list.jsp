@@ -49,6 +49,9 @@
             <c:if test="${param.success == 'saved'}">
                 <div class="success-message">Đã lưu thông tin phiếu bảo trì thành công.</div>
             </c:if>
+            <c:if test="${param.success == 'deleted'}">
+                <div class="success-message">Đã xóa phiếu bảo trì thành công. Thiết bị đã được hoàn trả về trạng thái Sẵn sàng (AVAILABLE).</div>
+            </c:if>
 
             <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/lab-manager/maintenance">
                 <div class="filter-group">
@@ -130,6 +133,16 @@
                                                    href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
                                                     ✏️ Tiến độ
                                                 </a>
+                                                <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance"
+                                                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu bảo trì #MNT-${r.maintenanceId}? Thiết bị sẽ được trả về trạng thái Sẵn sàng.');"
+                                                      style="display:inline;margin:0;">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="id" value="${r.maintenanceId}">
+                                                    <button class="btn-secondary" type="submit"
+                                                            style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;font-weight:600;cursor:pointer;">
+                                                        Xóa
+                                                    </button>
+                                                </form>
                                             </c:if>
                                         </td>
                                     </tr>
