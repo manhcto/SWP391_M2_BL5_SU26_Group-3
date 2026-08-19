@@ -34,7 +34,8 @@ public class AssetItemDAO {
 				  AND (? = '' OR i.condition = ?)
 				ORDER BY a.asset_name, i.item_code
 				""";
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
 			String pattern = "%" + search + "%";
 			int index = 1;
 			statement.setString(index++, search);
@@ -49,8 +50,8 @@ public class AssetItemDAO {
 	}
 
 	public Optional<AssetItem> findById(long id) throws SQLException {
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(
-				SELECT + " WHERE i.asset_item_id = ?")) {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(SELECT + " WHERE i.asset_item_id = ?")) {
 			statement.setLong(1, id);
 			return read(statement).stream().findFirst();
 		}
@@ -64,7 +65,8 @@ public class AssetItemDAO {
 				       OR a.asset_code LIKE ? OR c.category_name LIKE ?)
 				ORDER BY a.asset_name, i.item_code
 				""";
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
 			String pattern = "%" + search + "%";
 			int index = 1;
 			statement.setString(index++, search);
@@ -75,8 +77,9 @@ public class AssetItemDAO {
 	}
 
 	public Optional<AssetItem> findBorrowableById(long id) throws SQLException {
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(
-				SELECT + " WHERE a.is_borrowable = 1 AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR') AND i.asset_item_id = ?")) {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(SELECT
+						+ " WHERE a.is_borrowable = 1 AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR') AND i.asset_item_id = ?")) {
 			statement.setLong(1, id);
 			return read(statement).stream().findFirst();
 		}
@@ -84,7 +87,8 @@ public class AssetItemDAO {
 
 	public List<AssetCategory> findCategories() throws SQLException {
 		String sql = "SELECT category_id, category_name FROM dbo.asset_categories WHERE status = 'ACTIVE' ORDER BY category_name";
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(sql);
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
 				ResultSet result = statement.executeQuery()) {
 			List<AssetCategory> categories = new ArrayList<>();
 			while (result.next()) {
@@ -255,10 +259,10 @@ public class AssetItemDAO {
 
 	private static int conditionRank(String condition) {
 		return switch (condition) {
-		case "BROKEN" -> 4;
-		case "DAMAGED" -> 3;
-		case "FAIR" -> 2;
-		default -> 1;
+			case "BROKEN" -> 4;
+			case "DAMAGED" -> 3;
+			case "FAIR" -> 2;
+			default -> 1;
 		};
 	}
 

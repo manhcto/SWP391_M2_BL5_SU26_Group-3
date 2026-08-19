@@ -20,7 +20,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-@WebServlet(urlPatterns = { "/lab-manager/assets/*", "/mentor/assets/*" })
+@WebServlet(urlPatterns = {"/lab-manager/assets/*", "/mentor/assets/*"})
 @MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = 6 * 1024 * 1024)
 public class AssetController extends HttpServlet {
 	private final AssetItemDAO dao = new AssetItemDAO();
@@ -81,8 +81,8 @@ public class AssetController extends HttpServlet {
 				}
 				int quantity = parseQuantity(request.getParameter("quantity"));
 				dao.createBundle(request.getParameter("assetCode"), request.getParameter("assetName"),
-						Long.parseLong(request.getParameter("categoryId")), parseBorrowable(request.getParameter("assetType")),
-						request.getParameter("description"),
+						Long.parseLong(request.getParameter("categoryId")),
+						parseBorrowable(request.getParameter("assetType")), request.getParameter("description"),
 						readItems(request, quantity));
 				response.sendRedirect(request.getAttribute("assetBasePath") + "?created=1");
 				return;
@@ -107,14 +107,14 @@ public class AssetController extends HttpServlet {
 				}
 				request.getRequestDispatcher("/WEB-INF/views/labmanager/assets/form.jsp").forward(request, response);
 			} else if (path != null && path.matches("/\\d+")) {
-					request.setAttribute("editMode", true);
-					doGet(request, response);
-				} else if (path != null && path.matches("/\\d+/delete")) {
-					try {
-						showList(request, response);
-					} catch (SQLException sqlException) {
-						throw new ServletException(sqlException);
-					}
+				request.setAttribute("editMode", true);
+				doGet(request, response);
+			} else if (path != null && path.matches("/\\d+/delete")) {
+				try {
+					showList(request, response);
+				} catch (SQLException sqlException) {
+					throw new ServletException(sqlException);
+				}
 			} else {
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 			}
@@ -123,8 +123,8 @@ public class AssetController extends HttpServlet {
 
 	private void showList(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
-		request.setAttribute("assetItems", dao.findAll(request.getParameter("keyword"),
-				request.getParameter("status"), request.getParameter("condition")));
+		request.setAttribute("assetItems", dao.findAll(request.getParameter("keyword"), request.getParameter("status"),
+				request.getParameter("condition")));
 		request.setAttribute("csrfToken", csrfToken(request));
 		forward(request, response, "list.jsp");
 	}
@@ -186,7 +186,8 @@ public class AssetController extends HttpServlet {
 	private void setRoleContext(HttpServletRequest request) {
 		boolean mentor = request.getServletPath().startsWith("/mentor/");
 		request.setAttribute("assetRole", mentor ? "mentor" : "lab-manager");
-		request.setAttribute("assetBasePath", request.getContextPath() + (mentor ? "/mentor/assets" : "/lab-manager/assets"));
+		request.setAttribute("assetBasePath",
+				request.getContextPath() + (mentor ? "/mentor/assets" : "/lab-manager/assets"));
 	}
 
 	private String csrfToken(HttpServletRequest request) {

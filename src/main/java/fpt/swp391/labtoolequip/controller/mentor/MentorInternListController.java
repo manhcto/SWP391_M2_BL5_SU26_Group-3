@@ -79,8 +79,8 @@ public class MentorInternListController extends HttpServlet {
 				InternList internList = readFormWithoutExcel(request);
 				internList.setRequestId(optionalId(request.getParameter("id")));
 				try {
-					forwardForm(request, response, internList,
-							"/mentor/interns/edit".equals(path) ? "edit" : "add", List.of());
+					forwardForm(request, response, internList, "/mentor/interns/edit".equals(path) ? "edit" : "add",
+							List.of());
 				} catch (SQLException loadingException) {
 					handleDatabaseError(response, loadingException);
 				}
@@ -213,8 +213,7 @@ public class MentorInternListController extends HttpServlet {
 		response.sendRedirect(request.getContextPath() + "/mentor/interns?deleted=1");
 	}
 
-	private InternList readForm(HttpServletRequest request, boolean includeExcel)
-			throws IOException, ServletException {
+	private InternList readForm(HttpServletRequest request, boolean includeExcel) throws IOException, ServletException {
 		InternList internList = readFormWithoutExcel(request);
 		if (includeExcel) {
 			Part excel = request.getPart("excelFile");
@@ -258,8 +257,7 @@ public class MentorInternListController extends HttpServlet {
 		return interns;
 	}
 
-	private List<InternListStudent> mergeStudents(List<InternListStudent> first,
-			List<InternListStudent> second) {
+	private List<InternListStudent> mergeStudents(List<InternListStudent> first, List<InternListStudent> second) {
 		List<InternListStudent> merged = new ArrayList<>(first);
 		Set<String> emails = new LinkedHashSet<>();
 		for (InternListStudent intern : first) {

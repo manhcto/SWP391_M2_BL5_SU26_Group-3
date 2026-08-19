@@ -86,7 +86,8 @@ public class InternListDAO {
 
 	public Optional<InternList> findById(long requestId) throws SQLException {
 		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection.prepareStatement(SELECT_INTERN_LIST + "WHERE r.request_id = ?")) {
+				PreparedStatement statement = connection
+						.prepareStatement(SELECT_INTERN_LIST + "WHERE r.request_id = ?")) {
 			statement.setLong(1, requestId);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
@@ -673,8 +674,7 @@ public class InternListDAO {
 		return studentId;
 	}
 
-	private void insertMembership(Connection connection, InternListStudent intern, long studentId)
-			throws SQLException {
+	private void insertMembership(Connection connection, InternListStudent intern, long studentId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement("""
 				INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
 				SELECT ?, ?, ?

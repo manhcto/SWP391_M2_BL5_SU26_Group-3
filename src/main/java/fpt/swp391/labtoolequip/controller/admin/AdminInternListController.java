@@ -49,8 +49,7 @@ public class AdminInternListController extends HttpServlet {
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
 		String path = canonicalPath(request);
-		if (!Set.of("/admin/interns/decision", "/admin/interns/edit", "/admin/interns/delete")
-				.contains(path)) {
+		if (!Set.of("/admin/interns/decision", "/admin/interns/edit", "/admin/interns/delete").contains(path)) {
 			response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			return;
 		}

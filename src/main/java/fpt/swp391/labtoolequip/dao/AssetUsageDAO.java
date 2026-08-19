@@ -153,16 +153,18 @@ public class AssetUsageDAO {
 					statement.setLong(2, userId);
 					try (ResultSet result = statement.executeQuery()) {
 						if (!result.next())
-							throw new IllegalStateException("Không thể trả lượt mượn này hoặc lượt mượn không thuộc về bạn.");
+							throw new IllegalStateException(
+									"Không thể trả lượt mượn này hoặc lượt mượn không thuộc về bạn.");
 						assetItemId = nullableLong(result, "asset_item_id");
 						assetId = result.getLong("asset_id");
 					}
 				}
-				try (PreparedStatement statement = connection.prepareStatement("""
-						UPDATE dbo.asset_usages
-						SET returned_at = SYSUTCDATETIME(), condition_after = ?, note = ?, status = 'RETURNED', updated_at = SYSUTCDATETIME()
-						WHERE asset_usage_id = ?
-						""")) {
+				try (PreparedStatement statement = connection.prepareStatement(
+						"""
+								UPDATE dbo.asset_usages
+								SET returned_at = SYSUTCDATETIME(), condition_after = ?, note = ?, status = 'RETURNED', updated_at = SYSUTCDATETIME()
+								WHERE asset_usage_id = ?
+								""")) {
 					statement.setString(1, conditionAfter);
 					statement.setString(2, blankToNull(note));
 					statement.setLong(3, usageId);
@@ -251,8 +253,8 @@ public class AssetUsageDAO {
 		}
 	}
 
-	private long insertUsage(Connection connection, long userId, AssetItem item, String note,
-			Membership membership) throws SQLException {
+	private long insertUsage(Connection connection, long userId, AssetItem item, String note, Membership membership)
+			throws SQLException {
 		String sql = """
 				INSERT dbo.asset_usages (request_id, semester_id, student_id, asset_id, asset_item_id, quantity, borrowed_at, due_at,
 				 condition_before, status, note, created_by) OUTPUT INSERTED.asset_usage_id

@@ -68,8 +68,8 @@ public final class AssetItemExcelReader {
 			String purchaseDate = cell(formatter, row, 4);
 			String warrantyUntil = cell(formatter, row, 5);
 			String note = cell(formatter, row, 6);
-			if (serial.isBlank() && image.isBlank() && condition.isBlank() && status.isBlank()
-					&& purchaseDate.isBlank() && warrantyUntil.isBlank() && note.isBlank()) {
+			if (serial.isBlank() && image.isBlank() && condition.isBlank() && status.isBlank() && purchaseDate.isBlank()
+					&& warrantyUntil.isBlank() && note.isBlank()) {
 				continue;
 			}
 			if (serial.length() > 100 || image.length() > 500 || note.length() > 500) {
