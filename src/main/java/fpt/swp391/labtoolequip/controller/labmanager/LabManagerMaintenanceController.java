@@ -66,7 +66,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 			long id;
 
 			switch (action == null ? "" : action) {
-				// Lab Manager tạo phiếu bảo trì (trực tiếp APPROVED)
+				// Lab Manager tạo phiếu bảo trì (trực tiếp IN_PROGRESS)
 				case "create" -> {
 					String incidentParam = request.getParameter("incidentId");
 					Long incidentId = (incidentParam == null || incidentParam.isBlank())
