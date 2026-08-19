@@ -107,7 +107,7 @@
                                 <c:otherwise><svg><use href="#i-wrench"/></svg> Gửi đề xuất bảo trì</c:otherwise>
                             </c:choose>
                         </button>
-                        <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance<c:if test="${formMode == 'edit'}">/${record.maintenanceId}</c:if>">Hủy</a>
+                        <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">Hủy</a>
                     </div>
                 </form>
             </article>
