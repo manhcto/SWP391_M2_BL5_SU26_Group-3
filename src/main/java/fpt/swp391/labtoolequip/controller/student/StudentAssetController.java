@@ -35,7 +35,9 @@ public class StudentAssetController extends HttpServlet {
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
-			request.setAttribute("assetItems", dao.findBorrowable(request.getParameter("keyword")));
+			request.setAttribute("assetItems",
+					dao.findBorrowable(request.getParameter("keyword"), request.getParameter("category")));
+			request.setAttribute("categories", dao.findBorrowableCategories());
 			forward(request, response, "list.jsp");
 		} catch (SQLException exception) {
 			throw new ServletException(exception);

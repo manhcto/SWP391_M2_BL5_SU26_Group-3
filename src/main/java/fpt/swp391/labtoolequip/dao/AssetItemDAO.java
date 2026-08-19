@@ -24,14 +24,21 @@ public class AssetItemDAO {
 	private final DBConnection db = new DBConnection();
 
 	public List<AssetItem> findAll(String keyword, String status, String condition) throws SQLException {
+		return findAll(keyword, status, condition, "");
+	}
+
+	public List<AssetItem> findAll(String keyword, String status, String condition, String categoryName)
+			throws SQLException {
 		String search = keyword == null ? "" : keyword.trim();
 		String state = status == null ? "" : status.trim();
 		String quality = condition == null ? "" : condition.trim();
+		String category = categoryName == null ? "" : categoryName.trim();
 		String sql = SELECT + """
 				WHERE (? = '' OR i.item_code LIKE ? OR i.serial_number LIKE ? OR a.asset_name LIKE ?
 				       OR a.asset_code LIKE ? OR c.category_name LIKE ?)
 				  AND (? = '' OR i.status = ?)
 				  AND (? = '' OR i.condition = ?)
+				  AND (? = '' OR c.category_name = ?)
 				ORDER BY a.asset_name, i.item_code
 				""";
 		try (Connection connection = db.getConnection();
@@ -44,7 +51,9 @@ public class AssetItemDAO {
 			statement.setString(index++, state);
 			statement.setString(index++, state);
 			statement.setString(index++, quality);
-			statement.setString(index, quality);
+			statement.setString(index++, quality);
+			statement.setString(index++, category);
+			statement.setString(index, category);
 			return read(statement);
 		}
 	}
@@ -58,11 +67,17 @@ public class AssetItemDAO {
 	}
 
 	public List<AssetItem> findBorrowable(String keyword) throws SQLException {
+		return findBorrowable(keyword, "");
+	}
+
+	public List<AssetItem> findBorrowable(String keyword, String categoryName) throws SQLException {
 		String search = keyword == null ? "" : keyword.trim();
+		String category = categoryName == null ? "" : categoryName.trim();
 		String sql = SELECT + """
 				WHERE a.is_borrowable = 1 AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR')
 				  AND (? = '' OR i.item_code LIKE ? OR i.serial_number LIKE ? OR a.asset_name LIKE ?
 				       OR a.asset_code LIKE ? OR c.category_name LIKE ?)
+				  AND (? = '' OR c.category_name = ?)
 				ORDER BY a.asset_name, i.item_code
 				""";
 		try (Connection connection = db.getConnection();
@@ -72,6 +87,8 @@ public class AssetItemDAO {
 			statement.setString(index++, search);
 			for (int count = 0; count < 5; count++)
 				statement.setString(index++, pattern);
+			statement.setString(index++, category);
+			statement.setString(index, category);
 			return read(statement);
 		}
 	}
@@ -87,6 +104,30 @@ public class AssetItemDAO {
 
 	public List<AssetCategory> findCategories() throws SQLException {
 		String sql = "SELECT category_id, category_name FROM dbo.asset_categories WHERE status = 'ACTIVE' ORDER BY category_name";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			List<AssetCategory> categories = new ArrayList<>();
+			while (result.next()) {
+				AssetCategory category = new AssetCategory();
+				category.setCategoryId(result.getLong("category_id"));
+				category.setCategoryName(result.getString("category_name"));
+				categories.add(category);
+			}
+			return categories;
+		}
+	}
+
+	public List<AssetCategory> findBorrowableCategories() throws SQLException {
+		String sql = """
+				SELECT DISTINCT c.category_id, c.category_name
+				FROM dbo.asset_categories c
+				JOIN dbo.assets a ON a.category_id = c.category_id
+				JOIN dbo.asset_items i ON i.asset_id = a.asset_id
+				WHERE c.status = 'ACTIVE' AND a.is_borrowable = 1
+				  AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR')
+				ORDER BY c.category_name
+				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql);
 				ResultSet result = statement.executeQuery()) {

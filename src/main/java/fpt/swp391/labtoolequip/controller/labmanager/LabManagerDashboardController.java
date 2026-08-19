@@ -30,7 +30,7 @@ public class LabManagerDashboardController extends HttpServlet {
 			var usages = assetUsageDAO.findAll("", "");
 			var inspections = inspectionDAO.findAll(null, "", "", "", "", "");
 			var incidents = incidentDAO.findAll("", "", "");
-			var maintenance = maintenanceDAO.findAll("", "", null);
+			var maintenance = maintenanceDAO.findAll("", "");
 			var disposals = disposalDAO.findAll("", "");
 			request.setAttribute("assetCount", assets.size());
 			request.setAttribute("availableAssetCount",

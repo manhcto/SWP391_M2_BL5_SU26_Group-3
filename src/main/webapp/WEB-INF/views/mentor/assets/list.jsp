@@ -1,5 +1,92 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
-<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thiết bị sẵn sàng | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"></head>
-<body class="mentor-page"><c:set var="activeMenu" value="assets" scope="request"/><div class="app-shell"><%@ include file="../includes/sidebar.jspf" %><main class="main-content"><header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1>Thiết bị sẵn sàng</h1><p>Các AssetItem ở trạng thái AVAILABLE trong phòng LAB</p></div></div></header><section class="content-area"><div class="content-heading"><div><p class="eyebrow">DANH MỤC TÀI SẢN</p><h2>Chỉ xem</h2></div></div><form class="filter-bar" method="get"><div class="filter-group"><input class="form-control" type="search" name="keyword" value="<c:out value='${param.keyword}'/>" placeholder="Tìm theo mã, tên hoặc serial"><button class="primary-button" type="submit">Tìm kiếm</button><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/assets">Đặt lại</a></div></form><article class="panel"><div class="table-scroll"><table><thead><tr><th>Mã sản phẩm</th><th>Thiết bị</th><th>Danh mục</th><th>Serial</th><th>Tình trạng</th><th>Trạng thái</th></tr></thead><tbody><c:forEach items="${assetItems}" var="item"><tr><td><strong><c:out value="${item.itemCode}"/></strong></td><td><c:out value="${item.assetName}"/></td><td><c:out value="${item.categoryName}"/></td><td><c:out value="${empty item.serialNumber ? 'Chưa nhập' : item.serialNumber}"/></td><td><c:out value="${item.condition}"/></td><td>Sẵn sàng</td></tr></c:forEach></tbody></table></div><c:if test="${empty assetItems}"><div class="empty-box"><h3>Chưa có AssetItem AVAILABLE</h3></div></c:if></article></section></main></div></body></html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trang thiết bị phòng lab | LAB Asset</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-catalog.css">
+</head>
+<body class="mentor-page">
+<c:set var="activeMenu" value="assets" scope="request"/>
+<div class="app-shell">
+    <%@ include file="../includes/sidebar.jspf" %>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="heading-wrap">
+                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false">
+                    <svg><use href="#i-menu"/></svg>
+                </button>
+                <div>
+                    <h1>Trang thiết bị phòng lab</h1>
+                    <p>Theo dõi tài sản cố định, thiết bị cho mượn và trạng thái từng sản phẩm</p>
+                </div>
+            </div>
+        </header>
+
+        <section class="content-area asset-catalog">
+            <form class="asset-catalog-filter" method="get" action="${assetBasePath}">
+                <label class="asset-search-field" for="keyword">
+                    <svg aria-hidden="true"><use href="#i-search"/></svg>
+                    <input id="keyword" type="search" name="keyword" value="<c:out value='${param.keyword}'/>" placeholder="Tìm theo tên hoặc mã sản phẩm">
+                </label>
+                <label class="asset-category-field" for="category">
+                    <select id="category" name="category" aria-label="Tên danh mục" onchange="this.form.submit()">
+                        <option value="">Tất cả danh mục</option>
+                        <c:forEach items="${categories}" var="category">
+                            <option value="<c:out value='${category.categoryName}'/>" <c:if test="${param.category == category.categoryName}">selected</c:if>><c:out value="${category.categoryName}"/></option>
+                        </c:forEach>
+                    </select>
+                </label>
+            </form>
+
+            <div class="asset-catalog-summary">
+                <span><strong>${fixedAssetCount}</strong> tài sản cố định · <strong>${borrowableAssetCount}</strong> thiết bị có thể mượn</span>
+                <span>Hiển thị ${assetItems.size()} sản phẩm</span>
+            </div>
+
+            <c:choose>
+                <c:when test="${empty assetItems}">
+                    <div class="empty-box asset-catalog-empty">
+                        <div class="empty-box-icon"><svg><use href="#i-box"/></svg></div>
+                        <h3>Không có thiết bị phù hợp</h3>
+                        <p>Hãy thử thay đổi từ khóa hoặc tên danh mục.</p>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="asset-grid">
+                        <c:forEach items="${assetItems}" var="item">
+                            <article class="asset-card">
+                                <div class="asset-card-image">
+                                    <c:choose>
+                                        <c:when test="${not empty item.imagePath}">
+                                            <img src="${pageContext.request.contextPath}${item.imagePath}" alt="Ảnh ${item.itemCode}">
+                                        </c:when>
+                                        <c:otherwise>
+                                            <svg aria-hidden="true"><use href="#i-box"/></svg>
+                                        </c:otherwise>
+                                    </c:choose>
+                                    <span class="asset-card-state status-${item.status}"><c:out value="${app:label(item.status)}"/></span>
+                                </div>
+                                <div class="asset-card-body">
+                                    <h2><c:out value="${item.assetName}"/></h2>
+                                    <span class="asset-card-code"><c:out value="${item.itemCode}"/></span>
+                                    <span class="asset-card-type ${item.borrowable ? 'borrowable' : 'fixed'}"><c:out value="${item.borrowable ? 'Có thể mượn' : 'Tài sản cố định'}"/></span>
+                                    <div class="asset-card-footer">
+                                        <span class="asset-card-condition"><svg aria-hidden="true"><use href="#i-grid"/></svg><c:out value="${app:label(item.condition)}"/></span>
+                                        <a href="${assetBasePath}/${item.assetItemId}">Xem chi tiết</a>
+                                    </div>
+                                </div>
+                            </article>
+                        </c:forEach>
+                    </div>
+                </c:otherwise>
+            </c:choose>
+        </section>
+    </main>
+</div>
+</body>
+</html>

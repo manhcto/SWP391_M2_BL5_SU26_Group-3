@@ -542,7 +542,7 @@ BEGIN TRY
         (@request_id, @semester_id, @intern_two_id);
 
     INSERT dbo.asset_categories (category_name, description, status)
-    VALUES (N'General Lab Equipment', N'Demo category for initial database setup.', 'ACTIVE');
+    VALUES (N'Thiết bị phòng LAB', N'Danh mục mẫu cho khởi tạo database.', 'ACTIVE');
 
     SET @category_id = SCOPE_IDENTITY();
 
@@ -762,22 +762,16 @@ IF NOT EXISTS (
         WHERE asset_item_id IS NOT NULL;
 GO
 
-/* Reduce the demo inventory to two borrowable kits and fixed lab assets. */
+/* Reduce the demo inventory to two borrowable kits. */
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 
 DECLARE @kitCategoryId bigint;
-DECLARE @fixedCategoryId bigint;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị')
     INSERT dbo.asset_categories (category_name, description, status)
     VALUES (N'Kit thiết bị', N'Các bộ kit điện tử và cảm biến được phép cho intern mượn.', 'ACTIVE');
 SELECT @kitCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị';
-
-IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Tài sản cố định')
-    INSERT dbo.asset_categories (category_name, description, status)
-    VALUES (N'Tài sản cố định', N'Bàn, ghế và thiết bị dùng chung trong phòng LAB; không cho mượn.', 'ACTIVE');
-SELECT @fixedCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Tài sản cố định';
 
 DECLARE @targets TABLE (
     asset_code varchar(50) NOT NULL PRIMARY KEY,
@@ -791,12 +785,8 @@ DECLARE @targets TABLE (
 
 INSERT @targets (asset_code, asset_name, category_id, total_quantity, is_borrowable, storage_location, description)
 VALUES
-    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 10, 1, N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
-    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 10, 1, N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.'),
-    ('FIXED-DESK-01', N'Bàn phòng LAB', @fixedCategoryId, 10, 0, N'Khu bàn cố định', N'Tài sản cố định, không cho mượn.'),
-    ('FIXED-CHAIR-01', N'Ghế phòng LAB', @fixedCategoryId, 20, 0, N'Khu bàn cố định', N'Tài sản cố định, không cho mượn.'),
-    ('FIXED-PROJECTOR-01', N'Máy chiếu phòng LAB', @fixedCategoryId, 1, 0, N'Tủ thiết bị trình chiếu', N'Tài sản cố định, không cho mượn.'),
-    ('FIXED-TV-01', N'Tivi phòng LAB', @fixedCategoryId, 1, 0, N'Khu trình chiếu', N'Tài sản cố định, không cho mượn.');
+    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 3, 1, N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
+    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 3, 1, N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.');
 
 UPDATE a SET a.status = 'UNAVAILABLE', a.is_borrowable = 0, a.updated_at = SYSUTCDATETIME()
 FROM dbo.assets a WHERE NOT EXISTS (SELECT 1 FROM @targets t WHERE t.asset_code = a.asset_code);

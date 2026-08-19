@@ -36,7 +36,8 @@ public class MentorDashboardController extends HttpServlet {
 					requests.stream().filter(item -> "PENDING".equals(item.getStatus())).count());
 			request.setAttribute("mentorUsageCount", assetUsageDAO.countForMentor(userId));
 			request.setAttribute("reportedIncidentCount", incidentDAO.countForMentor(userId));
-			request.setAttribute("maintenanceRequestCount", maintenanceDAO.findByRequester(userId, "", "").size());
+			request.setAttribute("maintenanceRequestCount", maintenanceDAO.findAll("", "").stream()
+					.filter(item -> Long.valueOf(userId).equals(item.getRequestedBy())).count());
 		} catch (SQLException exception) {
 			getServletContext().log("Mentor dashboard summary is unavailable.", exception);
 			request.setAttribute("pendingInternListCount", 0);

@@ -39,8 +39,8 @@ Intern được di chuyển tự do trong LAB; hệ thống không quản lý ho
 | Vai trò | Trách nhiệm chính |
 | --- | --- |
 | Admin | Quản lý tài khoản; phê duyệt hoặc từ chối danh sách intern; tạo hoặc kích hoạt người dùng; gán, thay đổi và thu hồi vai trò `LAB_MANAGER`, `MENTOR`, `INTERN` |
-| Lab Manager | Tạo, sửa, xóa và giám sát `Asset`/`AssetItem`; kiểm kê và tiếp nhận báo cáo hỏng hóc; xử lý sự cố theo quy định của phòng LAB, cập nhật `Responsibility` để thông báo xử phạt cho Intern khi cần, rồi bảo trì hoặc thanh lý |
-| Mentor | Phụ trách duy nhất phòng LAB và quản lý lớp/danh sách intern theo học kỳ; xem các `AssetItem` ở trạng thái `AVAILABLE`; hỗ trợ ghi nhận mượn/trả, kiểm kê và gửi báo cáo hỏng hóc cho Lab Manager, kèm nguyên nhân ghi nhận được |
+| Lab Manager | CRUD `Asset`/`AssetItem`, `Responsibility`, bảo trì và thanh lý; xem Incident do Mentor nộp, xác định hỏng do Intern hay tự nhiên, rồi xử lý theo quy định |
+| Mentor | Phụ trách lớp/danh sách intern, ghi nhận mượn/trả và kiểm kê; chỉ xem `AssetItem` `AVAILABLE`; chỉ được nộp một Incident cho mỗi hỏng hóc, sau đó chỉ xem các hồ sơ xử lý |
 | Intern | Xem tài sản có thể mượn; tự tạo lượt mượn/trả; xem lịch sử sử dụng; báo hỏng trực tiếp cho Mentor; xem thông tin trách nhiệm của chính mình |
 
 ## Xác thực và cấp quyền
@@ -63,8 +63,8 @@ Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuấ
 5. Intern được duyệt có thể tự tạo lượt mượn tài sản nhỏ mà không cần Mentor duyệt từng lượt; hệ thống kiểm tra học kỳ, khả năng cho mượn và số lượng còn lại.
 6. Mỗi lượt mượn liên kết trực tiếp một intern với một tài sản, có số lượng, thời điểm mượn và hạn trả; Intern, Mentor hoặc Lab Manager có thể ghi nhận thao tác theo quyền.
 7. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
-8. Khi phát hiện mất, hỏng, sai số lượng, quá hạn hoặc bất thường, Intern báo trực tiếp cho Mentor. Mentor gửi báo cáo cho Lab Manager; nếu hỏng do Intern gây ra, Mentor ghi rõ thông tin đó trong lý do báo cáo.
-9. Lab Manager xem báo cáo, xử lý theo quy định của phòng LAB và cập nhật `Responsibility` của Intern để thông báo xử phạt khi có vi phạm; sau đó quyết định bảo trì, sửa chữa hoặc thanh lý tài sản.
+8. Khi phát hiện hỏng hóc, Intern báo trực tiếp cho Mentor. Mentor nộp một Incident duy nhất cho Lab Manager và sau đó chỉ xem tiến trình xử lý.
+9. Lab Manager xem Incident, xác định nguyên nhân; nếu do Intern thì tạo/cập nhật `Responsibility`, nếu hỏng tự nhiên hoặc cần sửa thì tạo/cập nhật bảo trì, hoặc thanh lý khi không thể sửa.
 10. Với tài sản cần thanh lý, Lab Manager tạo quy trình thanh lý cho toàn bộ asset record; có thể hủy khi đang chờ hoặc hoàn tất khi không còn lượt mượn active.
 
 ## Mô hình tài sản
@@ -164,7 +164,7 @@ DEV_AUTH_ENABLED=false
 
 ### Khởi tạo database local
 
-Để tạo database nền và toàn bộ dữ liệu demo, chạy duy nhất `database/lab_asset_management_full.sql`. File full đã bao gồm danh mục Major, `asset_items`, bộ dữ liệu 2 kit và tài sản cố định, incident mẫu và responsibility test data. Các file trong `database/migrations/` được giữ lại để tham khảo hoặc nâng cấp những database đã tồn tại.
+Để tạo database nền và toàn bộ dữ liệu demo, chạy duy nhất `database/lab_asset_management_full.sql`. File full đã bao gồm danh mục Major, `asset_items`, bộ dữ liệu 2 kit với tối đa 3 item mỗi kit, incident mẫu và responsibility test data; không còn tạo category hoặc asset `Tài sản cố định` hay `Cơ sở vật chất`. Với database đã tồn tại, chạy `database/update_asset_categories_vietnamese.sql` để dịch tên category và xóa hai category cùng dữ liệu liên quan; chạy `database/limit_asset_items_to_three.sql` để giảm mỗi asset quantity còn tối đa 3 item.
 
 Nếu database đã chạy bản cũ có `asset_items`, chạy thêm `database/migrations/003_asset_item_usage.sql` để thêm liên kết `asset_item_id` cho các lượt mượn mới.
 

@@ -2,5 +2,92 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core"%>
 <!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Thiết bị có thể mượn | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"></head>
-<body class="intern-dashboard-page"><c:set var="activeMenu" value="assets" scope="request"/><div class="app-shell"><%@ include file="../includes/sidebar.jspf" %><main class="main-content"><header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Thiết bị có thể mượn</h1><p>Xem các sản phẩm đang sẵn sàng trong phòng LAB</p></div></div><div class="topbar-actions"><div class="top-profile"><div class="avatar">TT</div><span><c:out value="${currentUser.fullName}"/></span></div></div></header><section class="content-area"><div class="content-heading"><div><p class="eyebrow">DANH MỤC TÀI SẢN</p><h2>Thiết bị sẵn sàng</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/intern/usages/borrow"><svg><use href="#i-box"/></svg>Mượn thiết bị</a></div><form class="filter-bar" method="get" action="${assetBasePath}"><div class="asset-filter"><input class="form-control" type="search" name="keyword" value="<c:out value='${param.keyword}'/>" placeholder="Tìm theo mã, tên hoặc serial"><button class="primary-button" type="submit">Tìm kiếm</button><a class="btn-secondary" href="${assetBasePath}">Đặt lại</a></div></form><article class="panel"><c:choose><c:when test="${empty assetItems}"><div class="empty-box"><div class="empty-box-icon"><svg><use href="#i-box"/></svg></div><h3>Chưa có thiết bị sẵn sàng</h3><p>Hiện không có sản phẩm khả dụng để mượn.</p></div></c:when><c:otherwise><div class="table-scroll"><table><thead><tr><th>Ảnh</th><th>Mã sản phẩm</th><th>Thiết bị</th><th>Loại</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><c:forEach items="${assetItems}" var="item"><tr><td><c:choose><c:when test="${not empty item.imagePath}"><img class="asset-thumb" src="${pageContext.request.contextPath}${item.imagePath}" alt="Ảnh ${item.itemCode}"></c:when><c:otherwise><span class="asset-placeholder" aria-label="Chưa có ảnh"><svg><use href="#i-box"/></svg></span></c:otherwise></c:choose></td><td><span class="asset-code"><c:out value="${item.itemCode}"/></span></td><td><strong><c:out value="${item.assetName}"/></strong><small class="asset-meta"><c:out value="${empty item.serialNumber ? 'Không yêu cầu serial' : item.serialNumber}"/></small></td><td><c:out value="${item.categoryName}"/></td><td><span class="available">Sẵn sàng</span></td><td><a class="btn-action btn-action-primary" href="${assetBasePath}/${item.assetItemId}">Xem</a></td></tr></c:forEach></tbody></table></div><div class="table-footer"><span>Hiển thị ${assetItems.size()} sản phẩm có thể mượn</span></div></c:otherwise></c:choose></article></section></main></div></body></html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thiết bị có thể mượn | LAB Asset</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-catalog.css">
+</head>
+<body class="intern-dashboard-page intern-assets-page">
+    <c:set var="activeMenu" value="assets" scope="request"/>
+    <div class="app-shell">
+        <%@ include file="../includes/sidebar.jspf" %>
+        <main class="main-content">
+            <header class="topbar">
+                <div class="heading-wrap">
+                    <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false">
+                        <svg><use href="#i-menu"/></svg>
+                    </button>
+                    <div>
+                        <h1>Danh mục thiết bị</h1>
+                        <p>Thiết bị đang sẵn sàng để thực tập sinh mượn</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <div class="top-profile"><div class="avatar">TT</div><span><c:out value="${currentUser.fullName}"/></span></div>
+                </div>
+            </header>
+
+            <section class="content-area asset-catalog">
+                <form class="asset-catalog-filter" method="get" action="${assetBasePath}">
+                    <label class="asset-search-field" for="keyword">
+                        <svg aria-hidden="true"><use href="#i-search"/></svg>
+                        <input id="keyword" type="search" name="keyword" value="<c:out value='${param.keyword}'/>" placeholder="Tìm theo tên hoặc mã sản phẩm">
+                    </label>
+                    <label class="asset-category-field" for="category">
+                        <select id="category" name="category" aria-label="Tên danh mục" onchange="this.form.submit()">
+                            <option value="">Tất cả danh mục</option>
+                            <c:forEach items="${categories}" var="category">
+                                <option value="<c:out value='${category.categoryName}'/>" <c:if test="${param.category == category.categoryName}">selected</c:if>><c:out value="${category.categoryName}"/></option>
+                            </c:forEach>
+                        </select>
+                    </label>
+                </form>
+
+                <div class="asset-catalog-summary">
+                    <span>Đang hiển thị <strong>${assetItems.size()}</strong> sản phẩm có thể mượn</span>
+                    <span>Không bao gồm tài sản cố định</span>
+                </div>
+
+                <c:choose>
+                    <c:when test="${empty assetItems}">
+                        <div class="empty-box asset-catalog-empty">
+                            <div class="empty-box-icon"><svg><use href="#i-box"/></svg></div>
+                            <h3>Không có thiết bị phù hợp</h3>
+                            <p>Hãy thử thay đổi từ khóa hoặc tên danh mục.</p>
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="asset-grid">
+                            <c:forEach items="${assetItems}" var="item">
+                                <article class="asset-card">
+                                    <div class="asset-card-image">
+                                        <c:choose>
+                                            <c:when test="${not empty item.imagePath}">
+                                                <img src="${pageContext.request.contextPath}${item.imagePath}" alt="Ảnh ${item.itemCode}">
+                                            </c:when>
+                                            <c:otherwise>
+                                                <svg aria-hidden="true"><use href="#i-box"/></svg>
+                                            </c:otherwise>
+                                        </c:choose>
+                                        <span class="asset-card-state status-AVAILABLE">Sẵn sàng</span>
+                                    </div>
+                                    <div class="asset-card-body">
+                                        <h2><c:out value="${item.assetName}"/></h2>
+                                        <span class="asset-card-code"><c:out value="${item.itemCode}"/></span>
+                                        <div class="asset-card-footer">
+                                            <span class="asset-card-condition"><svg aria-hidden="true"><use href="#i-grid"/></svg><c:out value="${item.condition == 'FAIR' ? 'Khá' : 'Tốt'}"/></span>
+                                            <a href="${assetBasePath}/${item.assetItemId}">Xem chi tiết</a>
+                                        </div>
+                                    </div>
+                                </article>
+                            </c:forEach>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
