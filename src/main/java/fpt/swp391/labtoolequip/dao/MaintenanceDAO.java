@@ -92,7 +92,7 @@ public class MaintenanceDAO {
 	/** Danh sách sự cố còn mở để liên kết tùy chọn khi tạo phiếu bảo trì. */
 	public List<Incident> findOpenIncidents() throws SQLException {
 		String sql = """
-				SELECT i.incident_id, i.description, a.asset_name, a.asset_code
+				SELECT i.incident_id, i.asset_id, i.description, a.asset_name, a.asset_code
 				FROM dbo.incidents i
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
 				WHERE i.status IN ('OPEN', 'INVESTIGATING')
@@ -105,6 +105,7 @@ public class MaintenanceDAO {
 			while (result.next()) {
 				Incident incident = new Incident();
 				incident.setIncidentId(result.getLong("incident_id"));
+				incident.setAssetId(result.getLong("asset_id"));
 				incident.setDescription(result.getString("description"));
 				incident.setAssetName(result.getString("asset_name"));
 				incident.setAssetCode(result.getString("asset_code"));
