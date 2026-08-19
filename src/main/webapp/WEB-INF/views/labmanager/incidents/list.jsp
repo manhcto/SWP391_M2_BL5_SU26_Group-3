@@ -43,8 +43,6 @@
                     </select>
                     <select class="form-control" name="severity">
                         <option value="">Tất cả mức độ</option>
-                        <option value="LOW" ${selectedSeverity == 'LOW' ? 'selected' : ''}>Thấp</option>
-                        <option value="MEDIUM" ${selectedSeverity == 'MEDIUM' ? 'selected' : ''}>Trung bình</option>
                         <option value="HIGH" ${selectedSeverity == 'HIGH' ? 'selected' : ''}>Cao</option>
                         <option value="CRITICAL" ${selectedSeverity == 'CRITICAL' ? 'selected' : ''}>Nghiêm trọng</option>
                     </select>

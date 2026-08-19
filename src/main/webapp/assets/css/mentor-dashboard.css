@@ -264,7 +264,6 @@ a { color: inherit; text-decoration: none; }
 .panel-header > a svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .panel-tools { display: flex; align-items: center; }
 .panel-tools button { height: 26px; padding: 0 5px; border: 0; color: #55605c; background: transparent; font-size: 9.5px; cursor: pointer; }
-
 /* Mentor dashboard schedule */
 .schedule { padding: 15px 16px 16px; }
 .schedule-scroll { overflow-x: auto; padding-bottom: 4px; }
@@ -458,6 +457,14 @@ textarea.form-control { height: 75px; padding: 8px 10px; resize: vertical; }
     line-height: 1.5;
 }
 
+.lab-rules-page { max-width: 1100px; }
+.rules-panel + .rules-panel { margin-top: 14px; }
+.rules-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; }
+.role-rules { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px; }
+.rule-card, .role-rules section { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 13px 14px; }
+.rule-card h3, .role-rules h3 { margin: 0 0 6px; color: var(--ink); font-size: 12px; }
+.rule-card p, .role-rules p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
 .inspection-page { overflow-x: hidden; }
 .inspection-page .content-area { min-width: 0; }
 .inspection-page .panel { max-width: 100%; }
@@ -502,12 +509,14 @@ textarea.form-control { height: 75px; padding: 8px 10px; resize: vertical; }
     .nav-open .sidebar-overlay { display: block; }
     .main-content { margin-left: 0; }
     .detail-columns { grid-template-columns: 1fr; }
+    .role-rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 650px) {
     .topbar { padding: 8px 14px; }
     .content-area { padding-right: 14px; padding-left: 14px; }
     .search-box, .top-profile span { display: none; }
     .dashboard-grid { grid-template-columns: 1fr; }
+    .rules-grid, .role-rules { grid-template-columns: 1fr; }
     .attention-item { grid-template-columns: 40px minmax(0, 1fr) 15px; }
     .severity { display: none; }
     .schedule-empty { flex-direction: column; min-height: 220px; text-align: center; }

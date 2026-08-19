@@ -26,6 +26,7 @@
         <span><strong>LAB ASSET</strong><small>CỔNG NGƯỜI HƯỚNG DẪN</small></span>
     </a>
     <nav class="side-nav" aria-label="Điều hướng người hướng dẫn">
+        <a class="nav-link${activeMenu == 'labRules' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/lab-rules"><svg><use href="#i-clipboard"/></svg><span>Nội quy phòng lab</span></a>
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
         <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/interns"><svg><use href="#i-clipboard"/></svg><span>Danh sách thực tập sinh</span></a>
         <a class="nav-link" href="#"><svg><use href="#i-users"/></svg><span>Thực tập sinh</span></a>

@@ -21,11 +21,27 @@
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">CỔNG QUẢN TRỊ</p><h2>Quản lý người dùng và danh sách thực tập sinh</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg>Duyệt danh sách thực tập sinh</a></div>
             <div class="stats-grid">
-                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/admin/users?role=INTERN"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${internCount}"/></strong><span>Thực tập sinh</span><small>Quản lý tài khoản thực tập sinh</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users?role=MENTOR"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${mentorCount}"/></strong><span>Người hướng dẫn</span><small>Quản lý tài khoản người hướng dẫn</small></div></a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/admin/users?role=LAB_MANAGER"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${labManagerCount}"/></strong><span>Quản lý phòng LAB</span><small>Quản lý tài khoản quản lý phòng LAB</small></div></a>
+                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${accountCount}"/></strong><span>Tổng tài khoản</span><small>Tất cả tài khoản có quyền truy cập hệ thống</small></div></a>
+                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/admin/users?status=ACTIVE"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${activeAccountCount}"/></strong><span>Tài khoản hoạt động</span><small>Đang có thể đăng nhập hệ thống</small></div></a>
+                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/admin/users?status=INACTIVE"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${inactiveAccountCount}"/></strong><span>Tài khoản tạm khóa</span><small>Cần quản trị viên kiểm tra trạng thái</small></div></a>
+                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/admin/users?role=INTERN"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${internCount}"/></strong><span>Thực tập sinh</span><small>Tài khoản được tạo từ danh sách đã duyệt</small></div></a>
                 <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingLabRequestCount}"/></strong><span>Danh sách chờ duyệt</span><small>Phê duyệt hoặc từ chối danh sách do người hướng dẫn gửi</small></div></a>
             </div>
+            <section class="dashboard-grid">
+                <article class="panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-clipboard"/></svg></span><h3>Danh sách thực tập sinh chờ duyệt</h3></div><a href="${pageContext.request.contextPath}/admin/interns?status=PENDING">Xem tất cả</a></header>
+                    <div class="table-scroll"><table><thead><tr><th>Danh sách</th><th>Người hướng dẫn</th><th>Học kỳ</th><th>Thực tập sinh</th><th></th></tr></thead><tbody><c:choose><c:when test="${empty pendingLabRequests}"><tr><td colspan="5">Không có danh sách thực tập sinh chờ duyệt.</td></tr></c:when><c:otherwise><c:forEach var="request" items="${pendingLabRequests}" end="4"><tr><td><strong><c:out value="${request.groupName}"/></strong></td><td><c:out value="${request.mentorName}"/></td><td><c:out value="${request.semesterCode}"/></td><td><c:out value="${request.studentCount}"/></td><td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/admin/interns/view?id=${request.requestId}">Xem</a></td></tr></c:forEach></c:otherwise></c:choose></tbody></table></div>
+                </article>
+                <article class="panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-grid"/></svg></span><h3>Thao tác nhanh</h3></div></header>
+                    <div class="mentor-actions">
+                        <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users"><span class="mentor-action-icon"><svg><use href="#i-users"/></svg></span><span><strong>Quản lý người dùng</strong><small>Xem tài khoản và trạng thái truy cập</small></span></a>
+                        <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users/add"><span class="mentor-action-icon"><svg><use href="#i-plus"/></svg></span><span><strong>Thêm người dùng</strong><small>Tạo tài khoản cho vai trò hệ thống</small></span></a>
+                        <a class="mentor-action" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><span class="mentor-action-icon gold"><svg><use href="#i-clipboard"/></svg></span><span><strong>Duyệt danh sách thực tập sinh</strong><small>Xem các danh sách đang chờ quyết định</small></span></a>
+                        <a class="mentor-action" href="${pageContext.request.contextPath}/admin/lab-rules"><span class="mentor-action-icon rose"><svg><use href="#i-clipboard"/></svg></span><span><strong>Nội quy phòng LAB</strong><small>Xem quy định áp dụng cho các vai trò</small></span></a>
+                    </div>
+                </article>
+            </section>
         </section>
     </main>
 </div>

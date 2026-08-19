@@ -33,9 +33,11 @@ public class IncidentDAO {
 				       OR COALESCE(intern.full_name, '') LIKE ?)
 				  AND (? = '' OR i.status = ?)
 				  AND (? = '' OR i.severity = ?)
+				  AND i.severity IN ('HIGH', 'CRITICAL')
 				ORDER BY COALESCE(i.occurred_at, i.reported_at) DESC, i.incident_id DESC
 				""";
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
 			String pattern = "%" + search + "%";
 			int index = 1;
 			statement.setString(index++, search);
@@ -46,6 +48,35 @@ public class IncidentDAO {
 			statement.setString(index++, level);
 			statement.setString(index, level);
 			return read(statement);
+		}
+	}
+
+	public int countForReporter(long userId) throws SQLException {
+		return count("""
+				SELECT COUNT(*) FROM dbo.incidents
+				WHERE reported_by = ? AND severity IN ('HIGH', 'CRITICAL')
+				""", userId);
+	}
+
+	public int countForMentor(long mentorId) throws SQLException {
+		return count("""
+				SELECT COUNT(*)
+				FROM dbo.incidents i
+				LEFT JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
+				LEFT JOIN dbo.lab_usage_requests r ON r.request_id = au.request_id
+				WHERE i.severity IN ('HIGH', 'CRITICAL') AND (i.reported_by = ? OR r.mentor_id = ?)
+				""", mentorId, mentorId);
+	}
+
+	private int count(String sql, long... userIds) throws SQLException {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			for (int index = 0; index < userIds.length; index++)
+				statement.setLong(index + 1, userIds[index]);
+			try (ResultSet result = statement.executeQuery()) {
+				result.next();
+				return result.getInt(1);
+			}
 		}
 	}
 

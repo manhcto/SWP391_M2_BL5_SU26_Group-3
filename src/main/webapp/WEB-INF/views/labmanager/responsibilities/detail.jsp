@@ -14,10 +14,11 @@
                     </svg>
                 </button>
                 <div><h1>Chi tiết trách nhiệm</h1>
-                    <p>Hồ sơ trách nhiệm, sự cố và sử dụng thiết bị chỉ đọc</p></div>
+                    <p>Xem sự cố và cập nhật quyết định bồi thường</p></div>
             </div>
             <div class="topbar-actions"><a class="btn-secondary"
-                                           href="${pageContext.request.contextPath}/lab-manager/responsibilities">‹ Quay lại danh sách trách nhiệm</a></div>
+                                           href="${pageContext.request.contextPath}/lab-manager/responsibilities">‹ Quay lại danh sách trách nhiệm</a><a class="primary-button"
+                                           href="${pageContext.request.contextPath}/lab-manager/responsibilities/${responsibility.responsibilityId}/edit">Sửa xử lý</a></div>
         </header>
         <section class="content-area">
             <%@ include file="../../shared/responsibility-detail.jspf" %>
