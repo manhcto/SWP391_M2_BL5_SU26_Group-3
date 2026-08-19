@@ -19,6 +19,11 @@ public class Incident {
 	private String handlingResult;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	private String assetCode;
+	private String assetName;
+	private String reporterName;
+	private String internCode;
+	private String internName;
 
 	public Incident() {
 	}
@@ -171,5 +176,45 @@ public class Incident {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getAssetCode() {
+		return assetCode;
+	}
+
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+
+	public String getAssetName() {
+		return assetName;
+	}
+
+	public void setAssetName(String assetName) {
+		this.assetName = assetName;
+	}
+
+	public String getReporterName() {
+		return reporterName;
+	}
+
+	public void setReporterName(String reporterName) {
+		this.reporterName = reporterName;
+	}
+
+	public String getInternCode() {
+		return internCode;
+	}
+
+	public void setInternCode(String internCode) {
+		this.internCode = internCode;
+	}
+
+	public String getInternName() {
+		return internName;
+	}
+
+	public void setInternName(String internName) {
+		this.internName = internName;
 	}
 }

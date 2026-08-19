@@ -31,7 +31,7 @@
                     <div class="form-grid">
                         <div class="form-group full-width"><label for="assetId">Thiết bị</label><select class="form-control" id="assetId" name="assetId" required><c:forEach items="${assets}" var="a"><option value="${a.assetId}"><c:out value="${a.assetCode}"/> · <c:out value="${a.assetName}"/> · ${a.totalQuantity} tổng cộng</option></c:forEach></select></div>
                         <div class="form-group"><label for="quantity">Số lượng</label><input class="form-control" id="quantity" type="number" name="quantity" min="1" value="1" required></div>
-                        <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field" value="End of approved semester" readonly></div>
+                        <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field" value="Kết thúc học kỳ đã được phê duyệt" readonly></div>
                         <div class="form-group full-width"><label for="note">Ghi chú sử dụng</label><textarea class="form-control" id="note" name="note" placeholder="Mục đích hoặc lưu ý sử dụng"></textarea></div>
                         <div class="form-group full-width form-actions"><button class="primary-button" type="submit" <c:if test="${empty assets}">disabled</c:if>><svg><use href="#i-box"/></svg>Xác nhận mượn</button></div>
                     </div>
