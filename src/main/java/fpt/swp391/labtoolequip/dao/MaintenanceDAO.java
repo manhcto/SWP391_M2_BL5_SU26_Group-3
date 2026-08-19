@@ -256,7 +256,12 @@ public class MaintenanceDAO {
 	 */
 	public void updateProgress(long id, String newStatus, String approvalNote, String note, String repairResult)
 			throws SQLException {
-		if (!"APPROVED".equals(newStatus) && !"IN_PROGRESS".equals(newStatus) && !"COMPLETED".equals(newStatus)) {
+		boolean isFailed = "COMPLETED_FAILED".equals(newStatus) || "FAILED".equals(newStatus);
+		String dbStatus = (isFailed || "COMPLETED".equals(newStatus) || "COMPLETED_SUCCESS".equals(newStatus))
+				? "COMPLETED"
+				: newStatus;
+
+		if (!"APPROVED".equals(dbStatus) && !"IN_PROGRESS".equals(dbStatus) && !"COMPLETED".equals(dbStatus)) {
 			throw new IllegalArgumentException("Trạng thái tiến độ không hợp lệ.");
 		}
 		try (Connection connection = db.getConnection()) {
@@ -266,7 +271,7 @@ public class MaintenanceDAO {
 				long assetId = requireApprovedOrInProgress(connection, id);
 
 				String sql;
-				if ("COMPLETED".equals(newStatus)) {
+				if ("COMPLETED".equals(dbStatus)) {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'COMPLETED',
@@ -276,7 +281,7 @@ public class MaintenanceDAO {
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
-				} else if ("IN_PROGRESS".equals(newStatus)) {
+				} else if ("IN_PROGRESS".equals(dbStatus)) {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'IN_PROGRESS',
@@ -303,9 +308,15 @@ public class MaintenanceDAO {
 					statement.executeUpdate();
 				}
 
-				// Nếu hoàn thành -> trả thiết bị về AVAILABLE
-				if ("COMPLETED".equals(newStatus)) {
-					setAssetStatus(connection, assetId, "AVAILABLE");
+				// Cập nhật trạng thái thiết bị theo kết quả sửa
+				if ("COMPLETED".equals(dbStatus)) {
+					if (isFailed) {
+						// Sửa thất bại -> thiết bị chuyển sang UNAVAILABLE để chờ lập hồ sơ thanh lý
+						setAssetStatus(connection, assetId, "UNAVAILABLE");
+					} else {
+						// Sửa thành công -> thiết bị phục hồi về AVAILABLE
+						setAssetStatus(connection, assetId, "AVAILABLE");
+					}
 				}
 
 				connection.commit();
