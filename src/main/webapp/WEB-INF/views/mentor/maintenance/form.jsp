@@ -125,21 +125,20 @@
                 const selectedAssetId = assetSelect.value;
                 const currentIncidentVal = incidentSelect.value;
                 let matchingCount = 0;
+                let firstMatchingVal = '';
                 let isCurrentStillValid = false;
 
                 Array.from(incidentSelect.options).forEach(function(opt, index) {
-                    if (index === 0) {
-                        // Tùy chọn "Không có sự cố" luôn luôn hiển thị
-                        opt.hidden = false;
-                        opt.disabled = false;
-                        return;
-                    }
+                    if (index === 0) return;
 
                     const optAssetId = opt.getAttribute('data-asset-id');
                     if (selectedAssetId && optAssetId === selectedAssetId) {
                         opt.hidden = false;
                         opt.disabled = false;
                         matchingCount++;
+                        if (!firstMatchingVal) {
+                            firstMatchingVal = opt.value;
+                        }
                         if (opt.value === currentIncidentVal) {
                             isCurrentStillValid = true;
                         }
@@ -149,21 +148,37 @@
                     }
                 });
 
-                // Nếu sự cố đang chọn không còn hợp lệ sau khi đổi thiết bị -> reset về không chọn
-                if (!isCurrentStillValid && currentIncidentVal !== '') {
-                    incidentSelect.value = '';
-                }
+                const noneOption = incidentSelect.options[0];
 
-                // Hiển thị thông báo số lượng sự cố tìm thấy
-                if (countNotice) {
-                    if (!selectedAssetId) {
-                        countNotice.textContent = 'Vui lòng chọn thiết bị ở trên để xem danh sách sự cố tương ứng.';
-                    } else if (matchingCount > 0) {
-                        countNotice.textContent = '💡 Tìm thấy ' + matchingCount + ' sự cố đang mở của thiết bị này.';
-                        countNotice.style.color = '#137a4d';
-                    } else {
-                        countNotice.textContent = 'ℹ️ Thiết bị này hiện không có sự cố nào đang mở.';
-                        countNotice.style.color = '#5a6662';
+                if (matchingCount > 0) {
+                    // Thiết bị có sự cố mở -> BẮT BUỘC chọn sự cố, ẩn option không có sự cố
+                    noneOption.hidden = true;
+                    noneOption.disabled = true;
+                    incidentSelect.required = true;
+
+                    if (!isCurrentStillValid) {
+                        incidentSelect.value = firstMatchingVal;
+                    }
+
+                    if (countNotice) {
+                        countNotice.innerHTML = '⚠️ Thiết bị này đang có <b>' + matchingCount + '</b> sự cố hỏng hóc chưa xử lý. Hệ thống đã tự động chọn sự cố cần khắc phục.';
+                        countNotice.style.color = '#c62828';
+                    }
+                } else {
+                    // Thiết bị không có sự cố -> Cho phép chọn "Không có sự cố (bảo dưỡng định kỳ)"
+                    noneOption.hidden = false;
+                    noneOption.disabled = false;
+                    incidentSelect.required = false;
+                    incidentSelect.value = '';
+
+                    if (countNotice) {
+                        if (!selectedAssetId) {
+                            countNotice.textContent = 'Vui lòng chọn thiết bị ở trên để xem danh sách sự cố tương ứng.';
+                            countNotice.style.color = '#5a6662';
+                        } else {
+                            countNotice.textContent = 'ℹ️ Thiết bị này hiện không có sự cố nào. Bạn có thể gửi đề xuất bảo dưỡng định kỳ.';
+                            countNotice.style.color = '#137a4d';
+                        }
                     }
                 }
             }

@@ -138,9 +138,17 @@ public class MaintenanceDAO {
 							"Thiết bị này đã có phiếu bảo trì đang chờ duyệt hoặc đang sửa chữa. Không thể tạo thêm phiếu mới.");
 				}
 
-				// Kiểm tra sự cố có thuộc đúng thiết bị này không
-				if (incidentId != null && !isIncidentMatchingAsset(connection, incidentId, assetId)) {
-					throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+				// Kiểm tra sự cố theo Phương án B: nếu thiết bị có sự cố mở -> bắt buộc phải
+				// chọn sự cố
+				if (incidentId == null) {
+					if (hasOpenIncidentForAsset(connection, assetId)) {
+						throw new IllegalArgumentException(
+								"Thiết bị này đang có sự cố hỏng hóc chưa xử lý. Vui lòng chọn sự cố liên quan.");
+					}
+				} else {
+					if (!isIncidentMatchingAsset(connection, incidentId, assetId)) {
+						throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+					}
 				}
 
 				String sql = """
@@ -180,8 +188,15 @@ public class MaintenanceDAO {
 			throw new IllegalArgumentException("Số lượng phải lớn hơn 0.");
 		}
 		try (Connection connection = db.getConnection()) {
-			if (incidentId != null && !isIncidentMatchingAsset(connection, incidentId, assetId)) {
-				throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+			if (incidentId == null) {
+				if (hasOpenIncidentForAsset(connection, assetId)) {
+					throw new IllegalArgumentException(
+							"Thiết bị này đang có sự cố hỏng hóc chưa xử lý. Vui lòng chọn sự cố liên quan.");
+				}
+			} else {
+				if (!isIncidentMatchingAsset(connection, incidentId, assetId)) {
+					throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+				}
 			}
 			String sql = """
 					UPDATE dbo.maintenance_records
@@ -344,6 +359,16 @@ public class MaintenanceDAO {
 				.prepareStatement("SELECT 1 FROM dbo.incidents WHERE incident_id = ? AND asset_id = ?")) {
 			statement.setLong(1, incidentId);
 			statement.setLong(2, assetId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
+	private boolean hasOpenIncidentForAsset(Connection connection, long assetId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.incidents WHERE asset_id = ? AND status IN ('OPEN', 'INVESTIGATING')")) {
+			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
 			}
