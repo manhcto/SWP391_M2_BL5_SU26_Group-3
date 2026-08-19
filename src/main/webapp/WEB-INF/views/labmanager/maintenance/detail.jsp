@@ -208,39 +208,8 @@
                     </c:if>
                 </div>
 
-                <%-- CỘT PHẢI: TIMELINE + KHUNG DUYỆT --%>
+                <%-- CỘT PHẢI: TIMELINE --%>
                 <div>
-                    <%-- KHUNG PHÊ DUYỆT (chỉ hiển thị khi PENDING) --%>
-                    <c:if test="${record.status == 'PENDING'}">
-                        <article class="panel" style="margin-bottom:16px;border:2px solid #bce1ce;">
-                            <div style="padding:14px 18px;border-bottom:1px solid #edf0ec;background:#e5f3eb;border-radius:8px 8px 0 0;">
-                                <strong style="color:#137a4d;">⚡ Yêu cầu cần phê duyệt</strong>
-                            </div>
-                            <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
-                                <input type="hidden" name="action" value="decide">
-                                <input type="hidden" name="id" value="${record.maintenanceId}">
-                                <div>
-                                    <label class="form-label">Quyết định *</label>
-                                    <select class="form-control" name="decision">
-                                        <option value="APPROVED">✅ Duyệt – Cho phép sửa chữa</option>
-                                        <option value="REJECTED">❌ Từ chối yêu cầu</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="form-label">Ghi chú phê duyệt / Dự toán kinh phí</label>
-                                    <input class="form-control" type="text" name="approvalNote"
-                                           placeholder="VD: Duyệt chi phí 650.000 VNĐ">
-                                </div>
-                                <div>
-                                    <label class="form-label">Đơn vị / Kỹ thuật viên sửa chữa</label>
-                                    <input class="form-control" type="text" name="note"
-                                           placeholder="VD: FPT Tech Services">
-                                </div>
-                                <button class="primary-button" type="submit">Gửi quyết định phê duyệt</button>
-                            </form>
-                        </article>
-                    </c:if>
-
                     <%-- TIMELINE --%>
                     <article class="panel">
                         <div style="padding:14px 18px;border-bottom:1px solid #edf0ec;">
