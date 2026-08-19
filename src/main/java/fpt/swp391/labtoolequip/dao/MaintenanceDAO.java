@@ -128,14 +128,20 @@ public class MaintenanceDAO {
 		if (quantity < 1) {
 			throw new IllegalArgumentException("Số lượng phải lớn hơn 0.");
 		}
-		String sql = """
-				INSERT INTO dbo.maintenance_records (asset_id, incident_id, quantity, requested_by, description, status)
-				OUTPUT INSERTED.maintenance_id
-				VALUES (?, ?, ?, ?, ?, 'PENDING')
-				""";
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
+				// Kiểm tra thiết bị đã có phiếu bảo trì đang xử lý chưa
+				if (hasActiveMaintenance(connection, assetId)) {
+					throw new IllegalStateException(
+							"Thiết bị này đã có phiếu bảo trì đang chờ duyệt hoặc đang sửa chữa. Không thể tạo thêm phiếu mới.");
+				}
+
+				String sql = """
+						INSERT INTO dbo.maintenance_records (asset_id, incident_id, quantity, requested_by, description, status)
+						OUTPUT INSERTED.maintenance_id
+						VALUES (?, ?, ?, ?, ?, 'PENDING')
+						""";
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
 					statement.setLong(1, assetId);
 					setNullableLong(statement, 2, incidentId);
@@ -299,6 +305,16 @@ public class MaintenanceDAO {
 	}
 
 	// ─── PRIVATE HELPERS ────────────────────────────────────────────────────────
+
+	private boolean hasActiveMaintenance(Connection connection, long assetId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.maintenance_records WHERE asset_id = ? AND status IN ('PENDING','APPROVED','IN_PROGRESS')")) {
+			statement.setLong(1, assetId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
 
 	private long requirePending(Connection connection, long id) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
