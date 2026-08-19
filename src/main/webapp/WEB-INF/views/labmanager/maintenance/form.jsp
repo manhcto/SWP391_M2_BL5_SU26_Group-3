@@ -16,13 +16,23 @@
 
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1><c:choose><c:when test="${formMode == 'edit'}">Cập nhật phiếu #MNT-${record.maintenanceId}</c:when><c:otherwise>Tạo phiếu bảo trì</c:otherwise></c:choose></h1><p>Phê duyệt bảo trì, phân công kỹ thuật viên và ghi nhận kết quả</p></div></div>
+            <div class="heading-wrap">
+                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button>
+                <div>
+                    <h1><c:choose><c:when test="${formMode == 'edit'}">Cập nhật phiếu #MNT-${record.maintenanceId}</c:when><c:otherwise>Tạo phiếu bảo trì</c:otherwise></c:choose></h1>
+                    <p>Phê duyệt bảo trì, phân công kỹ thuật viên và ghi nhận kết quả</p>
+                </div>
+            </div>
             <div class="topbar-actions">
-                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">‹ Quay lại danh sách</a>
+                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">‹ Quay lại danh sách</a>
             </div>
         </header>
 
         <section class="content-area">
+            <c:if test="${not empty message}">
+                <div class="error-message"><c:out value="${message}"/></div>
+            </c:if>
+
             <article class="panel">
                 <c:choose>
                     <c:when test="${formMode == 'edit'}">
@@ -33,8 +43,10 @@
                             </p>
                         </div>
 
+                        <%-- KHUNG PHÊ DUYỆT (nếu đang PENDING) --%>
                         <c:if test="${record.status == 'PENDING'}">
-                            <form method="post" action="${pageContext.request.contextPath}/labmanager/maintenance/approve" class="form-grid" style="border-bottom: 2px dashed #edf0ec; padding-bottom: 20px;">
+                            <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid" style="border-bottom: 2px dashed #edf0ec; padding-bottom: 20px;">
+                                <input type="hidden" name="action" value="decide">
                                 <input type="hidden" name="id" value="${record.maintenanceId}">
                                 <div class="form-group full-width">
                                     <h3 style="margin:0 0 8px; font-size:13.5px; color:#137a4d;">1. Phê duyệt hoặc Từ chối yêu cầu bảo trì:</h3>
@@ -42,8 +54,8 @@
                                 <div class="form-group">
                                     <label>Quyết định duyệt *</label>
                                     <select class="form-control" name="decision">
-                                        <option value="APPROVED">Duyệt sửa chữa</option>
-                                        <option value="REJECTED">Từ chối yêu cầu</option>
+                                        <option value="APPROVED">✅ Duyệt sửa chữa</option>
+                                        <option value="REJECTED">❌ Từ chối yêu cầu</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -56,17 +68,18 @@
                             </form>
                         </c:if>
 
-                        <form method="post" action="${pageContext.request.contextPath}/labmanager/maintenance/edit" class="form-grid">
+                        <%-- KHUNG CẬP NHẬT TIẾN ĐỘ & KẾT QUẢ SỬA CHỮA --%>
+                        <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid">
+                            <input type="hidden" name="action" value="updateProgress">
                             <input type="hidden" name="id" value="${record.maintenanceId}">
                             <div class="form-group full-width">
-                                <h3 style="margin:0 0 8px; font-size:13.5px; color:#2869b5;">2. Cập nhật tiến độ kỹ thuật & Kết quả sửa chữa:</h3>
+                                <h3 style="margin:0 0 8px; font-size:13.5px; color:#2869b5;">2. Cập nhật tiến độ kỹ thuật &amp; Kết quả sửa chữa:</h3>
                             </div>
                             <div class="form-group">
                                 <label>Trạng thái tiến độ *</label>
                                 <select class="form-control" name="status">
-                                    <option value="APPROVED" ${record.status == 'APPROVED' ? 'selected' : ''}>Đã duyệt - Chờ xử lý</option>
                                     <option value="IN_PROGRESS" ${record.status == 'IN_PROGRESS' ? 'selected' : ''}>Đang sửa chữa</option>
-                                    <option value="COMPLETED" ${record.status == 'COMPLETED' ? 'selected' : ''}>Đã sửa xong - Chờ nghiệm thu</option>
+                                    <option value="COMPLETED" ${record.status == 'COMPLETED' ? 'selected' : ''}>Đã sửa xong – Hoàn tất</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -75,17 +88,18 @@
                             </div>
                             <div class="form-group full-width">
                                 <label>Kết quả sửa chữa / Linh kiện thay thế</label>
-                                <textarea class="form-control" name="repairResult" placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
+                                <textarea class="form-control" name="repairResult" rows="4" placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
                             </div>
                             <div class="form-group full-width" style="display: flex; gap: 10px;">
                                 <button class="primary-button" type="submit">Lưu tiến độ bảo trì</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">Hủy</a>
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Hủy</a>
                             </div>
                         </form>
                     </c:when>
 
                     <c:otherwise>
-                        <form method="post" action="${pageContext.request.contextPath}/labmanager/maintenance/add" class="form-grid">
+                        <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid">
+                            <input type="hidden" name="action" value="create">
                             <div class="form-group">
                                 <label>Thiết bị cần bảo trì *</label>
                                 <select class="form-control" name="assetId" required>
@@ -99,12 +113,12 @@
                                 <input class="form-control" type="number" name="quantity" value="1" min="1" required>
                             </div>
                             <div class="form-group full-width">
-                                <label>Mô tả chi tiết tình trạng hỏng hóc & Yêu cầu sửa chữa *</label>
-                                <textarea class="form-control" name="description" required placeholder="Mô tả cụ thể hiện tượng lỗi, nguyên nhân hoặc bộ phận cần thay thế..."></textarea>
+                                <label>Mô tả chi tiết tình trạng hỏng hóc &amp; Yêu cầu sửa chữa *</label>
+                                <textarea class="form-control" name="description" rows="5" required placeholder="Mô tả cụ thể hiện tượng lỗi, nguyên nhân hoặc bộ phận cần thay thế..."></textarea>
                             </div>
                             <div class="form-group full-width" style="display: flex; gap: 10px;">
                                 <button class="primary-button" type="submit">Tạo phiếu bảo trì</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance">Hủy</a>
+                                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Hủy</a>
                             </div>
                         </form>
                     </c:otherwise>

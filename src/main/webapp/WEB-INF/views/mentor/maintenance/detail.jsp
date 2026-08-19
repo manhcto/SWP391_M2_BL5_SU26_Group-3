@@ -39,13 +39,7 @@
                 </div>
             </div>
             <div class="topbar-actions">
-                <c:if test="${(record.status == 'APPROVED' || record.status == 'IN_PROGRESS') && record.requestedBy == currentUser.userId}">
-                    <a class="primary-button"
-                       href="${pageContext.request.contextPath}/mentor/maintenance/${record.maintenanceId}/edit">
-                        <svg><use href="#i-wrench"/></svg> Cập nhật tiến độ
-                    </a>
-                </c:if>
-                <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Quay lại</a>
+                <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Quay lại danh sách</a>
             </div>
         </header>
 

@@ -139,11 +139,7 @@
                                         </td>
                                         <td>
                                             <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
-                                               href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}">Xem</a>
-                                            <c:if test="${(r.status == 'APPROVED' || r.status == 'IN_PROGRESS') && r.requestedBy == currentUser.userId}">
-                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce"
-                                                   href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}/edit">Cập nhật</a>
-                                            </c:if>
+                                               href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}">Xem chi tiết</a>
                                         </td>
                                     </tr>
                                 </c:forEach>
