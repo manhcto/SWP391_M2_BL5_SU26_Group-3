@@ -18,20 +18,33 @@ public class AdminDashboardController extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			request.setAttribute("internCount", userDAO.findAll("", "INTERN", "").size());
-			request.setAttribute("mentorCount", userDAO.findAll("", "MENTOR", "").size());
-			request.setAttribute("labManagerCount", userDAO.findAll("", "LAB_MANAGER", "").size());
+			var users = userDAO.findAll("", "", "");
+			request.setAttribute("accountCount", users.size());
+			request.setAttribute("activeAccountCount",
+					users.stream().filter(user -> "ACTIVE".equals(user.getStatus())).count());
+			request.setAttribute("inactiveAccountCount",
+					users.stream().filter(user -> "INACTIVE".equals(user.getStatus())).count());
+			request.setAttribute("internCount", users.stream().filter(user -> "INTERN".equals(user.getRole())).count());
+			request.setAttribute("mentorCount", users.stream().filter(user -> "MENTOR".equals(user.getRole())).count());
+			request.setAttribute("labManagerCount",
+					users.stream().filter(user -> "LAB_MANAGER".equals(user.getRole())).count());
 		} catch (Exception exception) {
 			getServletContext().log("Could not load admin user counts", exception);
+			request.setAttribute("accountCount", 0);
+			request.setAttribute("activeAccountCount", 0);
+			request.setAttribute("inactiveAccountCount", 0);
 			request.setAttribute("internCount", 0);
 			request.setAttribute("mentorCount", 0);
 			request.setAttribute("labManagerCount", 0);
 		}
 		try {
-			request.setAttribute("pendingInternListCount", internListDAO.countByStatus("PENDING"));
+			var pendingInternLists = internListDAO.findAll("", "PENDING", null);
+			request.setAttribute("pendingInternListCount", pendingInternLists.size());
+			request.setAttribute("pendingInternLists", pendingInternLists);
 		} catch (Exception exception) {
 			getServletContext().log("Could not load pending Intern List count", exception);
 			request.setAttribute("pendingInternListCount", 0);
+			request.setAttribute("pendingInternLists", java.util.List.of());
 		}
 		request.getRequestDispatcher("/WEB-INF/views/admin/dashboard.jsp").forward(request, response);
 	}

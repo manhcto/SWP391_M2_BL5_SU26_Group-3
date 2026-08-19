@@ -59,6 +59,23 @@ public class AssetUsageDAO {
 		}
 	}
 
+	public int countForMentor(long mentorId) throws SQLException {
+		String sql = """
+				SELECT COUNT(*)
+				FROM dbo.asset_usages au
+				JOIN dbo.lab_usage_requests r ON r.request_id = au.request_id
+				WHERE r.mentor_id = ?
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, mentorId);
+			try (ResultSet result = statement.executeQuery()) {
+				result.next();
+				return result.getInt(1);
+			}
+		}
+	}
+
 	public Optional<AssetUsage> findById(long usageId, Long ownerUserId) throws SQLException {
 		String sql = SELECT_USAGE + " WHERE au.asset_usage_id = ?" + (ownerUserId == null ? "" : " AND sp.user_id = ?");
 		try (Connection connection = db.getConnection();

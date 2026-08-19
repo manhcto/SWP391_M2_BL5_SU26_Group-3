@@ -16,6 +16,7 @@ import util.AppConfig;
 
 public class ResponsibilityDAO {
 	private static final Set<String> MENTOR_STATUSES = Set.of("CONFIRMED", "PENDING_REVIEW", "RESOLVED");
+	private static final Set<String> LAB_MANAGER_STATUSES = Set.of("APPROVED", "REJECTED", "RESOLVED");
 	private static final String SELECT = """
 			SELECT r.*, i.asset_id, i.asset_usage_id, i.incident_type, i.description AS incident_description,
 			       i.severity AS incident_severity, i.status AS incident_status, i.occurred_at, i.reported_at,
@@ -74,6 +75,7 @@ public class ResponsibilityDAO {
 				JOIN dbo.users u ON u.user_id = sp.user_id
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
 				WHERE NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
+				  AND i.severity IN ('HIGH', 'CRITICAL')
 				ORDER BY i.reported_at DESC
 				""";
 		try (Connection connection = db.getConnection();
@@ -114,6 +116,7 @@ public class ResponsibilityDAO {
 				FROM dbo.incidents i
 				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
 				WHERE i.incident_id = ?
+				  AND i.severity IN ('HIGH', 'CRITICAL')
 				  AND NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
 				""";
 		try (Connection connection = db.getConnection();
@@ -156,6 +159,32 @@ public class ResponsibilityDAO {
 			if (statement.executeUpdate() != 1)
 				throw new IllegalStateException(
 						"Không tìm thấy hồ sơ trách nhiệm hoặc người hướng dẫn này không được phép sửa.");
+		}
+	}
+
+	public void updateByLabManager(long managerUserId, long id, String decision, String status, String reviewNote,
+			String resolutionNote) throws SQLException {
+		if (!LAB_MANAGER_STATUSES.contains(status))
+			throw new IllegalArgumentException("Trạng thái xử lý không hợp lệ.");
+		String sql = """
+				UPDATE dbo.responsibilities
+				SET decision = ?, status = ?, reviewed_by = ?, reviewed_at = SYSUTCDATETIME(), review_note = ?,
+				    resolution_note = ?,
+				    resolved_at = CASE WHEN ? = 'RESOLVED' THEN COALESCE(resolved_at, SYSUTCDATETIME()) ELSE NULL END,
+				    updated_at = SYSUTCDATETIME()
+				WHERE responsibility_id = ?
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, blankToNull(decision));
+			statement.setString(2, status);
+			statement.setLong(3, managerUserId);
+			statement.setString(4, blankToNull(reviewNote));
+			statement.setString(5, blankToNull(resolutionNote));
+			statement.setString(6, status);
+			statement.setLong(7, id);
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Không tìm thấy hồ sơ trách nhiệm.");
 		}
 	}
 

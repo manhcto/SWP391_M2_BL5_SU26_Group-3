@@ -37,11 +37,17 @@
                 <a class="stat-card stat-green" href="${pageContext.request.contextPath}/mentor/interns">
                     <div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${totalInterns}"/></strong><span>Thực tập sinh đang hoạt động</span><small>Trong các danh sách đã duyệt</small></div>
                 </a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/mentor/inspections">
-                    <div class="stat-icon"><svg><use href="#i-inspect"/></svg></div><div><strong>Rà soát</strong><span>Kiểm tra</span><small>Kiểm tra hồ sơ tài sản phòng LAB</small></div>
+                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/mentor/interns?status=PENDING">
+                    <div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingInternListCount}"/></strong><span>Danh sách chờ duyệt</span><small>Danh sách thực tập sinh đang chờ quản trị viên</small></div>
                 </a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/mentor/maintenance">
-                    <div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong>Track</strong><span>Bảo trì</span><small>Theo dõi đề xuất thiết bị</small></div>
+                <div class="stat-card stat-blue">
+                    <div class="stat-icon"><svg><use href="#i-calendar"/></svg></div><div><strong><c:out value="${mentorUsageCount}"/></strong><span>Lượt sử dụng thiết bị</span><small>Của thực tập sinh trong các danh sách bạn quản lý</small></div>
+                </div>
+                <div class="stat-card stat-purple">
+                    <div class="stat-icon"><svg><use href="#i-alert"/></svg></div><div><strong><c:out value="${reportedIncidentCount}"/></strong><span>Sự cố đã báo cáo</span><small>Các sự cố lớn liên quan đến nhóm bạn phụ trách</small></div>
+                </div>
+                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/mentor/maintenance">
+                    <div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong><c:out value="${maintenanceRequestCount}"/></strong><span>Yêu cầu bảo trì</span><small>Các đề xuất bảo trì bạn đã gửi</small></div>
                 </a>
             </section>
 

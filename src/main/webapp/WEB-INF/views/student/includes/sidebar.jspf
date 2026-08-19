@@ -22,6 +22,7 @@
         <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages"><svg><use href="#i-calendar"/></svg><span>Lịch sử sử dụng</span></a>
         <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="#"><svg><use href="#i-alert"/></svg><span>Sự cố của tôi</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/responsibilities"><svg><use href="#i-list"/></svg><span>Trách nhiệm của tôi</span></a>
+        <a class="nav-link${activeMenu == 'labRules' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/lab-rules"><svg><use href="#i-list"/></svg><span>Nội quy phòng lab</span></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">TT</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i>Thực tập sinh</span></div></div>

@@ -33,6 +33,7 @@
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><svg><use href="#i-list"/></svg><span>Trách nhiệm</span></a>
         <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/maintenance"><svg><use href="#i-wrench"/></svg><span>Bảo trì</span></a>
         <a class="nav-link${activeMenu == 'disposals' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/disposals"><svg><use href="#i-trash"/></svg><span>Thanh lý</span></a>
+        <a class="nav-link${activeMenu == 'labRules' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/lab-rules"><svg><use href="#i-clipboard"/></svg><span>Nội quy phòng lab</span></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${app:label(currentUser.role)}"/></span></div></div>
