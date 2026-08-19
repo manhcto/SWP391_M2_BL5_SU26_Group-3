@@ -66,24 +66,15 @@ public class LabManagerMaintenanceController extends HttpServlet {
 			long id;
 
 			switch (action == null ? "" : action) {
-				// Lab Manager tạo phiếu bảo trì
+				// Lab Manager tạo phiếu bảo trì (trực tiếp APPROVED)
 				case "create" -> {
 					String incidentParam = request.getParameter("incidentId");
 					Long incidentId = (incidentParam == null || incidentParam.isBlank())
 							? null
 							: Long.parseLong(incidentParam);
 					id = dao.create(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
-							incidentId, parseQuantity(request), request.getParameter("description"));
-				}
-				// Lab Manager phê duyệt hoặc từ chối
-				case "decide" -> {
-					id = Long.parseLong(request.getParameter("id"));
-					String decision = request.getParameter("decision");
-					String note = "REJECTED".equals(decision) ? null : request.getParameter("note");
-					String approvalNote = "REJECTED".equals(decision)
-							? request.getParameter("rejectReason")
-							: request.getParameter("approvalNote");
-					dao.decide(id, AuthSession.userId(request), decision, approvalNote, note);
+							incidentId, request.getParameter("approvalNote"), request.getParameter("note"),
+							request.getParameter("description"));
 				}
 				// Lab Manager cập nhật tiến độ sửa chữa
 				case "updateProgress" -> {
@@ -104,19 +95,6 @@ public class LabManagerMaintenanceController extends HttpServlet {
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			request.setAttribute("message", exception.getMessage());
 			doGet(request, response);
-		}
-	}
-
-	private int parseQuantity(HttpServletRequest request) {
-		String param = request.getParameter("quantity");
-		if (param == null || param.isBlank()) {
-			return 1;
-		}
-		try {
-			int q = Integer.parseInt(param);
-			return q < 1 ? 1 : q;
-		} catch (NumberFormatException e) {
-			return 1;
 		}
 	}
 

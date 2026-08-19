@@ -36,24 +36,12 @@
             <div class="content-heading">
                 <div>
                     <p class="eyebrow">FE-08 BẢO TRÌ</p>
-                    <h2>Danh sách phiếu bảo trì (${records.size()})</h2>
+                    <h2>Theo dõi bảo trì thiết bị (${records.size()})</h2>
                 </div>
-                <a class="primary-button" href="${pageContext.request.contextPath}/mentor/maintenance/new">
-                    <svg><use href="#i-wrench"/></svg>+ Đề xuất bảo trì
-                </a>
             </div>
 
             <c:if test="${not empty message}">
                 <div class="error-message"><c:out value="${message}"/></div>
-            </c:if>
-            <c:if test="${param.success == 'created'}">
-                <div class="success-message">Đã tạo phiếu đề xuất bảo trì thành công. Chờ Lab Manager phê duyệt.</div>
-            </c:if>
-            <c:if test="${param.success == 'updated'}">
-                <div class="success-message">Đã cập nhật thông tin đề xuất bảo trì thành công.</div>
-            </c:if>
-            <c:if test="${param.success == 'deleted'}">
-                <div class="success-message">Đã hủy và xóa đề xuất bảo trì thành công.</div>
             </c:if>
 
             <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/mentor/maintenance">
@@ -63,11 +51,9 @@
                            placeholder="Tìm theo mã phiếu, tên thiết bị, mô tả..." style="width:300px">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="PENDING"      ${selectedStatus == 'PENDING'      ? 'selected' : ''}>Chờ duyệt</option>
-                        <option value="APPROVED"     ${selectedStatus == 'APPROVED'     ? 'selected' : ''}>Đã duyệt</option>
+                        <option value="APPROVED"     ${selectedStatus == 'APPROVED'     ? 'selected' : ''}>Đã duyệt / Chờ sửa</option>
                         <option value="IN_PROGRESS"  ${selectedStatus == 'IN_PROGRESS'  ? 'selected' : ''}>Đang sửa chữa</option>
                         <option value="COMPLETED"    ${selectedStatus == 'COMPLETED'    ? 'selected' : ''}>Hoàn tất</option>
-                        <option value="REJECTED"     ${selectedStatus == 'REJECTED'     ? 'selected' : ''}>Bị từ chối</option>
                     </select>
                     <button class="primary-button" type="submit">Tìm kiếm</button>
                     <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">Đặt lại</a>
@@ -79,9 +65,8 @@
                     <c:when test="${empty records}">
                         <div class="empty-box">
                             <div class="empty-box-icon"><svg><use href="#i-wrench"/></svg></div>
-                            <h3>Chưa có phiếu bảo trì nào</h3>
-                            <p>Khi thiết bị trong phòng LAB bị hỏng hóc, hãy tạo đề xuất bảo trì để gửi Lab Manager phê duyệt.</p>
-                            <a class="primary-button" href="${pageContext.request.contextPath}/mentor/maintenance/new">+ Đề xuất bảo trì</a>
+                            <h3>Chưa có thiết bị nào đang bảo trì</h3>
+                            <p>Tất cả thiết bị phòng LAB hiện đang hoạt động bình thường hoặc chưa có phiếu sửa chữa nào được tạo.</p>
                         </div>
                     </c:when>
                     <c:otherwise>
@@ -92,8 +77,8 @@
                                     <th>Mã phiếu</th>
                                     <th>Thiết bị</th>
                                     <th>SL</th>
-                                    <th>Mô tả hỏng hóc</th>
-                                    <th>Ngày gửi</th>
+                                    <th>Mô tả yêu cầu sửa chữa</th>
+                                    <th>Ngày tạo</th>
                                     <th>Người duyệt</th>
                                     <th>Trạng thái</th>
                                     <th>Thao tác</th>
@@ -120,11 +105,8 @@
                                         </td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${r.status == 'PENDING'}">
-                                                    <span class="status review">Chờ duyệt</span>
-                                                </c:when>
                                                 <c:when test="${r.status == 'APPROVED'}">
-                                                    <span class="status in-use">Đã duyệt</span>
+                                                    <span class="status in-use">Đã duyệt / Chờ sửa</span>
                                                 </c:when>
                                                 <c:when test="${r.status == 'IN_PROGRESS'}">
                                                     <span class="status maintenance">Đang sửa</span>
@@ -139,9 +121,6 @@
                                                          </c:otherwise>
                                                      </c:choose>
                                                  </c:when>
-                                                <c:when test="${r.status == 'REJECTED'}">
-                                                    <span class="status overdue">Từ chối</span>
-                                                </c:when>
                                                 <c:otherwise>
                                                     <span class="status"><c:out value="${r.status}"/></span>
                                                 </c:otherwise>
@@ -150,20 +129,6 @@
                                         <td style="white-space:nowrap;">
                                             <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
                                                href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}">Xem</a>
-                                            <c:if test="${r.status == 'PENDING' && r.requestedBy == currentUser.userId}">
-                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce"
-                                                   href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}/edit">Sửa</a>
-                                                <form method="post" action="${pageContext.request.contextPath}/mentor/maintenance"
-                                                      onsubmit="return confirm('Bạn có chắc chắn muốn hủy và xóa đề xuất bảo trì này?');"
-                                                      style="display:inline;margin:0;">
-                                                    <input type="hidden" name="action" value="delete">
-                                                    <input type="hidden" name="id" value="${r.maintenanceId}">
-                                                    <button class="btn-secondary" type="submit"
-                                                            style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;cursor:pointer;">
-                                                        Xóa
-                                                    </button>
-                                                </form>
-                                            </c:if>
                                         </td>
                                     </tr>
                                 </c:forEach>
