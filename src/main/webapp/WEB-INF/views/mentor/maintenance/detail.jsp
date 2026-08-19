@@ -37,22 +37,7 @@
                     <p>Chi tiết hồ sơ sửa chữa và trạng thái xử lý</p>
                 </div>
             </div>
-            <div class="topbar-actions" style="display:flex;gap:8px;">
-                <%-- NÚT SỬA VÀ HỦY KHI VẪN CÒN PENDING --%>
-                <c:if test="${record.status == 'PENDING' && record.requestedBy == currentUser.userId}">
-                    <a class="btn-secondary" style="background:#e5f3eb;color:#188255;border-color:#bce1ce;"
-                       href="${pageContext.request.contextPath}/mentor/maintenance/${record.maintenanceId}/edit">
-                        ✏️ Sửa đề xuất
-                    </a>
-                    <form method="post" action="${pageContext.request.contextPath}/mentor/maintenance"
-                          onsubmit="return confirm('Bạn có chắc chắn muốn hủy và xóa đề xuất bảo trì này?');" style="margin:0;">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="${record.maintenanceId}">
-                        <button class="btn-secondary" type="submit" style="background:#fde8e8;color:#c62828;border-color:#f8b4b4;">
-                            🗑️ Hủy yêu cầu
-                        </button>
-                    </form>
-                </c:if>
+            <div class="topbar-actions">
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Quay lại danh sách</a>
             </div>
         </header>
