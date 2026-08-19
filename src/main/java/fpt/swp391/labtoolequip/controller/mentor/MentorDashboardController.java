@@ -3,8 +3,8 @@ package fpt.swp391.labtoolequip.controller.mentor;
 import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.AssetUsageDAO;
 import fpt.swp391.labtoolequip.dao.IncidentDAO;
-import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
+import fpt.swp391.labtoolequip.dao.InternListDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -15,23 +15,23 @@ import java.sql.SQLException;
 
 @WebServlet("/mentor/dashboard")
 public class MentorDashboardController extends HttpServlet {
-	private final LabUsageRequestDAO labUsageRequestDAO = new LabUsageRequestDAO();
 	private final AssetUsageDAO assetUsageDAO = new AssetUsageDAO();
 	private final IncidentDAO incidentDAO = new IncidentDAO();
 	private final MaintenanceDAO maintenanceDAO = new MaintenanceDAO();
+	private final InternListDAO internListDAO = new InternListDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		long userId = AuthSession.userId(request);
 		try {
-			request.setAttribute("approvedRequests", labUsageRequestDAO.findApprovedSchedule(userId));
+			request.setAttribute("approvedInternLists", internListDAO.findApprovedSchedule(userId));
 		} catch (SQLException exception) {
 			getServletContext().log("Approved Mentor schedule is unavailable.", exception);
-			request.setAttribute("approvedRequests", java.util.List.of());
+			request.setAttribute("approvedInternLists", java.util.List.of());
 		}
 		try {
-			var requests = labUsageRequestDAO.findByMentor(userId, "", "", null);
+			var requests = internListDAO.findByMentor(userId, "", "", null);
 			request.setAttribute("pendingInternListCount",
 					requests.stream().filter(item -> "PENDING".equals(item.getStatus())).count());
 			request.setAttribute("mentorUsageCount", assetUsageDAO.countForMentor(userId));

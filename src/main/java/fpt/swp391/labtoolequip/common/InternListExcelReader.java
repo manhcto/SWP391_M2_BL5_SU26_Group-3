@@ -1,6 +1,6 @@
 package fpt.swp391.labtoolequip.common;
 
-import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
+import fpt.swp391.labtoolequip.model.InternListStudent;
 import jakarta.servlet.http.Part;
 import java.io.InputStream;
 import java.io.IOException;
@@ -12,8 +12,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
-public final class LabUsageRequestExcelReader {
-	private LabUsageRequestExcelReader() {
+public final class
+
+InternListExcelReader {
+	private InternListExcelReader() {
 	}
 
 	public static ImportData read(Part part) throws IOException {
@@ -41,9 +43,9 @@ public final class LabUsageRequestExcelReader {
 		}
 	}
 
-	private static List<LabUsageRequestStudent> readStudents(Sheet sheet) throws IOException {
+	private static List<InternListStudent> readStudents(Sheet sheet) throws IOException {
 		DataFormatter formatter = new DataFormatter();
-		List<LabUsageRequestStudent> students = new ArrayList<>();
+		List<InternListStudent> students = new ArrayList<>();
 		for (int index = 1; index <= sheet.getLastRowNum(); index++) {
 			Row row = sheet.getRow(index);
 			if (row == null) {
@@ -59,7 +61,7 @@ public final class LabUsageRequestExcelReader {
 			if (code.isBlank() || name.isBlank() || email.isBlank() || cohort.isBlank()) {
 				throw new IOException("Sheet Interns thiếu dữ liệu tại dòng " + (index + 1) + ".");
 			}
-			LabUsageRequestStudent student = new LabUsageRequestStudent();
+			InternListStudent student = new InternListStudent();
 			student.setStudentCode(code);
 			student.setFullName(name);
 			student.setEmail(email);
@@ -73,6 +75,6 @@ public final class LabUsageRequestExcelReader {
 		return formatter.formatCellValue(row.getCell(index)).trim();
 	}
 
-	public record ImportData(List<LabUsageRequestStudent> students) {
+	public record ImportData(List<InternListStudent> students) {
 	}
 }

@@ -1,0 +1,48 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core"%>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thêm thiết bị | LAB Asset</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+    <style>
+        .form-note{margin:0 0 12px;color:var(--muted);font-size:11px;line-height:1.5}.item-table{width:100%;min-width:820px}.item-table input,.item-table select{width:100%;min-height:32px;padding:0 8px;border:1px solid var(--line);border-radius:6px;color:var(--ink);background:#fff;font-size:10.5px}.item-table th{white-space:nowrap}.item-table td{padding:8px 6px;vertical-align:top}.quantity-control{display:flex;align-items:center;gap:8px}.quantity-control input{width:100px}.form-actions{display:flex;gap:8px;align-items:center}.error-message,.success-message{margin-bottom:10px;padding:9px 12px;border-radius:7px;font-size:11px}.error-message{border:1px solid #f1c1c1;color:#9a3030;background:#fff0f0}.success-message{border:1px solid #b9e9d2;color:#12704c;background:#edfbf3}.import-box{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:7px;background:#faf8ff}.import-box label{display:flex;flex-direction:column;gap:5px;color:var(--ink);font-size:11px;font-weight:600}.import-box input[type=file]{font-size:11px}.import-box small{width:100%;color:var(--muted);font-size:10px}
+    </style>
+</head>
+<body class="${assetRole == 'mentor' ? 'mentor-page' : 'lab-manager-page'}">
+<c:set var="activeMenu" value="assets" scope="request"/>
+<div class="app-shell">
+    <c:choose><c:when test="${assetRole == 'mentor'}"><%@ include file="../../mentor/includes/sidebar.jspf" %></c:when><c:otherwise><%@ include file="../includes/sidebar.jspf" %></c:otherwise></c:choose>
+    <main class="main-content">
+        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Thêm thiết bị</h1><p>Tạo một nhóm thiết bị và sinh mã riêng cho từng sản phẩm</p></div></div><div class="topbar-actions"><a class="btn-secondary" href="${assetBasePath}">Quay lại danh sách</a></div></header>
+        <section class="content-area">
+            <div class="content-heading"><div><p class="eyebrow">QUẢN LÝ THIẾT BỊ</p><h2>Thông tin nhóm sản phẩm</h2></div></div>
+            <c:if test="${not empty message}"><div class="${not empty importedItems ? 'success-message' : 'error-message'}"><c:out value="${message}"/></div></c:if>
+            <form method="post" action="${assetBasePath}/new" enctype="multipart/form-data">
+                <article class="panel form-section"><header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Thông tin chung</h3></div></header>
+                    <div class="form-grid">
+                        <div class="form-group"><label for="assetCode">Mã thiết bị gốc</label><input class="form-control" id="assetCode" name="assetCode" value="<c:out value='${param.assetCode}'/>" placeholder="VD: LAPTOP-DELL" required><small>Mã sản phẩm riêng sẽ được sinh dạng LAPTOP-DELL-0001.</small></div>
+                        <div class="form-group"><label for="assetName">Tên thiết bị</label><input class="form-control" id="assetName" name="assetName" value="<c:out value='${param.assetName}'/>" placeholder="VD: Laptop Dell Latitude" required></div>
+                        <div class="form-group"><label for="categoryId">Loại thiết bị</label><select class="form-control" id="categoryId" name="categoryId" required><option value="">Chọn loại thiết bị</option><c:forEach items="${categories}" var="category"><option value="${category.categoryId}" ${param.categoryId == category.categoryId ? 'selected' : ''}><c:out value="${category.categoryName}"/></option></c:forEach></select></div>
+                        <div class="form-group"><label for="assetType">Dạng tài sản</label><select class="form-control" id="assetType" name="assetType" required><option value="">Chọn dạng tài sản</option><option value="FIXED" ${param.assetType == 'FIXED' ? 'selected' : ''}>Tài sản cố định — không cho mượn</option><option value="BORROWABLE" ${param.assetType == 'BORROWABLE' ? 'selected' : ''}>Tài sản có thể mượn</option></select><small>Tài sản cố định vẫn được kiểm kê, bảo trì và thanh lý.</small></div>
+                        <div class="form-group"><label for="quantity">Số lượng sản phẩm</label><div class="quantity-control"><input class="form-control" id="quantity" name="quantity" type="number" min="1" max="100" value="${empty quantity ? 1 : quantity}" required><span>sản phẩm</span></div><small>Mỗi sản phẩm có mã và trạng thái riêng.</small></div>
+                        <div class="form-group full-width"><label for="description">Mô tả chung</label><textarea class="form-control" id="description" name="description" placeholder="Thông tin dùng chung cho nhóm thiết bị"><c:out value="${param.description}"/></textarea></div>
+                    </div>
+                </article>
+                <article class="panel form-section" style="margin-top:12px"><header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-list"/></svg></span><h3>Thông tin từng sản phẩm</h3></div></header><p class="form-note">Nhập serial, ảnh, tình trạng, ngày mua và ghi chú cho từng sản phẩm. Ảnh có thể là đường dẫn tương đối trong ứng dụng, ví dụ <code>/uploads/assets/laptop-01.jpg</code>.</p><div class="import-box"><label for="assetFile">Nhập danh sách từ Excel (.xlsx)<input id="assetFile" name="assetFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label><button class="btn-secondary" type="submit" name="action" value="import">Nạp từ Excel</button><a class="btn-secondary" href="${assetBasePath}/new/template">Tải file mẫu</a><small>Các cột: Serial, Image Path, Condition, Status, Purchase Date, Warranty Until, Note. Không cần cột vị trí.</small></div><div class="table-scroll"><table class="item-table"><thead><tr><th>#</th><th>Serial</th><th>Đường dẫn ảnh</th><th>Tình trạng</th><th>Trạng thái</th><th>Ngày mua</th><th>Bảo hành đến</th><th>Ghi chú</th></tr></thead><tbody id="itemRows" data-imported="${not empty importedItems}"><c:forEach items="${importedItems}" var="item" varStatus="row"><tr><td>${row.count}</td><td><input name="itemSerialNumber" maxlength="100" value="<c:out value='${item.serialNumber}'/>" placeholder="Serial"></td><td><input name="itemImagePath" maxlength="500" value="<c:out value='${item.imagePath}'/>" placeholder="/uploads/...jpg"></td><td><select name="itemCondition"><option value="GOOD" ${item.condition == 'GOOD' ? 'selected' : ''}>Tốt</option><option value="FAIR" ${item.condition == 'FAIR' ? 'selected' : ''}>Khá</option><option value="DAMAGED" ${item.condition == 'DAMAGED' ? 'selected' : ''}>Hư hỏng</option><option value="BROKEN" ${item.condition == 'BROKEN' ? 'selected' : ''}>Hỏng</option></select></td><td><select name="itemStatus"><option value="AVAILABLE" ${item.status == 'AVAILABLE' ? 'selected' : ''}>Sẵn sàng</option><option value="MAINTENANCE" ${item.status == 'MAINTENANCE' ? 'selected' : ''}>Đang bảo trì</option><option value="UNAVAILABLE" ${item.status == 'UNAVAILABLE' ? 'selected' : ''}>Không khả dụng</option><option value="DISPOSED" ${item.status == 'DISPOSED' ? 'selected' : ''}>Đã thanh lý</option></select></td><td><input name="itemPurchaseDate" type="date" value="${item.purchaseDate}"></td><td><input name="itemWarrantyUntil" type="date" value="${item.warrantyUntil}"></td><td><input name="itemNote" maxlength="500" value="<c:out value='${item.note}'/>" placeholder="Ghi chú"></td></tr></c:forEach></tbody></table></div></article>
+                <div class="form-actions" style="margin-top:12px"><button class="primary-button" type="submit" name="action" value="create">Tạo sản phẩm</button><a class="btn-secondary" href="${assetBasePath}">Hủy</a></div>
+            </form>
+        </section>
+    </main>
+</div>
+<script>
+const rowHost=document.getElementById('itemRows'), quantityInput=document.getElementById('quantity');
+function row(index){return '<tr><td>'+(index+1)+'</td><td><input name="itemSerialNumber" maxlength="100" placeholder="Serial"></td><td><input name="itemImagePath" maxlength="500" placeholder="/uploads/...jpg"></td><td><select name="itemCondition"><option value="GOOD">Tốt</option><option value="FAIR">Khá</option><option value="DAMAGED">Hư hỏng</option><option value="BROKEN">Hỏng</option></select></td><td><select name="itemStatus"><option value="AVAILABLE">Sẵn sàng</option><option value="MAINTENANCE">Đang bảo trì</option><option value="UNAVAILABLE">Không khả dụng</option><option value="DISPOSED">Đã thanh lý</option></select></td><td><input name="itemPurchaseDate" type="date"></td><td><input name="itemWarrantyUntil" type="date"></td><td><input name="itemNote" maxlength="500" placeholder="Ghi chú"></td></tr>';}
+function renderRows(){let quantity=Math.max(1,Math.min(100,Number(quantityInput.value)||1));quantityInput.value=quantity;rowHost.innerHTML=Array.from({length:quantity},(_,index)=>row(index)).join('');}
+if(rowHost.dataset.imported !== 'true'){quantityInput.addEventListener('input',renderRows);renderRows();}
+</script>
+</body>
+</html>

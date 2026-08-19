@@ -9,7 +9,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 
-class LabUsageRequestExcelReaderTest {
+class InternListExcelReaderTest {
 	@Test
 	void readsInternsWithoutSchedule() throws Exception {
 		byte[] file;
@@ -25,8 +25,8 @@ class LabUsageRequestExcelReaderTest {
 			file = output.toByteArray();
 		}
 
-		LabUsageRequestExcelReader.ImportData imported = LabUsageRequestExcelReader.read(new ByteArrayInputStream(file),
-				"request.xlsx");
+		InternListExcelReader.ImportData imported = InternListExcelReader.read(new ByteArrayInputStream(file),
+				"intern-list.xlsx");
 
 		assertEquals(1, imported.students().size());
 		assertEquals("intern@example.com", imported.students().get(0).getEmail());

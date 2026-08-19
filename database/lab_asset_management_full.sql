@@ -627,3 +627,318 @@ SELECT
 FROM dbo.users AS u
 ORDER BY u.user_id;
 GO
+
+/* ========================================================================
+   MERGED EXTENSIONS
+   The sections below are included so this file is the single full setup:
+   majors lookup, serialized asset items, normalized asset seed, incidents,
+   and responsibility test data.
+   ======================================================================== */
+
+/* Major lookup migration */
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+
+IF OBJECT_ID(N'dbo.majors', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.majors (
+        major_id bigint IDENTITY(1,1) NOT NULL,
+        major_code varchar(20) NOT NULL,
+        major_name nvarchar(100) NOT NULL,
+        status varchar(10) NOT NULL CONSTRAINT DF_majors_status DEFAULT ('ACTIVE'),
+        display_order int NOT NULL CONSTRAINT DF_majors_display_order DEFAULT (0),
+        CONSTRAINT PK_majors PRIMARY KEY (major_id),
+        CONSTRAINT UQ_majors_code UNIQUE (major_code),
+        CONSTRAINT UQ_majors_name UNIQUE (major_name),
+        CONSTRAINT CK_majors_status CHECK (status IN ('ACTIVE', 'INACTIVE'))
+    );
+END;
+
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'SE') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('SE', N'Software Engineering', 1);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'AI') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('AI', N'Artificial Intelligence', 2);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'IS') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('IS', N'Information Systems', 3);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'IA') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('IA', N'Information Assurance', 4);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'GD') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('GD', N'Graphic Design', 5);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'MC') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('MC', N'Multimedia Communications', 6);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'BA') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('BA', N'Business Administration', 7);
+IF NOT EXISTS (SELECT 1 FROM dbo.majors WHERE major_code = 'DM') INSERT dbo.majors (major_code, major_name, display_order) VALUES ('DM', N'Digital Marketing', 8);
+
+IF COL_LENGTH('dbo.student_profiles', 'major_id') IS NULL
+    ALTER TABLE dbo.student_profiles ADD major_id bigint NULL;
+GO
+
+IF COL_LENGTH('dbo.student_profiles', 'major') IS NOT NULL
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM dbo.student_profiles profile
+        WHERE profile.major IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM dbo.majors major WHERE major.major_name = profile.major)
+    )
+        THROW 51000, 'Existing student_profiles.major values need a mapping in dbo.majors before migration.', 1;
+
+    UPDATE profile
+    SET major_id = major.major_id
+    FROM dbo.student_profiles profile
+    JOIN dbo.majors major ON major.major_name = profile.major
+    WHERE profile.major_id IS NULL;
+END;
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_student_profiles_major')
+    ALTER TABLE dbo.student_profiles
+        ADD CONSTRAINT FK_student_profiles_major FOREIGN KEY (major_id) REFERENCES dbo.majors(major_id);
+
+IF COL_LENGTH('dbo.student_profiles', 'major') IS NOT NULL
+    ALTER TABLE dbo.student_profiles DROP COLUMN major;
+
+COMMIT TRANSACTION;
+GO
+
+/* One row per physical asset item */
+IF OBJECT_ID(N'dbo.asset_items', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.asset_items (
+        asset_item_id bigint IDENTITY(1,1) NOT NULL,
+        asset_id bigint NOT NULL,
+        item_code varchar(70) NOT NULL,
+        serial_number varchar(100) NULL,
+        image_path nvarchar(500) NULL,
+        condition varchar(10) NOT NULL CONSTRAINT DF_asset_items_condition DEFAULT ('GOOD'),
+        status varchar(15) NOT NULL CONSTRAINT DF_asset_items_status DEFAULT ('AVAILABLE'),
+        storage_location nvarchar(150) NULL,
+        purchase_date date NULL,
+        warranty_until date NULL,
+        note nvarchar(500) NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_asset_items_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_asset_items_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_asset_items PRIMARY KEY (asset_item_id),
+        CONSTRAINT UQ_asset_items_code UNIQUE (item_code),
+        CONSTRAINT FK_asset_items_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
+        CONSTRAINT CK_asset_items_condition CHECK (condition IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')),
+        CONSTRAINT CK_asset_items_status CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'UNAVAILABLE', 'DISPOSED')),
+        CONSTRAINT CK_asset_items_dates CHECK (warranty_until IS NULL OR purchase_date IS NULL OR warranty_until >= purchase_date)
+    );
+
+    CREATE UNIQUE INDEX UX_asset_items_serial ON dbo.asset_items (serial_number) WHERE serial_number IS NOT NULL;
+    CREATE INDEX IX_asset_items_asset ON dbo.asset_items (asset_id);
+    CREATE INDEX IX_asset_items_status ON dbo.asset_items (status);
+
+    IF COL_LENGTH('dbo.asset_usages', 'asset_item_id') IS NULL
+    BEGIN
+        ALTER TABLE dbo.asset_usages ADD asset_item_id bigint NULL;
+        ALTER TABLE dbo.asset_usages
+            ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id)
+            REFERENCES dbo.asset_items(asset_item_id);
+        CREATE INDEX IX_asset_usages_asset_item ON dbo.asset_usages (asset_item_id)
+            WHERE asset_item_id IS NOT NULL;
+    END;
+
+    ;WITH Numbers AS (
+        SELECT TOP (SELECT COALESCE(MAX(total_quantity), 1) FROM dbo.assets)
+               ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS item_number
+        FROM sys.all_objects a CROSS JOIN sys.all_objects b
+    )
+    INSERT dbo.asset_items (asset_id, item_code, serial_number, condition, status, storage_location, note)
+    SELECT a.asset_id,
+           CONCAT(a.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)),
+           CASE WHEN a.serial_number IS NULL THEN NULL ELSE CONCAT(a.serial_number, '-', n.item_number) END,
+           a.condition, a.status, a.storage_location, N'Tạo tự động từ dữ liệu thiết bị hiện có'
+    FROM dbo.assets a
+    JOIN Numbers n ON n.item_number <= a.total_quantity
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.asset_items i WHERE i.asset_id = a.asset_id);
+END;
+GO
+
+/* Existing databases may already have asset_items; keep the usage link idempotent. */
+IF COL_LENGTH('dbo.asset_usages', 'asset_item_id') IS NULL
+    ALTER TABLE dbo.asset_usages ADD asset_item_id bigint NULL;
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE name = 'FK_asset_usages_asset_item'
+      AND parent_object_id = OBJECT_ID('dbo.asset_usages')
+)
+    ALTER TABLE dbo.asset_usages
+        ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id)
+        REFERENCES dbo.asset_items(asset_item_id);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_asset_usages_asset_item'
+      AND object_id = OBJECT_ID('dbo.asset_usages')
+)
+    CREATE INDEX IX_asset_usages_asset_item ON dbo.asset_usages (asset_item_id)
+        WHERE asset_item_id IS NOT NULL;
+GO
+
+/* Reduce the demo inventory to two borrowable kits and fixed lab assets. */
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+
+DECLARE @kitCategoryId bigint;
+DECLARE @fixedCategoryId bigint;
+
+IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị')
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'Kit thiết bị', N'Các bộ kit điện tử và cảm biến được phép cho intern mượn.', 'ACTIVE');
+SELECT @kitCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị';
+
+IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Tài sản cố định')
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'Tài sản cố định', N'Bàn, ghế và thiết bị dùng chung trong phòng LAB; không cho mượn.', 'ACTIVE');
+SELECT @fixedCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Tài sản cố định';
+
+DECLARE @targets TABLE (
+    asset_code varchar(50) NOT NULL PRIMARY KEY,
+    asset_name nvarchar(150) NOT NULL,
+    category_id bigint NOT NULL,
+    total_quantity int NOT NULL,
+    is_borrowable bit NOT NULL,
+    storage_location nvarchar(150) NULL,
+    description nvarchar(max) NULL
+);
+
+INSERT @targets (asset_code, asset_name, category_id, total_quantity, is_borrowable, storage_location, description)
+VALUES
+    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 10, 1, N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
+    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 10, 1, N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.'),
+    ('FIXED-DESK-01', N'Bàn phòng LAB', @fixedCategoryId, 10, 0, N'Khu bàn cố định', N'Tài sản cố định, không cho mượn.'),
+    ('FIXED-CHAIR-01', N'Ghế phòng LAB', @fixedCategoryId, 20, 0, N'Khu bàn cố định', N'Tài sản cố định, không cho mượn.'),
+    ('FIXED-PROJECTOR-01', N'Máy chiếu phòng LAB', @fixedCategoryId, 1, 0, N'Tủ thiết bị trình chiếu', N'Tài sản cố định, không cho mượn.'),
+    ('FIXED-TV-01', N'Tivi phòng LAB', @fixedCategoryId, 1, 0, N'Khu trình chiếu', N'Tài sản cố định, không cho mượn.');
+
+UPDATE a SET a.status = 'UNAVAILABLE', a.is_borrowable = 0, a.updated_at = SYSUTCDATETIME()
+FROM dbo.assets a WHERE NOT EXISTS (SELECT 1 FROM @targets t WHERE t.asset_code = a.asset_code);
+
+UPDATE i SET i.status = 'UNAVAILABLE', i.updated_at = SYSUTCDATETIME()
+FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id
+WHERE NOT EXISTS (SELECT 1 FROM @targets t WHERE t.asset_code = a.asset_code);
+
+UPDATE a
+SET a.asset_name = t.asset_name, a.category_id = t.category_id, a.tracking_mode = 'QUANTITY',
+    a.serial_number = NULL, a.total_quantity = t.total_quantity, a.condition = 'GOOD',
+    a.status = 'AVAILABLE', a.is_borrowable = t.is_borrowable, a.storage_location = t.storage_location,
+    a.description = t.description, a.updated_at = SYSUTCDATETIME()
+FROM dbo.assets a JOIN @targets t ON t.asset_code = a.asset_code;
+
+INSERT dbo.assets
+    (asset_code, asset_name, category_id, tracking_mode, serial_number, total_quantity,
+     condition, status, is_borrowable, storage_location, description)
+SELECT t.asset_code, t.asset_name, t.category_id, 'QUANTITY', NULL, t.total_quantity,
+       'GOOD', 'AVAILABLE', t.is_borrowable, t.storage_location, t.description
+FROM @targets t
+WHERE NOT EXISTS (SELECT 1 FROM dbo.assets a WHERE a.asset_code = t.asset_code);
+
+;WITH Numbers AS (
+    SELECT TOP (100) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS item_number
+    FROM sys.all_objects a CROSS JOIN sys.all_objects b
+)
+INSERT dbo.asset_items (asset_id, item_code, condition, status, storage_location, note)
+SELECT a.asset_id, CONCAT(t.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)),
+       'GOOD', 'AVAILABLE', t.storage_location, N'Tạo từ bộ dữ liệu LAB chuẩn hóa'
+FROM @targets t JOIN dbo.assets a ON a.asset_code = t.asset_code
+JOIN Numbers n ON n.item_number <= t.total_quantity
+WHERE NOT EXISTS (SELECT 1 FROM dbo.asset_items i
+                  WHERE i.item_code = CONCAT(t.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)));
+
+UPDATE i SET i.status = 'UNAVAILABLE', i.updated_at = SYSUTCDATETIME()
+FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @targets t ON t.asset_code = a.asset_code
+WHERE TRY_CONVERT(int, RIGHT(i.item_code, 4)) > t.total_quantity;
+
+COMMIT TRANSACTION;
+GO
+
+/* Five idempotent incident samples */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    DECLARE @asset_id bigint;
+    DECLARE @usage_id bigint;
+    DECLARE @reporter_id bigint;
+    DECLARE @now datetime2(0) = SYSUTCDATETIME();
+
+    SELECT TOP (1) @asset_id = au.asset_id, @usage_id = au.asset_usage_id, @reporter_id = sp.user_id
+    FROM dbo.asset_usages au JOIN dbo.student_profiles sp ON sp.student_id = au.student_id
+    ORDER BY au.asset_usage_id DESC;
+    IF @asset_id IS NULL SELECT TOP (1) @asset_id = asset_id FROM dbo.assets WHERE status <> 'DISPOSED' ORDER BY asset_id DESC;
+    IF @reporter_id IS NULL SELECT TOP (1) @reporter_id = user_id FROM dbo.users WHERE status = 'ACTIVE' ORDER BY CASE role WHEN 'INTERN' THEN 0 ELSE 1 END, user_id;
+    IF @asset_id IS NULL OR @reporter_id IS NULL THROW 50002, 'At least one active user and one non-disposed asset are required.', 1;
+
+    INSERT dbo.incidents
+        (asset_id, asset_usage_id, reported_by, affected_quantity, incident_type, description, severity,
+         status, occurred_at, reported_at, investigation_note, handling_result)
+    SELECT @asset_id, @usage_id, @reporter_id, 1, sample.incident_type, sample.description,
+           sample.severity, sample.status, sample.occurred_at, sample.reported_at,
+           sample.investigation_note, sample.handling_result
+    FROM (VALUES
+        ('MISSING', N'[SAMPLE] The equipment carrying case was not returned.', 'MEDIUM', 'OPEN', DATEADD(DAY, -5, @now), DATEADD(MINUTE, 30, DATEADD(DAY, -5, @now)), N'The return checklist is being reviewed.', CAST(NULL AS nvarchar(max))),
+        ('OTHER', N'[SAMPLE] The calibration label became unreadable.', 'LOW', 'CLOSED', DATEADD(DAY, -4, @now), DATEADD(MINUTE, 45, DATEADD(DAY, -4, @now)), N'The calibration record was verified.', N'A replacement label was applied.'),
+        ('MALFUNCTION', N'[SAMPLE] The display intermittently showed incomplete readings.', 'MEDIUM', 'INVESTIGATING', DATEADD(DAY, -3, @now), DATEADD(MINUTE, 20, DATEADD(DAY, -3, @now)), N'The battery and display connector require inspection.', NULL),
+        ('DAMAGE', N'[SAMPLE] The protective cover was torn near the input terminals.', 'LOW', 'RESOLVED', DATEADD(DAY, -2, @now), DATEADD(MINUTE, 15, DATEADD(DAY, -2, @now)), N'The damage did not affect operational safety.', N'The protective cover was replaced.'),
+        ('LOSS', N'[SAMPLE] The spare accessory set could not be located.', 'HIGH', 'OPEN', DATEADD(DAY, -1, @now), DATEADD(MINUTE, 30, DATEADD(DAY, -1, @now)), N'Inventory and recent usage records are being reviewed.', NULL)
+    ) AS sample (incident_type, description, severity, status, occurred_at, reported_at, investigation_note, handling_result)
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.incidents existing WHERE existing.description = sample.description);
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO
+
+/* Responsibility test data and lab-manager demo account */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    IF NOT EXISTS (SELECT 1 FROM dbo.users WHERE email = 'labmanager@gmail.com')
+        INSERT dbo.users (full_name, email, password_hash, role, status)
+        VALUES (N'Demo Lab Manager Test', 'labmanager@gmail.com', '$2a$10$c4PNSNs0bJn0drrJzAxThu4TBztls3COfVZA.W33b0BL6cquNIS.C', 'LAB_MANAGER', 'ACTIVE');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.incidents WHERE description = N'[TEST] Incident awaiting responsibility determination.')
+    BEGIN
+        DECLARE @asset_id_test bigint;
+        DECLARE @usage_id_test bigint;
+        DECLARE @reporter_id_test bigint;
+        DECLARE @request_id_test bigint;
+        DECLARE @semester_id_test bigint;
+        DECLARE @student_id_test bigint;
+
+        SELECT TOP (1) @asset_id_test = au.asset_id, @usage_id_test = au.asset_usage_id, @reporter_id_test = sp.user_id
+        FROM dbo.asset_usages au JOIN dbo.student_profiles sp ON sp.student_id = au.student_id
+        WHERE au.status = 'RETURNED' ORDER BY au.asset_usage_id DESC;
+
+        IF @usage_id_test IS NULL
+        BEGIN
+            SELECT TOP (1) @request_id_test = rs.request_id, @semester_id_test = rs.semester_id,
+                           @student_id_test = rs.student_id, @reporter_id_test = sp.user_id
+            FROM dbo.lab_usage_request_students rs JOIN dbo.student_profiles sp ON sp.student_id = rs.student_id
+            ORDER BY rs.request_id DESC;
+            SELECT TOP (1) @asset_id_test = asset_id FROM dbo.assets WHERE status <> 'DISPOSED' ORDER BY asset_id DESC;
+            IF @request_id_test IS NULL OR @asset_id_test IS NULL THROW 50001, 'An intern request membership and asset are required.', 1;
+            INSERT dbo.asset_usages
+                (request_id, semester_id, student_id, asset_id, quantity, borrowed_at, due_at, returned_at,
+                 condition_before, condition_after, status, note, created_by)
+            VALUES (@request_id_test, @semester_id_test, @student_id_test, @asset_id_test, 1,
+                    DATEADD(DAY, -2, SYSUTCDATETIME()), DATEADD(DAY, -1, SYSUTCDATETIME()),
+                    DATEADD(MINUTE, -30, SYSUTCDATETIME()), 'GOOD', 'DAMAGED', 'RETURNED',
+                    N'[TEST] Returned usage for responsibility testing.', @reporter_id_test);
+            SET @usage_id_test = SCOPE_IDENTITY();
+        END;
+
+        INSERT dbo.incidents
+            (asset_id, asset_usage_id, reported_by, affected_quantity, incident_type, description, severity,
+             status, occurred_at, reported_at, investigation_note)
+        VALUES (@asset_id_test, @usage_id_test, @reporter_id_test, 1, 'DAMAGE',
+                N'[TEST] Incident awaiting responsibility determination.', 'MEDIUM', 'INVESTIGATING',
+                DATEADD(MINUTE, -45, SYSUTCDATETIME()), SYSUTCDATETIME(),
+                N'Ready for Mentor responsibility testing.');
+    END;
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO
+
+SELECT 'FULL DATABASE SETUP COMPLETED' AS setup_status;
+GO
