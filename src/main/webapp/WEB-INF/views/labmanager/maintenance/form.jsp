@@ -67,10 +67,9 @@
                             <div class="form-group full-width">
                                 <label>Trạng thái tiến độ *</label>
                                 <select class="form-control" name="status" id="progressStatusSelect" required>
-                                    <option value="APPROVED" ${record.status == 'APPROVED' ? 'selected' : ''}>📋 Đã phê duyệt – Chờ đưa đi sửa / Chờ kỹ thuật viên tiếp nhận</option>
                                     <option value="IN_PROGRESS" ${record.status == 'IN_PROGRESS' ? 'selected' : ''}>⏳ Đang sửa chữa (Đang tiến hành sửa chữa, thay linh kiện)</option>
-                                    <option value="COMPLETED_SUCCESS" ${record.status == 'COMPLETED' ? 'selected' : ''}>✅ Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)</option>
-                                    <option value="COMPLETED_FAILED">❌ Sửa thất bại – Không thể phục hồi (Thiết bị chuyển UNAVAILABLE chờ thanh lý)</option>
+                                    <option value="COMPLETED_SUCCESS" ${record.status == 'COMPLETED' && record.assetStatus != 'UNAVAILABLE' ? 'selected' : ''}>✅ Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)</option>
+                                    <option value="COMPLETED_FAILED" ${record.status == 'COMPLETED' && record.assetStatus == 'UNAVAILABLE' ? 'selected' : ''}>❌ Sửa thất bại – Không thể phục hồi (Thiết bị chuyển UNAVAILABLE chờ thanh lý)</option>
                                 </select>
                             </div>
 

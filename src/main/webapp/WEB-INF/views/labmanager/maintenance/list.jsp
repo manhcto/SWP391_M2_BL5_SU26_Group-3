@@ -57,7 +57,6 @@
                            placeholder="Tìm theo mã phiếu, tên thiết bị, thợ sửa..." style="width:300px">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="APPROVED"     ${selectedStatus == 'APPROVED'     ? 'selected' : ''}>Đã duyệt / Chờ sửa</option>
                         <option value="IN_PROGRESS"  ${selectedStatus == 'IN_PROGRESS'  ? 'selected' : ''}>Đang sửa chữa</option>
                         <option value="COMPLETED"    ${selectedStatus == 'COMPLETED'    ? 'selected' : ''}>Hoàn tất</option>
                     </select>
@@ -105,11 +104,8 @@
                                         <td><c:out value="${app:dateTime(r.requestedAt)}"/></td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${r.status == 'APPROVED'}">
-                                                    <span class="status in-use">Đã duyệt / Chờ sửa</span>
-                                                </c:when>
                                                 <c:when test="${r.status == 'IN_PROGRESS'}">
-                                                    <span class="status maintenance">Đang sửa</span>
+                                                    <span class="status maintenance">Đang sửa chữa</span>
                                                 </c:when>
                                                 <c:when test="${r.status == 'COMPLETED'}">
                                                      <c:choose>
@@ -129,7 +125,7 @@
                                         <td style="white-space:nowrap;">
                                             <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
                                                href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}">Xem</a>
-                                            <c:if test="${r.status == 'APPROVED' || r.status == 'IN_PROGRESS'}">
+                                            <c:if test="${r.status == 'IN_PROGRESS'}">
                                                 <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-color:#aecbfa;font-weight:600;"
                                                    href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
                                                     ✏️ Tiến độ

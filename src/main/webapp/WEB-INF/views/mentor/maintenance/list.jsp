@@ -51,7 +51,6 @@
                            placeholder="Tìm theo mã phiếu, tên thiết bị, mô tả..." style="width:300px">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="APPROVED"     ${selectedStatus == 'APPROVED'     ? 'selected' : ''}>Đã duyệt / Chờ sửa</option>
                         <option value="IN_PROGRESS"  ${selectedStatus == 'IN_PROGRESS'  ? 'selected' : ''}>Đang sửa chữa</option>
                         <option value="COMPLETED"    ${selectedStatus == 'COMPLETED'    ? 'selected' : ''}>Hoàn tất</option>
                     </select>
@@ -105,11 +104,8 @@
                                         </td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${r.status == 'APPROVED'}">
-                                                    <span class="status in-use">Đã duyệt / Chờ sửa</span>
-                                                </c:when>
                                                 <c:when test="${r.status == 'IN_PROGRESS'}">
-                                                    <span class="status maintenance">Đang sửa</span>
+                                                    <span class="status maintenance">Đang sửa chữa</span>
                                                 </c:when>
                                                 <c:when test="${r.status == 'COMPLETED'}">
                                                      <c:choose>

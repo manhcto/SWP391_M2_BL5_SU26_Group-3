@@ -118,8 +118,8 @@ public class MaintenanceDAO {
 	// ─── WRITES ─────────────────────────────────────────────────────────────────
 
 	/**
-	 * Lab Manager tạo phiếu bảo trì mới (trực tiếp APPROVED). Cập nhật trạng thái
-	 * tài sản sang MAINTENANCE trong cùng giao dịch.
+	 * Lab Manager tạo phiếu bảo trì mới (trực tiếp IN_PROGRESS). Cập nhật trạng
+	 * thái tài sản sang MAINTENANCE trong cùng giao dịch.
 	 */
 	public long create(long userId, long assetId, Long incidentId, String approvalNote, String note, String description)
 			throws SQLException {
@@ -150,9 +150,9 @@ public class MaintenanceDAO {
 
 				String sql = """
 						INSERT INTO dbo.maintenance_records
-						    (asset_id, incident_id, quantity, requested_by, approved_by, approved_at, approval_note, note, description, status)
+						    (asset_id, incident_id, quantity, requested_by, approved_by, approved_at, repair_started_at, approval_note, note, description, status)
 						OUTPUT INSERTED.maintenance_id
-						VALUES (?, ?, 1, ?, ?, SYSUTCDATETIME(), ?, ?, ?, 'APPROVED')
+						VALUES (?, ?, 1, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?, 'IN_PROGRESS')
 						""";
 				long id;
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
