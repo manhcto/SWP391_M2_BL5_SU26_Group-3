@@ -128,16 +128,19 @@
                                                 </c:when>
                                             </c:choose>
                                         </td>
-                                        <td>
+                                        <td style="white-space:nowrap;">
                                             <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
                                                href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}">Xem</a>
-                                            <c:if test="${r.status == 'PENDING' || r.status == 'APPROVED' || r.status == 'IN_PROGRESS'}">
-                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce"
+                                            <c:if test="${r.status == 'PENDING'}">
+                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce;font-weight:600;"
                                                    href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
-                                                    <c:choose>
-                                                        <c:when test="${r.status == 'PENDING'}">Duyệt</c:when>
-                                                        <c:otherwise>Cập nhật</c:otherwise>
-                                                    </c:choose>
+                                                    ⚡ Duyệt
+                                                </a>
+                                            </c:if>
+                                            <c:if test="${r.status == 'APPROVED' || r.status == 'IN_PROGRESS'}">
+                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-color:#aecbfa;font-weight:600;"
+                                                   href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
+                                                    ✏️ Cập nhật
                                                 </a>
                                             </c:if>
                                         </td>

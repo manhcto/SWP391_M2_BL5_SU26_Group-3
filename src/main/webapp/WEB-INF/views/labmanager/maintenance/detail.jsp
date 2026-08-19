@@ -178,7 +178,12 @@
                                 <div>
                                     <label class="form-label">Ghi chú phê duyệt / Dự toán kinh phí</label>
                                     <input class="form-control" type="text" name="approvalNote"
-                                           placeholder="VD: Duyệt chi phí 650.000 VNĐ – Gửi FPT Tech Services">
+                                           placeholder="VD: Duyệt chi phí 650.000 VNĐ">
+                                </div>
+                                <div>
+                                    <label class="form-label">Đơn vị / Kỹ thuật viên sửa chữa</label>
+                                    <input class="form-control" type="text" name="note"
+                                           placeholder="VD: FPT Tech Services">
                                 </div>
                                 <button class="primary-button" type="submit">Gửi quyết định phê duyệt</button>
                             </form>

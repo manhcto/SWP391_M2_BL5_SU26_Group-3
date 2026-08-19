@@ -211,7 +211,8 @@ public class MaintenanceDAO {
 	 * Lab Manager phê duyệt hoặc từ chối yêu cầu bảo trì (chỉ khi PENDING). Khi
 	 * APPROVED: đổi trạng thái thiết bị sang MAINTENANCE.
 	 */
-	public void decide(long id, long approverId, String decision, String approvalNote) throws SQLException {
+	public void decide(long id, long approverId, String decision, String approvalNote, String note)
+			throws SQLException {
 		if (!"APPROVED".equals(decision) && !"REJECTED".equals(decision)) {
 			throw new IllegalArgumentException("Quyết định không hợp lệ.");
 		}
@@ -225,13 +226,14 @@ public class MaintenanceDAO {
 				try (PreparedStatement statement = connection.prepareStatement("""
 						UPDATE dbo.maintenance_records
 						SET status = ?, approved_by = ?, approved_at = SYSUTCDATETIME(),
-						    approval_note = ?, updated_at = SYSUTCDATETIME()
+						    approval_note = ?, note = ?, updated_at = SYSUTCDATETIME()
 						WHERE maintenance_id = ? AND status = 'PENDING'
 						""")) {
 					statement.setString(1, decision);
 					statement.setLong(2, approverId);
 					statement.setString(3, blankToNull(approvalNote));
-					statement.setLong(4, id);
+					statement.setString(4, blankToNull(note));
+					statement.setLong(5, id);
 					statement.executeUpdate();
 				}
 
@@ -249,11 +251,12 @@ public class MaintenanceDAO {
 	}
 
 	/**
-	 * Lab Manager hoặc Mentor cập nhật tiến độ sửa chữa (chỉ khi APPROVED /
-	 * IN_PROGRESS). Khi COMPLETED: đổi trạng thái thiết bị về AVAILABLE.
+	 * Lab Manager cập nhật tiến độ sửa chữa (chỉ khi APPROVED / IN_PROGRESS). Khi
+	 * COMPLETED: đổi trạng thái thiết bị về AVAILABLE.
 	 */
-	public void updateProgress(long id, String newStatus, String note, String repairResult) throws SQLException {
-		if (!"IN_PROGRESS".equals(newStatus) && !"COMPLETED".equals(newStatus)) {
+	public void updateProgress(long id, String newStatus, String approvalNote, String note, String repairResult)
+			throws SQLException {
+		if (!"APPROVED".equals(newStatus) && !"IN_PROGRESS".equals(newStatus) && !"COMPLETED".equals(newStatus)) {
 			throw new IllegalArgumentException("Trạng thái tiến độ không hợp lệ.");
 		}
 		try (Connection connection = db.getConnection()) {
@@ -269,25 +272,34 @@ public class MaintenanceDAO {
 							SET status = 'COMPLETED',
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
 							    repair_completed_at = SYSUTCDATETIME(),
-							    note = ?, repair_result = ?,
+							    approval_note = ?, note = ?, repair_result = ?,
+							    updated_at = SYSUTCDATETIME()
+							WHERE maintenance_id = ?
+							""";
+				} else if ("IN_PROGRESS".equals(newStatus)) {
+					sql = """
+							UPDATE dbo.maintenance_records
+							SET status = 'IN_PROGRESS',
+							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
+							    approval_note = ?, note = ?, repair_result = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
 				} else {
 					sql = """
 							UPDATE dbo.maintenance_records
-							SET status = 'IN_PROGRESS',
-							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
-							    note = ?, repair_result = ?,
+							SET status = 'APPROVED',
+							    approval_note = ?, note = ?, repair_result = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
 				}
 
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
-					statement.setString(1, blankToNull(note));
-					statement.setString(2, blankToNull(repairResult));
-					statement.setLong(3, id);
+					statement.setString(1, blankToNull(approvalNote));
+					statement.setString(2, blankToNull(note));
+					statement.setString(3, blankToNull(repairResult));
+					statement.setLong(4, id);
 					statement.executeUpdate();
 				}
 

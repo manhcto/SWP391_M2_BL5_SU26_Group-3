@@ -80,13 +80,13 @@ public class LabManagerMaintenanceController extends HttpServlet {
 				case "decide" -> {
 					id = Long.parseLong(request.getParameter("id"));
 					dao.decide(id, AuthSession.userId(request), request.getParameter("decision"),
-							request.getParameter("approvalNote"));
+							request.getParameter("approvalNote"), request.getParameter("note"));
 				}
 				// Lab Manager cập nhật tiến độ sửa chữa
 				case "updateProgress" -> {
 					id = Long.parseLong(request.getParameter("id"));
-					dao.updateProgress(id, request.getParameter("status"), request.getParameter("note"),
-							request.getParameter("repairResult"));
+					dao.updateProgress(id, request.getParameter("status"), request.getParameter("approvalNote"),
+							request.getParameter("note"), request.getParameter("repairResult"));
 				}
 				default -> {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST);
@@ -94,7 +94,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 				}
 			}
 
-			response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance/" + id);
+			response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance/" + id + "?success=saved");
 
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
