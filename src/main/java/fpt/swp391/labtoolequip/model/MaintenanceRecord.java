@@ -21,15 +21,24 @@ public class MaintenanceRecord {
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
-	// Transient display fields for JOIN queries
-	private String assetName;
+	// Joined display fields
 	private String assetCode;
+	private String assetName;
+	private String assetStatus;
+	private String storageLocation;
 	private String requesterName;
 	private String approverName;
+	private String incidentDescription;
 
 	public MaintenanceRecord() {
-		this.quantity = 1;
-		this.status = "PENDING";
+	}
+
+	public String getAssetStatus() {
+		return assetStatus;
+	}
+
+	public void setAssetStatus(String assetStatus) {
+		this.assetStatus = assetStatus;
 	}
 
 	public Long getMaintenanceId() {
@@ -168,6 +177,14 @@ public class MaintenanceRecord {
 		this.updatedAt = updatedAt;
 	}
 
+	public String getAssetCode() {
+		return assetCode;
+	}
+
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+
 	public String getAssetName() {
 		return assetName;
 	}
@@ -176,12 +193,12 @@ public class MaintenanceRecord {
 		this.assetName = assetName;
 	}
 
-	public String getAssetCode() {
-		return assetCode;
+	public String getStorageLocation() {
+		return storageLocation;
 	}
 
-	public void setAssetCode(String assetCode) {
-		this.assetCode = assetCode;
+	public void setStorageLocation(String storageLocation) {
+		this.storageLocation = storageLocation;
 	}
 
 	public String getRequesterName() {
@@ -198,5 +215,13 @@ public class MaintenanceRecord {
 
 	public void setApproverName(String approverName) {
 		this.approverName = approverName;
+	}
+
+	public String getIncidentDescription() {
+		return incidentDescription;
+	}
+
+	public void setIncidentDescription(String incidentDescription) {
+		this.incidentDescription = incidentDescription;
 	}
 }

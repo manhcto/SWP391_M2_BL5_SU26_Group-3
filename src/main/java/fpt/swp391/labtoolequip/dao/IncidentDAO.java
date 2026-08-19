@@ -37,7 +37,8 @@ public class IncidentDAO {
 				  AND (? = '' OR i.severity = ?)
 				ORDER BY COALESCE(i.occurred_at, i.reported_at) DESC, i.incident_id DESC
 				""";
-		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
 			String pattern = "%" + search + "%";
 			int index = 1;
 			statement.setString(index++, search);

@@ -31,7 +31,7 @@
         <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/inspections"><svg><use href="#i-inspect"/></svg><span>Kiểm tra</span></a>
         <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/incidents"><svg><use href="#i-alert"/></svg><span>Sự cố</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><svg><use href="#i-list"/></svg><span>Trách nhiệm</span></a>
-        <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg><span>Bảo trì</span></a>
+        <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/maintenance"><svg><use href="#i-wrench"/></svg><span>Bảo trì</span></a>
         <a class="nav-link${activeMenu == 'disposals' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/disposals"><svg><use href="#i-trash"/></svg><span>Thanh lý</span></a>
     </nav>
     <div class="sidebar-footer">
