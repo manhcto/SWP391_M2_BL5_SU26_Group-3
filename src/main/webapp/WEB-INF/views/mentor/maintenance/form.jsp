@@ -61,7 +61,9 @@
                         </c:otherwise>
                     </c:choose>
 
-                    <div class="form-group">
+                    <input type="hidden" name="quantity" value="1">
+
+                    <div class="form-group full-width">
                         <label>Thiết bị cần bảo trì *</label>
                         <select class="form-control" name="assetId" id="assetSelect" required>
                             <option value="">-- Chọn thiết bị --</option>
@@ -72,12 +74,6 @@
                                 </option>
                             </c:forEach>
                         </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Số lượng cần bảo trì *</label>
-                        <input class="form-control" type="number" name="quantity"
-                               value="${formMode == 'edit' ? record.quantity : 1}" min="1" required>
                     </div>
 
                     <div class="form-group full-width">

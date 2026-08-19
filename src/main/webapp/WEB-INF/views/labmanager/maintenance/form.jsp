@@ -182,17 +182,14 @@
                     <c:otherwise>
                         <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid">
                             <input type="hidden" name="action" value="create">
-                            <div class="form-group">
+                            <input type="hidden" name="quantity" value="1">
+                            <div class="form-group full-width">
                                 <label>Thiết bị cần bảo trì *</label>
                                 <select class="form-control" name="assetId" required>
                                     <c:forEach var="a" items="${assets}">
                                         <option value="${a.assetId}"><c:out value="${a.assetName}"/> (<c:out value="${a.assetCode}"/> - <c:out value="${a.storageLocation}"/>)</option>
                                     </c:forEach>
                                 </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Số lượng *</label>
-                                <input class="form-control" type="number" name="quantity" value="1" min="1" required>
                             </div>
                             <div class="form-group full-width">
                                 <label>Mô tả chi tiết tình trạng hỏng hóc &amp; Yêu cầu sửa chữa *</label>

@@ -86,8 +86,7 @@ public class MentorMaintenanceController extends HttpServlet {
 						? null
 						: Long.parseLong(incidentParam);
 				long id = dao.create(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
-						incidentId, Integer.parseInt(request.getParameter("quantity")),
-						request.getParameter("description"));
+						incidentId, parseQuantity(request), request.getParameter("description"));
 				response.sendRedirect(request.getContextPath() + "/mentor/maintenance/" + id + "?success=created");
 				return;
 			}
@@ -100,8 +99,7 @@ public class MentorMaintenanceController extends HttpServlet {
 						? null
 						: Long.parseLong(incidentParam);
 				dao.updatePending(id, AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
-						incidentId, Integer.parseInt(request.getParameter("quantity")),
-						request.getParameter("description"));
+						incidentId, parseQuantity(request), request.getParameter("description"));
 				response.sendRedirect(request.getContextPath() + "/mentor/maintenance/" + id + "?success=updated");
 				return;
 			}
@@ -121,6 +119,19 @@ public class MentorMaintenanceController extends HttpServlet {
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			request.setAttribute("message", exception.getMessage());
 			doGet(request, response);
+		}
+	}
+
+	private int parseQuantity(HttpServletRequest request) {
+		String param = request.getParameter("quantity");
+		if (param == null || param.isBlank()) {
+			return 1;
+		}
+		try {
+			int q = Integer.parseInt(param);
+			return q < 1 ? 1 : q;
+		} catch (NumberFormatException e) {
+			return 1;
 		}
 	}
 
