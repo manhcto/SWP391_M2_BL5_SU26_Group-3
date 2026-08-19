@@ -105,7 +105,7 @@
                                                     type="hidden" name="action" value="delete"><input type="hidden"
                                                                                                       name="responsibilityId"
                                                                                                       value="${r.responsibilityId}">
-                                                <button class="btn-action btn-action-danger" type="submit">Delete
+                                                <button class="btn-action btn-action-danger" type="submit">Xóa
                                                 </button>
                                             </form>
                                         </td>

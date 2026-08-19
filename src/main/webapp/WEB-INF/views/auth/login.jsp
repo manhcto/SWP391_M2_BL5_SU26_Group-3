@@ -3,21 +3,21 @@
 <%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
 <!DOCTYPE html>
 <html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng nhập | LAB ASSET MANAGEMENT</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css?v=20260818-campus"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Đăng nhập | Hệ thống quản lý tài sản phòng LAB</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css?v=20260818-campus"></head>
 <body class="login-page">
 <main class="login-shell">
     <section class="login-panel">
         <div class="login-box">
-            <div class="login-brand"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"><span>LAB ASSET MANAGEMENT</span></div>
+            <div class="login-brand"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="Đại học FPT"><span>QUẢN LÝ TÀI SẢN PHÒNG LAB</span></div>
             <div class="login-welcome"><h1>Đăng nhập nội bộ Đại học FPT</h1><p>Vui lòng nhập thông tin đăng nhập.</p></div>
             <c:if test="${not empty message}"><p class="login-alert" role="alert"><c:out value="${message}"/></p></c:if>
             <form class="login-form" method="post" action="${pageContext.request.contextPath}/login">
-                <label class="login-field" for="email"><span>Email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập email" required><span class="field-icon">✉</span></label>
-                <label class="login-field" for="password"><span>Password</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
+                <label class="login-field" for="email"><span>Địa chỉ email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập địa chỉ email" required><span class="field-icon">✉</span></label>
+                <label class="login-field" for="password"><span>Mật khẩu</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
                 <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><span>Quên mật khẩu?</span></div>
                 <button class="login-submit" type="submit">Đăng nhập</button>
             </form>
-            <div class="login-divider"><span>or</span></div>
+            <div class="login-divider"><span>hoặc</span></div>
             <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Gmail</span></a>
         </div>
     </section>

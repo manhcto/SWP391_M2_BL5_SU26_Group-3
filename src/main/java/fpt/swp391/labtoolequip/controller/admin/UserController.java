@@ -10,10 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 @WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit", "/admin/users/toggle-status",
 		"/admin/users/change-role"})
@@ -68,7 +65,9 @@ public class UserController extends HttpServlet {
 		String keyword = trim(request.getParameter("keyword"));
 		String role = normalize(request.getParameter("role"));
 		String status = normalize(request.getParameter("status"));
+
 		request.setAttribute("users", userDAO.findAll(keyword, role, status));
+
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedRole", role);
 		request.setAttribute("selectedStatus", status);
