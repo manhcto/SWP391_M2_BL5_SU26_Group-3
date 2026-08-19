@@ -144,7 +144,7 @@
 
                             <div class="form-group full-width">
                                 <label>Trạng thái tiến độ *</label>
-                                <select class="form-control" name="status" required>
+                                <select class="form-control" name="status" id="progressStatusSelect" required>
                                     <option value="APPROVED" ${record.status == 'APPROVED' ? 'selected' : ''}>📋 Đã phê duyệt – Chờ đưa đi sửa / Chờ kỹ thuật viên tiếp nhận</option>
                                     <option value="IN_PROGRESS" ${record.status == 'IN_PROGRESS' ? 'selected' : ''}>⏳ Đang sửa chữa (Đang tiến hành sửa chữa, thay linh kiện)</option>
                                     <option value="COMPLETED_SUCCESS" ${record.status == 'COMPLETED' ? 'selected' : ''}>✅ Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)</option>
@@ -166,7 +166,7 @@
                                        placeholder="Ví dụ: Kỹ thuật viên Tektronix VN / FPT Services">
                             </div>
 
-                            <div class="form-group full-width">
+                            <div class="form-group full-width" id="repairResultField" style="display:none;">
                                 <label>Kết quả sửa chữa / Linh kiện thay thế</label>
                                 <textarea class="form-control" name="repairResult" rows="4"
                                           placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
@@ -177,6 +177,25 @@
                                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Hủy</a>
                             </div>
                         </form>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const progressStatusSelect = document.getElementById('progressStatusSelect');
+                                const repairResultField = document.getElementById('repairResultField');
+                                if (progressStatusSelect && repairResultField) {
+                                    function toggleRepairResult() {
+                                        const val = progressStatusSelect.value;
+                                        if (val === 'COMPLETED_SUCCESS' || val === 'COMPLETED_FAILED') {
+                                            repairResultField.style.display = 'block';
+                                        } else {
+                                            repairResultField.style.display = 'none';
+                                        }
+                                    }
+                                    progressStatusSelect.addEventListener('change', toggleRepairResult);
+                                    toggleRepairResult();
+                                }
+                            });
+                        </script>
                     </c:when>
 
                     <%-- FORM TẠO MỚI PHIẾU BẢO TRÌ --%>
