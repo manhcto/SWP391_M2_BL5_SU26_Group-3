@@ -15,7 +15,6 @@
         .timeline-dot.pending { background: #e2aa3d; }
         .timeline-dot.rejected { background: #c62828; }
         .timeline-dot.completed { background: #188255; }
-        .timeline-line { width: 2px; background: #edf0ec; flex-shrink: 0; margin: 0 6px; }
         .timeline-content { flex: 1; }
         .timeline-content small { font-size: 11px; color: #5a6662; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
@@ -38,12 +37,34 @@
                     <p>Chi tiết hồ sơ sửa chữa và trạng thái xử lý</p>
                 </div>
             </div>
-            <div class="topbar-actions">
+            <div class="topbar-actions" style="display:flex;gap:8px;">
+                <%-- NÚT SỬA VÀ HỦY KHI VẪN CÒN PENDING --%>
+                <c:if test="${record.status == 'PENDING' && record.requestedBy == currentUser.userId}">
+                    <a class="btn-secondary" style="background:#e5f3eb;color:#188255;border-color:#bce1ce;"
+                       href="${pageContext.request.contextPath}/mentor/maintenance/${record.maintenanceId}/edit">
+                        ✏️ Sửa đề xuất
+                    </a>
+                    <form method="post" action="${pageContext.request.contextPath}/mentor/maintenance"
+                          onsubmit="return confirm('Bạn có chắc chắn muốn hủy và xóa đề xuất bảo trì này?');" style="margin:0;">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="${record.maintenanceId}">
+                        <button class="btn-secondary" type="submit" style="background:#fde8e8;color:#c62828;border-color:#f8b4b4;">
+                            🗑️ Hủy yêu cầu
+                        </button>
+                    </form>
+                </c:if>
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Quay lại danh sách</a>
             </div>
         </header>
 
         <section class="content-area">
+            <c:if test="${param.success == 'created'}">
+                <div class="success-message">Đã tạo đề xuất bảo trì thành công. Chờ Lab Manager phê duyệt.</div>
+            </c:if>
+            <c:if test="${param.success == 'updated'}">
+                <div class="success-message">Đã cập nhật thông tin đề xuất bảo trì thành công.</div>
+            </c:if>
+
             <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;">
 
                 <%-- THÔNG TIN CHÍNH --%>
@@ -97,7 +118,7 @@
                                 <p><c:out value="${record.requesterName}"/></p>
                             </div>
                             <c:if test="${not empty record.incidentId}">
-                                <div class="info-item full-width">
+                                <div class="info-item full-width" style="grid-column:1/-1;">
                                     <label>Sự cố liên quan</label>
                                     <p>#INC-<c:out value="${record.incidentId}"/>
                                         <c:if test="${not empty record.incidentDescription}">
@@ -117,7 +138,7 @@
                     <c:if test="${record.status == 'IN_PROGRESS' || record.status == 'COMPLETED'}">
                         <article class="panel">
                             <div style="padding:16px 20px;border-bottom:1px solid #edf0ec;">
-                                <strong>Tiến độ &amp; Kết quả sửa chữa</strong>
+                                <strong>Tiến độ &amp; Kết quả sửa chữa (Do Lab Manager cập nhật)</strong>
                             </div>
                             <div class="info-grid">
                                 <div class="info-item">
@@ -199,7 +220,7 @@
                                     <div class="timeline-item">
                                         <div class="timeline-dot completed"></div>
                                         <div class="timeline-content">
-                                            <b>Hoàn tất sửa chữa – Nghiệm thu</b>
+                                            <b>Hoàn tất sửa chữa – Thiết bị về AVAILABLE</b>
                                             <br><small><c:out value="${app:dateTime(record.repairCompletedAt)}"/></small>
                                             <c:if test="${not empty record.repairResult}">
                                                 <br><small style="font-style:italic"><c:out value="${record.repairResult}"/></small>

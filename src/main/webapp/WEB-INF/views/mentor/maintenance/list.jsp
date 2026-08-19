@@ -50,7 +50,10 @@
                 <div class="success-message">Đã tạo phiếu đề xuất bảo trì thành công. Chờ Lab Manager phê duyệt.</div>
             </c:if>
             <c:if test="${param.success == 'updated'}">
-                <div class="success-message">Đã cập nhật tiến độ sửa chữa thành công.</div>
+                <div class="success-message">Đã cập nhật thông tin đề xuất bảo trì thành công.</div>
+            </c:if>
+            <c:if test="${param.success == 'deleted'}">
+                <div class="success-message">Đã hủy và xóa đề xuất bảo trì thành công.</div>
             </c:if>
 
             <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/mentor/maintenance">
@@ -139,7 +142,11 @@
                                         </td>
                                         <td>
                                             <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
-                                               href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}">Xem chi tiết</a>
+                                               href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}">Xem</a>
+                                            <c:if test="${r.status == 'PENDING' && r.requestedBy == currentUser.userId}">
+                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce"
+                                                   href="${pageContext.request.contextPath}/mentor/maintenance/${r.maintenanceId}/edit">Sửa</a>
+                                            </c:if>
                                         </td>
                                     </tr>
                                 </c:forEach>

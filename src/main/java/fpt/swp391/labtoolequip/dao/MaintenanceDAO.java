@@ -157,6 +157,51 @@ public class MaintenanceDAO {
 	}
 
 	/**
+	 * Mentor sửa đề xuất bảo trì khi và chỉ khi còn ở trạng thái PENDING.
+	 */
+	public void updatePending(long id, long userId, long assetId, Long incidentId, int quantity, String description)
+			throws SQLException {
+		if (description == null || description.isBlank()) {
+			throw new IllegalArgumentException("Vui lòng mô tả chi tiết tình trạng hỏng hóc.");
+		}
+		if (quantity < 1) {
+			throw new IllegalArgumentException("Số lượng phải lớn hơn 0.");
+		}
+		String sql = """
+				UPDATE dbo.maintenance_records
+				SET asset_id = ?, incident_id = ?, quantity = ?, description = ?, updated_at = SYSUTCDATETIME()
+				WHERE maintenance_id = ? AND requested_by = ? AND status = 'PENDING'
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, assetId);
+			setNullableLong(statement, 2, incidentId);
+			statement.setInt(3, quantity);
+			statement.setString(4, description.trim());
+			statement.setLong(5, id);
+			statement.setLong(6, userId);
+			if (statement.executeUpdate() != 1) {
+				throw new IllegalStateException("Chỉ có thể sửa yêu cầu bảo trì đang chờ phê duyệt của chính bạn.");
+			}
+		}
+	}
+
+	/**
+	 * Mentor hủy / xóa đề xuất bảo trì khi và chỉ khi còn ở trạng thái PENDING.
+	 */
+	public void deletePending(long id, long userId) throws SQLException {
+		String sql = "DELETE FROM dbo.maintenance_records WHERE maintenance_id = ? AND requested_by = ? AND status = 'PENDING'";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, id);
+			statement.setLong(2, userId);
+			if (statement.executeUpdate() != 1) {
+				throw new IllegalStateException("Chỉ có thể xóa yêu cầu bảo trì đang chờ phê duyệt của chính bạn.");
+			}
+		}
+	}
+
+	/**
 	 * Lab Manager phê duyệt hoặc từ chối yêu cầu bảo trì (chỉ khi PENDING). Khi
 	 * APPROVED: đổi trạng thái thiết bị sang MAINTENANCE.
 	 */
