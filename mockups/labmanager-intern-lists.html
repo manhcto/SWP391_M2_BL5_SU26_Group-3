@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Lab Usage Requests (FE-03) | LAB Asset</title>
+    <title>Intern Lists (FE-03) | LAB Asset</title>
     <link rel="stylesheet" href="assets/css/mentor-dashboard.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
             <span class="brand-mark"><img src="assets/images/fpt-university-logo.png" alt="FPT University"></span>
             <span><strong>LAB ASSET</strong><small>LAB MANAGER PORTAL</small></span>
         </a>
-        <nav class="side-nav"><a class="nav-link" href="labmanager-dashboard.html"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a><a class="nav-link active" href="labmanager-requests.html" aria-current="page"><svg><use href="#i-clipboard"/></svg><span>Lab Requests</span><span class="nav-count">6</span></a><a class="nav-link" href="labmanager-students.html"><svg><use href="#i-users"/></svg><span>Students</span></a><a class="nav-link" href="labmanager-assets.html"><svg><use href="#i-box"/></svg><span>Assets</span></a><a class="nav-link" href="labmanager-asset-usage.html"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a><a class="nav-link" href="labmanager-inspections.html"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a><a class="nav-link" href="labmanager-incidents.html"><svg><use href="#i-alert"/></svg><span>Incidents</span><span class="nav-dot"></span></a><a class="nav-link" href="labmanager-responsibilities.html"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a><a class="nav-link" href="labmanager-maintenance.html"><svg><use href="#i-wrench"/></svg><span>Maintenance</span><span class="nav-count">3</span></a><a class="nav-link" href="labmanager-disposal.html"><svg><use href="#i-trash"/></svg><span>Disposal</span><span class="nav-count">2</span></a><a class="nav-link" href="labmanager-semesters.html"><svg><use href="#i-clock"/></svg><span>Semesters</span></a><a class="nav-link" href="labmanager-profile.html"><svg><use href="#i-users"/></svg><span>My Profile</span></a></nav>
+        <nav class="side-nav"><a class="nav-link" href="labmanager-dashboard.html"><svg><use href="#i-grid"/></svg><span>Dashboard</span></a><a class="nav-link active" href="labmanager-intern-lists.html" aria-current="page"><svg><use href="#i-clipboard"/></svg><span>Intern Lists</span><span class="nav-count">6</span></a><a class="nav-link" href="labmanager-students.html"><svg><use href="#i-users"/></svg><span>Students</span></a><a class="nav-link" href="labmanager-assets.html"><svg><use href="#i-box"/></svg><span>Assets</span></a><a class="nav-link" href="labmanager-asset-usage.html"><svg><use href="#i-calendar"/></svg><span>Asset Usage</span></a><a class="nav-link" href="labmanager-inspections.html"><svg><use href="#i-inspect"/></svg><span>Inspections</span></a><a class="nav-link" href="labmanager-incidents.html"><svg><use href="#i-alert"/></svg><span>Incidents</span><span class="nav-dot"></span></a><a class="nav-link" href="labmanager-responsibilities.html"><svg><use href="#i-list"/></svg><span>Responsibilities</span></a><a class="nav-link" href="labmanager-maintenance.html"><svg><use href="#i-wrench"/></svg><span>Maintenance</span><span class="nav-count">3</span></a><a class="nav-link" href="labmanager-disposal.html"><svg><use href="#i-trash"/></svg><span>Disposal</span><span class="nav-count">2</span></a><a class="nav-link" href="labmanager-semesters.html"><svg><use href="#i-clock"/></svg><span>Semesters</span></a><a class="nav-link" href="labmanager-profile.html"><svg><use href="#i-users"/></svg><span>My Profile</span></a></nav>
         <div class="sidebar-footer">
             <div class="profile-card"><div class="avatar avatar-lg">LM</div><div class="profile-copy"><strong>Pham Quang Dung</strong><span><i></i> Online</span></div><svg class="chevron-down" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></div>
             <a class="sign-out" href="index.html"><svg><use href="#i-logout"/></svg><span>Sign out</span></a>
@@ -41,7 +41,7 @@
     <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close navigation"></button>
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>Lab Usage Requests Management (FE-03)</h1><p>Review and approve mentor proposals for lab access & equipment quota</p></div></div>
+            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Open navigation"><svg><use href="#i-menu"/></svg></button><div><h1>Intern Lists Management (FE-03)</h1><p>Review and approve mentor proposals for lab access & equipment quota</p></div></div>
             <div class="topbar-actions">
                 <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Search..." aria-label="Search"></label>
                 <button class="icon-button notification" type="button" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span>3</span></button>
@@ -50,17 +50,17 @@
         </header>
         <section class="content-area">
 
-            <div class="content-heading"><div><p class="eyebrow">FE-03 APPROVALS</p><h2>Submitted Lab Requests (6)</h2></div></div>
+            <div class="content-heading"><div><p class="eyebrow">FE-03 APPROVALS</p><h2>Submitted Intern Lists (6)</h2></div></div>
             <div class="filter-bar">
                 <div class="filter-group">
-                    <input class="form-control" type="search" placeholder="Search request code or mentor..." style="width: 220px;">
+                    <input class="form-control" type="search" placeholder="Search intern list code or mentor..." style="width: 220px;">
                     <select class="form-control"><option value="">All Semesters</option><option value="FA26" selected>Fall 2026 (FA26)</option><option value="SU26">Summer 2026 (SU26)</option></select>
                     <select class="form-control"><option value="">All Status</option><option value="PENDING" selected>Pending Review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select>
                 </div>
             </div>
             <article class="panel">
                 <div class="table-scroll">
-                    <table><thead><tr><th>Request Code</th><th>Mentor</th><th>Semester</th><th>Students List</th><th>Requested Date</th><th>Status</th><th style="text-align: right;">Approval Actions</th></tr></thead>
+                    <table><thead><tr><th>Intern List Code</th><th>Mentor</th><th>Semester</th><th>Students List</th><th>Submitted Date</th><th>Status</th><th style="text-align: right;">Actions</th></tr></thead>
                     <tbody>
                         <tr><td><strong>#REQ-FA26-001</strong></td><td><span class="student"><i>MA</i><b>Nguyen Minh Anh</b></span></td><td><span class="badge badge-blue">FA26</span></td><td>12 students (Group IoT-01)</td><td>15/08/2026</td><td><span class="status review">PENDING</span></td><td style="text-align: right;"><button class="btn-secondary" style="height:24px; padding:0 8px; font-size:8.5px; background:#e5f3eb; color:#188255; border-color:#bce1ce;">Approve</button> <button class="btn-danger" style="height:24px; padding:0 8px; font-size:8.5px;">Reject</button></td></tr>
                         <tr><td><strong>#REQ-FA26-002</strong></td><td><span class="student"><i>TH</i><b>Tran Van Hung</b></span></td><td><span class="badge badge-blue">FA26</span></td><td>18 students (AI Robotics)</td><td>14/08/2026</td><td><span class="status review">PENDING</span></td><td style="text-align: right;"><button class="btn-secondary" style="height:24px; padding:0 8px; font-size:8.5px; background:#e5f3eb; color:#188255; border-color:#bce1ce;">Approve</button> <button class="btn-danger" style="height:24px; padding:0 8px; font-size:8.5px;">Reject</button></td></tr>
@@ -69,8 +69,8 @@
                     </tbody></table>
                 </div>
                 <div class="table-footer">
-                    <div class="page-size-selector"><span>Show</span><select class="form-control" style="width: auto; height: 26px;"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select><span>requests per page</span></div>
-                    <span>Showing 1 to 4 of 6 requests</span>
+                    <div class="page-size-selector"><span>Show</span><select class="form-control" style="width: auto; height: 26px;"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option></select><span>intern lists per page</span></div>
+                    <span>Showing 1 to 4 of 6 intern lists</span>
                     <div class="pagination-controls"><button class="page-btn" disabled>‹</button><button class="page-btn active">1</button><button class="page-btn">2</button><button class="page-btn">›</button></div>
                 </div>
             </article>

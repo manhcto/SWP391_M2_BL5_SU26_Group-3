@@ -1,54 +1,75 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ taglib prefix="c" uri="jakarta.tags.core"%>
-<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Quản lý bảo trì (FE-08) | LAB Asset</title>
+    <title>Quản lý bảo trì thiết bị | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
 <body class="lab-manager-page">
 <c:set var="activeMenu" value="maintenance" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../includes/sidebar.jspf"%>
-
+    <%@ include file="../includes/sidebar.jspf" %>
     <main class="main-content">
         <header class="topbar">
-            <div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1>Phê duyệt bảo trì và sửa chữa (FE-08)</h1><p>Phê duyệt đề xuất sửa chữa, dự toán chi phí và phân công kỹ thuật viên</p></div></div>
+            <div class="heading-wrap">
+                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng">
+                    <svg><use href="#i-menu"/></svg>
+                </button>
+                <div>
+                    <h1>Phê duyệt &amp; Giám sát bảo trì</h1>
+                    <p>Duyệt yêu cầu bảo trì, giám sát tiến độ sửa chữa và nghiệm thu kết quả</p>
+                </div>
+            </div>
             <div class="topbar-actions">
-                <label class="search-box"><svg><use href="#i-search"/></svg><input type="search" placeholder="Tìm phiếu bảo trì..." aria-label="Tìm kiếm"></label>
-                <button class="icon-button notification" type="button" aria-label="Thông báo"><svg><use href="#i-bell"/></svg><span>3</span></button>
-                <div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div>
+                <div class="top-profile">
+                    <div class="avatar">LM</div>
+                    <span><c:out value="${currentUser.fullName}"/></span>
+                </div>
             </div>
         </header>
 
         <section class="content-area">
             <div class="content-heading">
-                <div><p class="eyebrow">FE-08 BẢO TRÌ</p><h2>Danh sách yêu cầu bảo trì (${records.size()})</h2></div>
-                <a class="primary-button" href="${pageContext.request.contextPath}/labmanager/maintenance/add"><svg><use href="#i-wrench"/></svg>+ Tạo phiếu sửa chữa</a>
+                <div>
+                    <p class="eyebrow">FE-08 BẢO TRÌ</p>
+                    <h2>Toàn bộ phiếu bảo trì (${records.size()})</h2>
+                </div>
             </div>
 
-            <c:if test="${param.success == 'created'}"><div style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">✓ Phiếu bảo trì đã được tạo và lưu vào hệ thống!</div></c:if>
-            <c:if test="${param.success == 'approved'}"><div style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">✓ Quyết định phê duyệt/từ chối đã được xử lý!</div></c:if>
-            <c:if test="${param.success == 'updated'}"><div style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">✓ Cập nhật tiến độ kỹ thuật thành công!</div></c:if>
+            <c:if test="${not empty message}">
+                <div class="error-message"><c:out value="${message}"/></div>
+            </c:if>
+            <c:if test="${param.success == 'approved'}">
+                <div class="success-message">Đã phê duyệt yêu cầu bảo trì. Thiết bị chuyển sang trạng thái Đang bảo trì.</div>
+            </c:if>
+            <c:if test="${param.success == 'rejected'}">
+                <div class="success-message">Đã từ chối yêu cầu bảo trì.</div>
+            </c:if>
+            <c:if test="${param.success == 'updated'}">
+                <div class="success-message">Đã cập nhật tiến độ sửa chữa thành công.</div>
+            </c:if>
 
-            <div class="filter-bar">
-                <form method="get" action="${pageContext.request.contextPath}/labmanager/maintenance" class="filter-group">
-                    <input class="form-control" type="search" name="keyword" value="<c:out value='${keyword}'/>" placeholder="Tìm thiết bị hoặc sự cố..." style="width: 240px;">
+            <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/lab-manager/maintenance">
+                <div class="filter-group">
+                    <input class="form-control" type="search" name="keyword"
+                           value="<c:out value='${keyword}'/>"
+                           placeholder="Tìm theo mã phiếu, tên thiết bị, người yêu cầu..." style="width:300px">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="PENDING" ${selectedStatus == 'PENDING' ? 'selected' : ''}>Chờ duyệt</option>
-                        <option value="APPROVED" ${selectedStatus == 'APPROVED' ? 'selected' : ''}>Đã duyệt</option>
-                        <option value="IN_PROGRESS" ${selectedStatus == 'IN_PROGRESS' ? 'selected' : ''}>Đang sửa chữa</option>
-                        <option value="COMPLETED" ${selectedStatus == 'COMPLETED' ? 'selected' : ''}>Đã sửa xong</option>
-                        <option value="REJECTED" ${selectedStatus == 'REJECTED' ? 'selected' : ''}>Đã từ chối</option>
+                        <option value="PENDING"      ${selectedStatus == 'PENDING'      ? 'selected' : ''}>Chờ duyệt</option>
+                        <option value="APPROVED"     ${selectedStatus == 'APPROVED'     ? 'selected' : ''}>Đã duyệt</option>
+                        <option value="IN_PROGRESS"  ${selectedStatus == 'IN_PROGRESS'  ? 'selected' : ''}>Đang sửa chữa</option>
+                        <option value="COMPLETED"    ${selectedStatus == 'COMPLETED'    ? 'selected' : ''}>Hoàn tất</option>
+                        <option value="REJECTED"     ${selectedStatus == 'REJECTED'     ? 'selected' : ''}>Bị từ chối</option>
                     </select>
-                    <button class="primary-button" type="submit" style="height: 36px; padding: 0 16px;">Lọc</button>
-                    <a class="btn-secondary" href="${pageContext.request.contextPath}/labmanager/maintenance" style="height: 36px;">Đặt lại</a>
-                </form>
-            </div>
+                    <button class="primary-button" type="submit">Tìm kiếm</button>
+                    <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Đặt lại</a>
+                </div>
+            </form>
 
             <article class="panel">
                 <c:choose>
@@ -56,8 +77,7 @@
                         <div class="empty-box">
                             <div class="empty-box-icon"><svg><use href="#i-wrench"/></svg></div>
                             <h3>Chưa có phiếu bảo trì nào</h3>
-                            <p>Hiện chưa có yêu cầu sửa chữa hoặc bảo trì thiết bị nào được gửi trong hệ thống.</p>
-                            <a class="primary-button" href="${pageContext.request.contextPath}/labmanager/maintenance/add">+ Tạo phiếu bảo trì ngay</a>
+                            <p>Khi Mentor gửi đề xuất bảo trì thiết bị, các phiếu sẽ xuất hiện ở đây để bạn phê duyệt.</p>
                         </div>
                     </c:when>
                     <c:otherwise>
@@ -66,46 +86,75 @@
                                 <thead>
                                 <tr>
                                     <th>Mã phiếu</th>
-                                    <th>Tên / Mã thiết bị</th>
-                                    <th>Người yêu cầu</th>
-                                    <th>Mô tả / Sự cố</th>
-                                    <th>Ngày yêu cầu</th>
+                                    <th>Thiết bị</th>
+                                    <th>SL</th>
+                                    <th>Người đề xuất</th>
+                                    <th>Mô tả hỏng hóc</th>
+                                    <th>Ngày gửi</th>
                                     <th>Trạng thái</th>
-                                    <th>Người phê duyệt</th>
-                                    <th style="text-align: right;">Thao tác</th>
+                                    <th>Thao tác</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <c:forEach var="m" items="${records}">
+                                <c:forEach var="r" items="${records}">
                                     <tr>
-                                        <td><strong>#MNT-${m.maintenanceId}</strong></td>
-                                        <td><b><c:out value="${m.assetName}"/></b><br><small style="color:#8a938f;"><c:out value="${m.assetCode}"/></small></td>
-                                        <td><c:out value="${m.requesterName}"/></td>
-                                        <td><c:out value="${m.description}"/></td>
-                                        <td><c:out value="${app:dateTime(m.requestedAt)}"/></td>
+                                        <td><strong>#MNT-<c:out value="${r.maintenanceId}"/></strong></td>
+                                        <td>
+                                            <c:out value="${r.assetName}"/>
+                                            <small style="display:block;color:#5a6662"><c:out value="${r.assetCode}"/></small>
+                                        </td>
+                                        <td><c:out value="${r.quantity}"/></td>
+                                        <td><c:out value="${r.requesterName}"/></td>
+                                        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                            <c:out value="${r.description}"/>
+                                        </td>
+                                        <td><c:out value="${app:dateTime(r.requestedAt)}"/></td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${m.status == 'PENDING'}"><span class="status review">Chờ duyệt</span></c:when>
-                                                <c:when test="${m.status == 'APPROVED'}"><span class="badge badge-gold">Đã duyệt</span></c:when>
-                                                <c:when test="${m.status == 'IN_PROGRESS'}"><span class="badge badge-blue">Đang sửa chữa</span></c:when>
-                                                <c:when test="${m.status == 'COMPLETED'}"><span class="status returned">Hoàn tất</span></c:when>
-                                                <c:otherwise><span class="badge badge-red"><c:out value="${app:label(m.status)}"/></span></c:otherwise>
+                                                <c:when test="${r.status == 'PENDING'}">
+                                                    <span class="status review">Chờ duyệt</span>
+                                                </c:when>
+                                                <c:when test="${r.status == 'APPROVED'}">
+                                                    <span class="status in-use">Đã duyệt</span>
+                                                </c:when>
+                                                <c:when test="${r.status == 'IN_PROGRESS'}">
+                                                    <span class="status maintenance">Đang sửa</span>
+                                                </c:when>
+                                                <c:when test="${r.status == 'COMPLETED'}">
+                                                     <c:choose>
+                                                         <c:when test="${r.assetStatus == 'UNAVAILABLE'}">
+                                                             <span class="status overdue">Sửa thất bại</span>
+                                                         </c:when>
+                                                         <c:otherwise>
+                                                             <span class="status returned">Đã sửa xong</span>
+                                                         </c:otherwise>
+                                                     </c:choose>
+                                                 </c:when>
+                                                <c:when test="${r.status == 'REJECTED'}">
+                                                    <span class="status overdue">Từ chối</span>
+                                                </c:when>
                                             </c:choose>
                                         </td>
-                                        <td><c:out value="${m.approverName}" default="—"/></td>
-                                        <td style="text-align: right;">
-                                            <a class="btn-action" href="${pageContext.request.contextPath}/labmanager/maintenance/view?id=${m.maintenanceId}">Xem</a>
-                                            <a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/labmanager/maintenance/edit?id=${m.maintenanceId}">Cập nhật / Phê duyệt</a>
+                                        <td style="white-space:nowrap;">
+                                            <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px"
+                                               href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}">Xem</a>
+                                            <c:if test="${r.status == 'PENDING'}">
+                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e5f3eb;color:#188255;border-color:#bce1ce;font-weight:600;"
+                                                   href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
+                                                    ⚡ Duyệt
+                                                </a>
+                                            </c:if>
+                                            <c:if test="${r.status == 'APPROVED' || r.status == 'IN_PROGRESS'}">
+                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-color:#aecbfa;font-weight:600;"
+                                                   href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
+                                                    ✏️ Cập nhật
+                                                </a>
+                                            </c:if>
                                         </td>
                                     </tr>
                                 </c:forEach>
                                 </tbody>
                             </table>
-                        </div>
-                        <div class="table-footer">
-                            <div class="page-size-selector"><span>Hiển thị</span><select class="form-control" style="width: auto; height: 28px;"><option value="10" selected>10</option><option value="25">25</option></select><span>bản ghi mỗi trang</span></div>
-                            <span>Hiển thị 1 đến ${records.size()} trong tổng số ${records.size()} bản ghi</span>
-                            <div class="pagination-controls"><button class="page-btn" disabled>‹</button><button class="page-btn active">1</button><button class="page-btn">›</button></div>
                         </div>
                     </c:otherwise>
                 </c:choose>

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class Incident {
 	private Long incidentId;
 	private Long assetId;
+	private Long assetItemId;
 	private Long assetUsageId;
 	private Long inspectionItemId;
 	private Long reportedBy;
@@ -21,6 +22,7 @@ public class Incident {
 	private LocalDateTime updatedAt;
 	private String assetCode;
 	private String assetName;
+	private String assetItemCode;
 	private String reporterName;
 	private String internCode;
 	private String internName;
@@ -64,6 +66,14 @@ public class Incident {
 
 	public void setAssetId(Long assetId) {
 		this.assetId = assetId;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
 	}
 
 	public Long getAssetUsageId() {
@@ -192,6 +202,14 @@ public class Incident {
 
 	public void setAssetName(String assetName) {
 		this.assetName = assetName;
+	}
+
+	public String getAssetItemCode() {
+		return assetItemCode;
+	}
+
+	public void setAssetItemCode(String assetItemCode) {
+		this.assetItemCode = assetItemCode;
 	}
 
 	public String getReporterName() {

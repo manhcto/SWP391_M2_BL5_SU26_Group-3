@@ -1,9 +1,7 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
-import fpt.swp391.labtoolequip.common.EmailHelper;
 import fpt.swp391.labtoolequip.dao.MajorDAO;
 import fpt.swp391.labtoolequip.dao.UserDAO;
-import fpt.swp391.labtoolequip.model.Major;
 import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -12,14 +10,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import org.mindrot.jbcrypt.BCrypt;
+import java.util.*;
 
-@WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit", "/admin/users/import",
-		"/admin/users/toggle-status", "/admin/users/change-role"})
+@WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit", "/admin/users/toggle-status",
+		"/admin/users/change-role"})
 public class UserController extends HttpServlet {
 	private static final Set<String> ROLES = Set.of("ADMIN", "LAB_MANAGER", "MENTOR", "INTERN");
 	private static final Set<String> STATUSES = Set.of("ACTIVE", "INACTIVE");
@@ -38,7 +32,6 @@ public class UserController extends HttpServlet {
 				case "/admin/users/view" -> showDetail(request, response);
 				case "/admin/users/add" -> showAddForm(request, response);
 				case "/admin/users/edit" -> showEditForm(request, response);
-				case "/admin/users/import" -> showImportForm(request, response);
 				case "/admin/users/toggle-status" -> toggleStatus(request, response);
 				case "/admin/users/change-role" -> changeRole(request, response);
 				default -> showList(request, response);
@@ -56,7 +49,6 @@ public class UserController extends HttpServlet {
 			switch (request.getServletPath()) {
 				case "/admin/users/add" -> createUser(request, response);
 				case "/admin/users/edit" -> updateUser(request, response);
-				case "/admin/users/import" -> importBatchUsers(request, response);
 				case "/admin/users/toggle-status" -> toggleStatus(request, response);
 				default -> response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			}
@@ -73,7 +65,9 @@ public class UserController extends HttpServlet {
 		String keyword = trim(request.getParameter("keyword"));
 		String role = normalize(request.getParameter("role"));
 		String status = normalize(request.getParameter("status"));
+
 		request.setAttribute("users", userDAO.findAll(keyword, role, status));
+
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedRole", role);
 		request.setAttribute("selectedStatus", status);
@@ -119,12 +113,7 @@ public class UserController extends HttpServlet {
 		}
 		request.setAttribute("user", user);
 		request.setAttribute("formMode", "edit");
-		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
-	}
-
-	private void showImportForm(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
-		request.setAttribute("formMode", "import");
+		request.setAttribute("majors", majorDAO.findActive());
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
@@ -141,20 +130,13 @@ public class UserController extends HttpServlet {
 	private void createUser(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		User user = extractUser(request);
-		if (user.getEmail().isBlank()) {
-			user.setEmail(EmailHelper.generateFptEmail(user.getFullName(), user.getStudentCode(),
-					"INTERN".equals(user.getRole())));
-		}
-		List<String> errors = validate(user);
+		List<String> errors = validate(user, true);
+
 		if (!errors.isEmpty()) {
 			forwardWithErrors(request, response, user, errors, "add");
 			return;
 		}
 
-		String rawPassword = trim(request.getParameter("password"));
-		if (!rawPassword.isEmpty()) {
-			user.setPasswordHash(BCrypt.hashpw(rawPassword, BCrypt.gensalt()));
-		}
 		userDAO.create(user);
 		response.sendRedirect(request.getContextPath() + "/admin/users?success=created");
 	}
@@ -171,92 +153,39 @@ public class UserController extends HttpServlet {
 			return;
 		}
 
+		String fullName = trim(request.getParameter("fullName"));
 		String role = normalize(request.getParameter("role"));
 		String status = normalize(request.getParameter("status"));
+		String studentCode = trim(request.getParameter("studentCode"));
+		Long majorId = optionalLong(request.getParameter("majorId"));
+		String cohort = trim(request.getParameter("cohort"));
+
+		// Quy tắc nghiệp vụ: INTERN và ADMIN không thể đổi sang vai trò khác
 		if ("INTERN".equals(user.getRole()) || "ADMIN".equals(user.getRole())) {
 			role = user.getRole();
-		} else if (("MENTOR".equals(user.getRole()) || "LAB_MANAGER".equals(user.getRole()))
-				&& !Set.of("MENTOR", "LAB_MANAGER").contains(role)) {
-			role = user.getRole();
+		} else if ("MENTOR".equals(user.getRole()) || "LAB_MANAGER".equals(user.getRole())) {
+			if (!"MENTOR".equals(role) && !"LAB_MANAGER".equals(role)) {
+				role = user.getRole();
+			}
 		}
 
-		List<String> errors = new ArrayList<>();
-		if (!ROLES.contains(role)) {
-			errors.add("Vai trò không hợp lệ.");
+		user.setFullName(fullName);
+		user.setRole(role);
+		user.setStatus(status);
+		if ("INTERN".equals(user.getRole())) {
+			user.setStudentCode(studentCode);
+			user.setMajorId(majorId);
+			user.setCohort(cohort);
 		}
-		if (!STATUSES.contains(status)) {
-			errors.add("Trạng thái không hợp lệ.");
-		}
+
+		List<String> errors = validate(user, false);
 		if (!errors.isEmpty()) {
-			user.setRole(role);
-			user.setStatus(status);
 			forwardWithErrors(request, response, user, errors, "edit");
 			return;
 		}
 
-		userDAO.updateRoleAndStatus(userId, role, status);
+		userDAO.update(user);
 		response.sendRedirect(request.getContextPath() + "/admin/users?success=updated");
-	}
-
-	private void importBatchUsers(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		String importData = request.getParameter("importData");
-		String targetRole = normalize(request.getParameter("targetRole"));
-		if (!Set.of("INTERN", "MENTOR", "LAB_MANAGER").contains(targetRole)) {
-			targetRole = "INTERN";
-		}
-		if (importData == null || importData.isBlank()) {
-			request.setAttribute("errors", List.of("Vui lòng nhập dữ liệu cần import."));
-			request.setAttribute("formMode", "import");
-			request.getRequestDispatcher(FORM_VIEW).forward(request, response);
-			return;
-		}
-
-		List<Major> majors = majorDAO.findActive();
-		List<User> users = new ArrayList<>();
-		for (String line : importData.split("\\r?\\n")) {
-			String[] values = line.trim().contains("\t") ? line.trim().split("\t") : line.trim().split("[,;]");
-			if (line.isBlank() || line.trim().startsWith("#") || values.length == 0 || values[0].isBlank()) {
-				continue;
-			}
-			String fullName = values[0].trim();
-			String studentCode = "INTERN".equals(targetRole) && values.length > 1 ? values[1].trim() : "";
-			String email = "";
-			String major = "Software Engineering";
-			String cohort = "K16";
-			if ("INTERN".equals(targetRole)) {
-				if (values.length > 2 && values[2].contains("@")) {
-					email = values[2].trim().toLowerCase(Locale.ROOT);
-					major = values.length > 3 ? values[3].trim() : major;
-					cohort = values.length > 4 ? values[4].trim() : cohort;
-				} else {
-					major = values.length > 2 ? values[2].trim() : major;
-					cohort = values.length > 3 ? values[3].trim() : cohort;
-					email = values.length > 4 && values[4].contains("@")
-							? values[4].trim().toLowerCase(Locale.ROOT)
-							: EmailHelper.generateFptEmail(fullName, studentCode, true);
-				}
-			} else if (values.length > 1 && values[1].contains("@")) {
-				email = values[1].trim().toLowerCase(Locale.ROOT);
-			} else {
-				email = values.length > 2 && values[2].contains("@")
-						? values[2].trim().toLowerCase(Locale.ROOT)
-						: EmailHelper.generateFptEmail(fullName, "", false);
-			}
-
-			User user = new User();
-			user.setFullName(fullName);
-			user.setStudentCode(studentCode.isEmpty() ? null : studentCode);
-			user.setEmail(email);
-			user.setMajorId("INTERN".equals(targetRole) ? matchingMajorId(majors, major) : null);
-			user.setCohort("INTERN".equals(targetRole) ? cohort : null);
-			user.setRole(targetRole);
-			user.setStatus("ACTIVE");
-			users.add(user);
-		}
-
-		int imported = userDAO.batchCreate(users);
-		response.sendRedirect(request.getContextPath() + "/admin/users?success=imported&count=" + imported);
 	}
 
 	private void changeRole(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {
@@ -264,6 +193,7 @@ public class UserController extends HttpServlet {
 		if (response.isCommitted()) {
 			return;
 		}
+
 		String newRole = normalize(request.getParameter("role"));
 		if ("MENTOR".equals(newRole) || "LAB_MANAGER".equals(newRole)) {
 			userDAO.updateRole(userId, newRole);
@@ -285,7 +215,7 @@ public class UserController extends HttpServlet {
 		return user;
 	}
 
-	private List<String> validate(User user) throws SQLException {
+	private List<String> validate(User user, boolean isAdd) throws SQLException {
 		List<String> errors = new ArrayList<>();
 		if (user.getFullName().isEmpty()) {
 			errors.add("Họ và tên không được để trống.");
@@ -296,21 +226,43 @@ public class UserController extends HttpServlet {
 		if (!STATUSES.contains(user.getStatus())) {
 			errors.add("Trạng thái không hợp lệ.");
 		}
+
+		// Validate Email
 		if (user.getEmail().isEmpty()) {
 			errors.add("Email không được để trống.");
-		} else if ("INTERN".equals(user.getRole())) {
-			if (!user.getEmail().toLowerCase(Locale.ROOT).endsWith("@fpt.edu.vn")) {
-				errors.add("Email của thực tập sinh bắt buộc phải có đuôi @fpt.edu.vn.");
+		} else {
+			if ("INTERN".equals(user.getRole())) {
+				if (!user.getEmail().toLowerCase().endsWith("@fpt.edu.vn")) {
+					errors.add("Email của thực tập sinh bắt buộc phải có đuôi @fpt.edu.vn.");
+				}
+			} else {
+				// MENTOR / LAB_MANAGER / ADMIN: chấp nhận email thường (@gmail.com, v.v.)
+				if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
+					errors.add("Email không đúng định dạng hợp lệ.");
+				}
 			}
-		} else if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
-			errors.add("Email không đúng định dạng hợp lệ.");
 		}
-		if ("INTERN".equals(user.getRole()) && user.getStudentCode().isEmpty()) {
-			errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
+
+		if (isAdd && userDAO.findByEmail(user.getEmail()).isPresent()) {
+			errors.add("Email này đã tồn tại trong hệ thống.");
 		}
-		if ("INTERN".equals(user.getRole()) && user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
-			errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");
+
+		if ("INTERN".equals(user.getRole())) {
+			if (user.getStudentCode() == null || user.getStudentCode().isEmpty()) {
+				errors.add("Mã sinh viên là bắt buộc đối với thực tập sinh.");
+			} else {
+				Optional<User> existingStudent = userDAO.findByStudentCode(user.getStudentCode());
+				if (existingStudent.isPresent()) {
+					if (isAdd || existingStudent.get().getUserId() != user.getUserId()) {
+						errors.add("Mã sinh viên này đã được sử dụng bởi người dùng khác.");
+					}
+				}
+			}
+			if (user.getMajorId() != null && !majorDAO.isActive(user.getMajorId())) {
+				errors.add("Chuyên ngành không hợp lệ hoặc đã ngừng sử dụng.");
+			}
 		}
+
 		return errors;
 	}
 
@@ -321,14 +273,6 @@ public class UserController extends HttpServlet {
 		request.setAttribute("formMode", formMode);
 		request.setAttribute("majors", majorDAO.findActive());
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
-	}
-
-	private Long matchingMajorId(List<Major> majors, String value) {
-		String major = trim(value);
-		return majors.stream()
-				.filter(candidate -> major.equalsIgnoreCase(candidate.getMajorCode())
-						|| major.equalsIgnoreCase(candidate.getMajorName()))
-				.map(Major::getMajorId).findFirst().orElse(null);
 	}
 
 	private long requireId(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -361,6 +305,6 @@ public class UserController extends HttpServlet {
 	}
 
 	private String normalize(String value) {
-		return trim(value).toUpperCase(Locale.ROOT);
+		return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
 	}
 }

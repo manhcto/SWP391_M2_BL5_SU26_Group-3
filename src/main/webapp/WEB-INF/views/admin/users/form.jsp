@@ -46,18 +46,18 @@
 
             <article class="panel">
                 <c:choose>
-                    <%-- CHẾ ĐỘ CHỈNH SỬA (EDIT): CHỈ CHO ĐỔI ROLE VÀ STATUS, KHÓA TOÀN BỘ THÔNG TIN ĐỊNH DANH --%>
+                    <%-- CHẾ ĐỘ CHỈNH SỬA (EDIT USER) --%>
                     <c:when test="${formMode == 'edit'}">
                         <form method="post" action="${pageContext.request.contextPath}/admin/users/edit" class="form-grid">
                             <input type="hidden" name="id" value="${user.userId}">
 
                             <div class="form-group full-width" style="padding: 10px 14px; background: #fafbf9; border: 1px dashed #d5dbd7; border-radius: 6px;">
-                                <span style="font-size: 11.5px; color: #55605c;">🔒 <b>Quy tắc nghiệp vụ:</b> Quản trị viên chỉ có quyền chuyển đổi vai trò và trạng thái. Các thông tin định danh cá nhân không được phép chỉnh sửa.</span>
+                                <span style="font-size: 11.5px; color: #55605c;">✏️ <b>Cập nhật thông tin:</b> Quản trị viên có thể chỉnh sửa Họ tên, Mã sinh viên, Chuyên ngành, Khóa, Vai trò và Trạng thái. Email đăng nhập Google OAuth2 được giữ cố định.</span>
                             </div>
 
                             <div class="form-group">
-                                <label>Họ và tên <span class="lock-badge">🔒 Cố định</span></label>
-                                <input class="form-control readonly-field" type="text" value="<c:out value='${user.fullName}'/>" readonly disabled>
+                                <label>Họ và tên *</label>
+                                <input class="form-control" type="text" name="fullName" value="<c:out value='${user.fullName}'/>" required placeholder="Nhập họ và tên...">
                             </div>
 
                             <div class="form-group">
@@ -65,14 +65,25 @@
                                 <input class="form-control readonly-field" type="email" value="<c:out value='${user.email}'/>" readonly disabled>
                             </div>
 
-                            <c:if test="${not empty user.studentCode}">
+                            <c:if test="${user.role == 'INTERN' || not empty user.studentCode}">
                                 <div class="form-group">
-                                    <label>Mã sinh viên <span class="lock-badge">🔒 Cố định</span></label>
-                                    <input class="form-control readonly-field" type="text" value="<c:out value='${user.studentCode}'/>" readonly disabled>
+                                    <label>Mã sinh viên *</label>
+                                    <input class="form-control" type="text" name="studentCode" value="<c:out value='${user.studentCode}'/>" required placeholder="Ví dụ: SE160123">
                                 </div>
                                 <div class="form-group">
-                                    <label>Chuyên ngành & Khóa <span class="lock-badge">🔒 Cố định</span></label>
-                                    <input class="form-control readonly-field" type="text" value="<c:out value='${user.major}' default='Software Engineering'/> (<c:out value='${user.cohort}' default='K16'/>)" readonly disabled>
+                                    <label>Chuyên ngành</label>
+                                    <select class="form-control" name="majorId">
+                                        <option value="">-- Chọn chuyên ngành --</option>
+                                        <c:forEach var="major" items="${majors}">
+                                            <option value="${major.majorId}" ${user.majorId == major.majorId ? 'selected' : ''}>
+                                                <c:out value="${major.majorCode}"/> - <c:out value="${major.majorName}"/>
+                                            </option>
+                                        </c:forEach>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Khóa</label>
+                                    <input class="form-control" type="text" name="cohort" value="<c:out value='${user.cohort}'/>" placeholder="Ví dụ: K16">
                                 </div>
                             </c:if>
 

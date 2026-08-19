@@ -1,7 +1,6 @@
 package fpt.swp391.labtoolequip.controller.mentor;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
-import fpt.swp391.labtoolequip.dao.AssetDAO;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
 import jakarta.servlet.ServletException;
@@ -11,107 +10,133 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 
-@WebServlet({"/mentor/maintenance", "/mentor/maintenance/view", "/mentor/maintenance/add"})
+@WebServlet("/mentor/maintenance/*")
 public class MentorMaintenanceController extends HttpServlet {
-	private static final String LIST_VIEW = "/WEB-INF/views/mentor/maintenance/list.jsp";
-	private static final String DETAIL_VIEW = "/WEB-INF/views/mentor/maintenance/detail.jsp";
-	private static final String FORM_VIEW = "/WEB-INF/views/mentor/maintenance/form.jsp";
-
-	private final MaintenanceDAO maintenanceDAO = new MaintenanceDAO();
-	private final AssetDAO assetDAO = new AssetDAO();
+	private final MaintenanceDAO dao = new MaintenanceDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			switch (request.getServletPath()) {
-				case "/mentor/maintenance/view" -> showDetail(request, response);
-				case "/mentor/maintenance/add" -> showAddForm(request, response);
-				default -> showList(request, response);
+			String path = request.getPathInfo();
+
+			// /mentor/maintenance/new -> Form tạo đề xuất bảo trì mới
+			if ("/new".equals(path)) {
+				request.setAttribute("assets", dao.findEligibleAssets());
+				request.setAttribute("incidents", dao.findOpenIncidents());
+				request.setAttribute("formMode", "create");
+				forward(request, response, "form.jsp");
+				return;
 			}
-		} catch (SQLException ex) {
-			handleError(request, response, ex);
+
+			// /mentor/maintenance/123/edit -> Form sửa đề xuất bảo trì khi còn PENDING
+			if (path != null && path.matches("/\\d+/edit")) {
+				long id = Long.parseLong(path.substring(1, path.lastIndexOf('/')));
+				MaintenanceRecord record = dao.findById(id).orElseThrow();
+				// Chỉ người tạo mới được sửa
+				if (!record.getRequestedBy().equals(AuthSession.userId(request))) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
+				// Chỉ được sửa khi còn PENDING
+				if (!"PENDING".equals(record.getStatus())) {
+					response.sendRedirect(request.getContextPath() + "/mentor/maintenance/" + id);
+					return;
+				}
+				request.setAttribute("record", record);
+				request.setAttribute("assets", dao.findEligibleAssets());
+				request.setAttribute("incidents", dao.findOpenIncidents());
+				request.setAttribute("formMode", "edit");
+				forward(request, response, "form.jsp");
+				return;
+			}
+
+			// /mentor/maintenance/123 -> Xem chi tiết và tiến độ phiếu bảo trì
+			if (path != null && path.matches("/\\d+")) {
+				request.setAttribute("record", dao.findById(Long.parseLong(path.substring(1))).orElseThrow());
+				forward(request, response, "detail.jsp");
+				return;
+			}
+
+			// /mentor/maintenance -> Danh sách phiếu bảo trì
+			request.setAttribute("records",
+					dao.findAll(request.getParameter("keyword"), request.getParameter("status")));
+			request.setAttribute("keyword", request.getParameter("keyword"));
+			request.setAttribute("selectedStatus", request.getParameter("status"));
+			forward(request, response, "list.jsp");
+
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		} catch (RuntimeException exception) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		}
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		request.setCharacterEncoding("UTF-8");
 		try {
-			if ("/mentor/maintenance/add".equals(request.getServletPath())) {
-				createProposal(request, response);
-			} else {
-				response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+			String action = request.getParameter("action");
+
+			// Tạo mới đề xuất
+			if ("create".equals(action)) {
+				String incidentParam = request.getParameter("incidentId");
+				Long incidentId = (incidentParam == null || incidentParam.isBlank())
+						? null
+						: Long.parseLong(incidentParam);
+				long id = dao.create(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
+						incidentId, parseQuantity(request), request.getParameter("description"));
+				response.sendRedirect(request.getContextPath() + "/mentor/maintenance/" + id + "?success=created");
+				return;
 			}
-		} catch (SQLException ex) {
-			handleError(request, response, ex);
-		}
-	}
 
-	private void showList(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		String keyword = request.getParameter("keyword");
-		String status = request.getParameter("status");
-		List<MaintenanceRecord> records = maintenanceDAO.findByRequester(AuthSession.userId(request), keyword, status);
-		request.setAttribute("records", records);
-		request.setAttribute("keyword", keyword);
-		request.setAttribute("selectedStatus", status);
-		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
-	}
+			// Sửa đề xuất khi còn PENDING
+			if ("update".equals(action)) {
+				long id = Long.parseLong(request.getParameter("id"));
+				String incidentParam = request.getParameter("incidentId");
+				Long incidentId = (incidentParam == null || incidentParam.isBlank())
+						? null
+						: Long.parseLong(incidentParam);
+				dao.updatePending(id, AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
+						incidentId, parseQuantity(request), request.getParameter("description"));
+				response.sendRedirect(request.getContextPath() + "/mentor/maintenance/" + id + "?success=updated");
+				return;
+			}
 
-	private void showDetail(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		long id = requireId(request, response);
-		if (response.isCommitted())
-			return;
+			// Hủy / Xóa đề xuất khi còn PENDING
+			if ("delete".equals(action)) {
+				long id = Long.parseLong(request.getParameter("id"));
+				dao.deletePending(id, AuthSession.userId(request));
+				response.sendRedirect(request.getContextPath() + "/mentor/maintenance?success=deleted");
+				return;
+			}
 
-		MaintenanceRecord record = maintenanceDAO.findById(id).orElse(null);
-		if (record == null) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-			return;
-		}
-		request.setAttribute("record", record);
-		request.getRequestDispatcher(DETAIL_VIEW).forward(request, response);
-	}
-
-	private void showAddForm(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		request.setAttribute("assets", assetDAO.findAll());
-		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
-	}
-
-	private void createProposal(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, IOException {
-		long assetId = Long.parseLong(request.getParameter("assetId"));
-		String description = request.getParameter("description");
-		int quantity = Integer.parseInt(request.getParameter("quantity"));
-
-		MaintenanceRecord m = new MaintenanceRecord();
-		m.setAssetId(assetId);
-		m.setDescription(description);
-		m.setQuantity(quantity);
-		m.setRequestedBy(AuthSession.userId(request));
-
-		maintenanceDAO.create(m);
-		response.sendRedirect(request.getContextPath() + "/mentor/maintenance?success=submitted");
-	}
-
-	private long requireId(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		try {
-			return Long.parseLong(request.getParameter("id"));
-		} catch (Exception e) {
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST);
-			return -1;
+
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			request.setAttribute("message", exception.getMessage());
+			doGet(request, response);
 		}
 	}
 
-	private void handleError(HttpServletRequest request, HttpServletResponse response, SQLException ex)
+	private int parseQuantity(HttpServletRequest request) {
+		String param = request.getParameter("quantity");
+		if (param == null || param.isBlank()) {
+			return 1;
+		}
+		try {
+			int q = Integer.parseInt(param);
+			return q < 1 ? 1 : q;
+		} catch (NumberFormatException e) {
+			return 1;
+		}
+	}
+
+	private void forward(HttpServletRequest request, HttpServletResponse response, String view)
 			throws ServletException, IOException {
-		getServletContext().log("MentorMaintenanceController error", ex);
-		request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu: " + ex.getMessage());
-		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
+		request.getRequestDispatcher("/WEB-INF/views/mentor/maintenance/" + view).forward(request, response);
 	}
 }

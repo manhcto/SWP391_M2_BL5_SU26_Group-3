@@ -1,6 +1,8 @@
 package fpt.swp391.labtoolequip.controller.labmanager;
 
+import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.ResponsibilityDAO;
+import fpt.swp391.labtoolequip.model.Responsibility;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -33,12 +35,55 @@ public class ResponsibilityController extends HttpServlet {
 				forward(request, response, "detail.jsp");
 				return;
 			}
+			if (path.matches("/\\d+/edit")) {
+				request.setAttribute("responsibility", dao.findById(idFrom(path)).orElseThrow());
+				forward(request, response, "form.jsp");
+				return;
+			}
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
 		} catch (RuntimeException exception) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		}
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		request.setCharacterEncoding("UTF-8");
+		if (!"update".equals(request.getParameter("action"))) {
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+			return;
+		}
+		try {
+			long id = Long.parseLong(request.getParameter("responsibilityId"));
+			dao.updateByLabManager(AuthSession.userId(request), id, request.getParameter("decision"),
+					request.getParameter("status"), request.getParameter("reviewNote"),
+					request.getParameter("resolutionNote"));
+			response.sendRedirect(
+					request.getContextPath() + "/lab-manager/responsibilities/" + id + "?success=updated");
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			try {
+				Responsibility record = dao.findById(Long.parseLong(request.getParameter("responsibilityId")))
+						.orElseThrow();
+				record.setDecision(request.getParameter("decision"));
+				record.setStatus(request.getParameter("status"));
+				record.setReviewNote(request.getParameter("reviewNote"));
+				record.setResolutionNote(request.getParameter("resolutionNote"));
+				request.setAttribute("responsibility", record);
+				request.setAttribute("message", exception.getMessage());
+				forward(request, response, "form.jsp");
+			} catch (SQLException | RuntimeException nested) {
+				throw new ServletException(nested);
+			}
+		}
+	}
+
+	private long idFrom(String path) {
+		return Long.parseLong(path.split("/")[1]);
 	}
 
 	private void forward(HttpServletRequest request, HttpServletResponse response, String view)

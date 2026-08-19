@@ -16,17 +16,18 @@ import util.AppConfig;
 
 public class ResponsibilityDAO {
 	private static final Set<String> MENTOR_STATUSES = Set.of("CONFIRMED", "PENDING_REVIEW", "RESOLVED");
+	private static final Set<String> LAB_MANAGER_STATUSES = Set.of("APPROVED", "REJECTED", "RESOLVED");
 	private static final String SELECT = """
 			SELECT r.*, i.asset_id, i.asset_usage_id, i.incident_type, i.description AS incident_description,
 			       i.severity AS incident_severity, i.status AS incident_status, i.occurred_at, i.reported_at,
-			       i.investigation_note, i.handling_result, ip.intern_code,
+			       i.investigation_note, i.handling_result, sp.student_code AS intern_code,
 			       intern.full_name AS intern_name, intern.email AS intern_email, mentor.full_name AS mentor_name,
 			       reviewer.full_name AS reviewer_name, a.asset_code, a.asset_name, au.status AS usage_status,
 			       au.borrowed_at, au.due_at, au.returned_at
 			FROM dbo.responsibilities r
 			JOIN dbo.incidents i ON i.incident_id = r.incident_id
-			JOIN dbo.intern_profiles ip ON ip.intern_id = r.intern_id
-			JOIN dbo.users intern ON intern.user_id = ip.user_id
+			JOIN dbo.student_profiles sp ON sp.student_id = r.student_id
+			JOIN dbo.users intern ON intern.user_id = sp.user_id
 			JOIN dbo.users mentor ON mentor.user_id = r.determined_by
 			LEFT JOIN dbo.users reviewer ON reviewer.user_id = r.reviewed_by
 			JOIN dbo.assets a ON a.asset_id = i.asset_id
@@ -45,7 +46,7 @@ public class ResponsibilityDAO {
 	}
 
 	public List<Responsibility> findForIntern(long userId, String keyword, String status) throws SQLException {
-		String sql = SELECT + searchWhere("ip.user_id = ? AND ") + " ORDER BY r.determined_at DESC";
+		String sql = SELECT + searchWhere("sp.user_id = ? AND ") + " ORDER BY r.determined_at DESC";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, userId);
@@ -59,21 +60,22 @@ public class ResponsibilityDAO {
 	}
 
 	public Optional<Responsibility> findByIdForIntern(long id, long userId) throws SQLException {
-		return findOne(SELECT + " WHERE r.responsibility_id = ? AND ip.user_id = ?", id, userId);
+		return findOne(SELECT + " WHERE r.responsibility_id = ? AND sp.user_id = ?", id, userId);
 	}
 
 	public List<Responsibility> findEligibleIncidents() throws SQLException {
 		String sql = """
 				SELECT i.incident_id, i.reported_at, i.incident_type, i.severity AS incident_severity,
 				       i.status AS incident_status, i.description AS incident_description, i.asset_id,
-				       i.asset_usage_id, a.asset_code, a.asset_name, au.intern_id,
-				       ip.intern_code, u.full_name AS intern_name, u.email AS intern_email
+				       i.asset_usage_id, a.asset_code, a.asset_name, au.student_id,
+				       sp.student_code AS intern_code, u.full_name AS intern_name, u.email AS intern_email
 				FROM dbo.incidents i
 				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
-				JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
-				JOIN dbo.users u ON u.user_id = ip.user_id
+				JOIN dbo.student_profiles sp ON sp.student_id = au.student_id
+				JOIN dbo.users u ON u.user_id = sp.user_id
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
 				WHERE NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
+				  AND i.severity IN ('HIGH', 'CRITICAL')
 				ORDER BY i.reported_at DESC
 				""";
 		try (Connection connection = db.getConnection();
@@ -92,7 +94,7 @@ public class ResponsibilityDAO {
 				item.setAssetUsageId(result.getLong("asset_usage_id"));
 				item.setAssetCode(result.getString("asset_code"));
 				item.setAssetName(result.getString("asset_name"));
-				item.setInternId(result.getLong("intern_id"));
+				item.setInternId(result.getLong("student_id"));
 				item.setInternCode(result.getString("intern_code"));
 				item.setInternName(result.getString("intern_name"));
 				item.setInternEmail(result.getString("intern_email"));
@@ -107,13 +109,14 @@ public class ResponsibilityDAO {
 		validate(conclusion, status);
 		String sql = """
 				INSERT dbo.responsibilities
-				    (incident_id, intern_id, determined_by, conclusion, decision, status, resolution_note, resolved_at)
+				    (incident_id, student_id, determined_by, conclusion, decision, status, resolution_note, resolved_at)
 				OUTPUT INSERTED.responsibility_id
-				SELECT i.incident_id, au.intern_id, ?, ?, ?, ?, ?,
+				SELECT i.incident_id, au.student_id, ?, ?, ?, ?, ?,
 				       CASE WHEN ? = 'RESOLVED' THEN SYSUTCDATETIME() ELSE NULL END
 				FROM dbo.incidents i
 				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
 				WHERE i.incident_id = ?
+				  AND i.severity IN ('HIGH', 'CRITICAL')
 				  AND NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
 				""";
 		try (Connection connection = db.getConnection();
@@ -159,6 +162,32 @@ public class ResponsibilityDAO {
 		}
 	}
 
+	public void updateByLabManager(long managerUserId, long id, String decision, String status, String reviewNote,
+			String resolutionNote) throws SQLException {
+		if (!LAB_MANAGER_STATUSES.contains(status))
+			throw new IllegalArgumentException("Trạng thái xử lý không hợp lệ.");
+		String sql = """
+				UPDATE dbo.responsibilities
+				SET decision = ?, status = ?, reviewed_by = ?, reviewed_at = SYSUTCDATETIME(), review_note = ?,
+				    resolution_note = ?,
+				    resolved_at = CASE WHEN ? = 'RESOLVED' THEN COALESCE(resolved_at, SYSUTCDATETIME()) ELSE NULL END,
+				    updated_at = SYSUTCDATETIME()
+				WHERE responsibility_id = ?
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, blankToNull(decision));
+			statement.setString(2, status);
+			statement.setLong(3, managerUserId);
+			statement.setString(4, blankToNull(reviewNote));
+			statement.setString(5, blankToNull(resolutionNote));
+			statement.setString(6, status);
+			statement.setLong(7, id);
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Không tìm thấy hồ sơ trách nhiệm.");
+		}
+	}
+
 	public void delete(long mentorUserId, long id) throws SQLException {
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(
@@ -175,7 +204,7 @@ public class ResponsibilityDAO {
 		return """
 				 WHERE %s(? = '' OR CAST(r.responsibility_id AS varchar(30)) LIKE ?
 				    OR CAST(r.incident_id AS varchar(30)) LIKE ? OR intern.full_name LIKE ?
-				    OR ip.intern_code LIKE ? OR a.asset_code LIKE ? OR a.asset_name LIKE ?
+				    OR sp.student_code LIKE ? OR a.asset_code LIKE ? OR a.asset_name LIKE ?
 				    OR r.conclusion LIKE ? OR r.decision LIKE ?)
 				 AND (? = '' OR r.status = ?)
 				""".formatted(prefix);
@@ -210,7 +239,7 @@ public class ResponsibilityDAO {
 				Responsibility record = new Responsibility();
 				record.setResponsibilityId(result.getLong("responsibility_id"));
 				record.setIncidentId(result.getLong("incident_id"));
-				record.setInternId(result.getLong("intern_id"));
+				record.setInternId(result.getLong("student_id"));
 				record.setDeterminedBy(result.getLong("determined_by"));
 				record.setConclusion(result.getString("conclusion"));
 				record.setDecision(result.getString("decision"));

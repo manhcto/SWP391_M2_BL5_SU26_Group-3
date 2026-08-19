@@ -41,6 +41,10 @@
                     <div class="stat-icon"><svg><use href="#i-list"/></svg></div>
                     <div><strong><c:out value="${responsibilityCount}"/></strong><span>Trách nhiệm</span><small>Kết luận và quyết định của người hướng dẫn</small></div>
                 </a>
+                <div class="stat-card stat-purple">
+                    <div class="stat-icon"><svg><use href="#i-alert"/></svg></div>
+                    <div><strong><c:out value="${reportedIncidentCount}"/></strong><span>Sự cố đã báo cáo</span><small>Các sự cố lớn bạn đã gửi để xử lý</small></div>
+                </div>
                 <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/intern/usages">
                     <div class="stat-icon"><svg><use href="#i-grid"/></svg></div>
                     <div><strong><c:out value="${totalUsageCount}"/></strong><span>Tổng lượt sử dụng</span><small>Tất cả lịch sử mượn</small></div>

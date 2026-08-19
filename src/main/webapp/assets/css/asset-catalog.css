@@ -1,0 +1,47 @@
+.asset-catalog { --catalog-border: #d7eaf0; --catalog-field-border: #d7e7ed; --catalog-ink: #15364c; --catalog-muted: #658090; --catalog-accent: #087c8c; --catalog-image-start: #d9f2f2; --catalog-image-end: #eef7fd; --catalog-icon: #14848e; --catalog-condition: #168172; --catalog-available: #12795d; padding-top: 22px; }
+.mentor-page .asset-catalog { --catalog-border: #e8def4; --catalog-field-border: #e5d9f1; --catalog-ink: #34264a; --catalog-muted: #756a84; --catalog-accent: #8054d8; --catalog-image-start: #f0e8fb; --catalog-image-end: #fbf8ff; --catalog-icon: #8b5cf6; --catalog-condition: #8b5cf6; --catalog-available: #7453a3; }
+.asset-catalog-filter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .35fr); gap: 10px; max-width: 680px; margin-bottom: 16px; padding: 10px; border: 1px solid var(--catalog-border); border-radius: 12px; background: rgba(255, 255, 255, .92); box-shadow: 0 8px 20px rgba(15, 80, 104, .05); }
+.asset-search-field, .asset-category-field { display: flex; min-width: 0; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border: 1px solid var(--catalog-field-border); border-radius: 8px; background: #fff; color: var(--catalog-muted); }
+.asset-search-field svg { width: 16px; height: 16px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.asset-search-field input, .asset-category-field select { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--catalog-ink); background: transparent; font: inherit; font-size: 11px; }
+.asset-search-field:focus-within, .asset-category-field:focus-within { border-color: var(--catalog-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--catalog-accent) 14%, transparent); }
+.asset-catalog-summary { display: flex; justify-content: space-between; gap: 12px; margin: 0 2px 12px; color: var(--catalog-muted); font-size: 10px; }
+.asset-catalog-summary strong { color: var(--catalog-ink); }
+.asset-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.asset-card { overflow: hidden; border: 1px solid var(--catalog-border); border-radius: 13px; background: #fff; box-shadow: 0 8px 18px rgba(26, 76, 100, .07); transition: transform .18s ease, box-shadow .18s ease; }
+.asset-card:hover { transform: translateY(-3px); box-shadow: 0 14px 24px rgba(26, 76, 100, .12); }
+.asset-card-image { position: relative; display: grid; height: 132px; place-items: center; overflow: hidden; background: linear-gradient(135deg, var(--catalog-image-start), var(--catalog-image-end)); }
+.asset-card-image::before { position: absolute; width: 164px; height: 164px; border-radius: 50%; background: rgba(255, 255, 255, .52); content: ""; }
+.asset-card-image img { position: relative; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.asset-card-image svg { position: relative; width: 54px; height: 54px; fill: none; stroke: var(--catalog-icon); stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
+.asset-card-state { position: absolute; top: 10px; right: 10px; padding: 4px 8px; border-radius: 999px; color: var(--catalog-available); background: #fff; font-size: 8.5px; font-weight: 700; }
+.asset-card-state.status-MAINTENANCE { color: #a56a16; background: #fff2d9; }
+.asset-card-state.status-UNAVAILABLE { color: #a84343; background: #fde8e8; }
+.asset-card-state.status-DISPOSED { color: #65716d; background: #edf0ee; }
+.asset-card-body { padding: 13px; }
+.asset-card-body h2 { overflow: hidden; margin: 0; color: var(--catalog-ink); font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.asset-card-code { display: block; margin-top: 5px; color: var(--catalog-muted); font-size: 8.5px; font-weight: 700; letter-spacing: .045em; }
+.asset-card-type { display: inline-flex; margin-top: 9px; padding: 3px 7px; border-radius: 999px; font-size: 8px; font-weight: 700; }
+.asset-card-type.borrowable { color: #13765d; background: #e4f5ee; }
+.asset-card-type.fixed { color: #a36b17; background: #fff0d6; }
+.asset-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--catalog-border); font-size: 9.5px; }
+.asset-card-condition { display: inline-flex; align-items: center; gap: 5px; color: var(--catalog-muted); }
+.asset-card-condition svg { width: 14px; height: 14px; fill: none; stroke: var(--catalog-condition); stroke-width: 1.8; }
+.asset-card-status { color: var(--catalog-muted); font-weight: 700; }
+.asset-card-footer a { color: var(--catalog-accent); font-weight: 700; }
+.asset-catalog-empty { margin-top: 16px; border: 1px solid var(--catalog-border); border-radius: 13px; background: #fff; }
+.mentor-page .asset-card-image { height: 172px; }
+.mentor-asset-detail { padding-top: 22px; }
+.mentor-asset-detail-panel { display: grid; grid-template-columns: minmax(300px, .9fr) minmax(0, 1.1fr); gap: 24px; padding: 22px; border: 1px solid #e8def4; border-radius: 14px; background: #fff; box-shadow: 0 8px 24px rgba(102, 73, 150, .08); }
+.mentor-asset-detail-image { display: grid; min-height: 360px; place-items: center; overflow: hidden; border: 1px solid #eadff5; border-radius: 12px; background: #fbf9ff; }
+.mentor-asset-detail-image img { width: 100%; height: 360px; object-fit: contain; }
+.mentor-asset-detail-image svg { width: 72px; height: 72px; fill: none; stroke: #8b5cf6; stroke-width: 1.4; }
+.mentor-asset-detail-copy { min-width: 0; }
+.mentor-asset-detail-copy h2 { margin: 10px 0 4px; color: #34264a; font-size: 22px; }
+.mentor-asset-detail-copy > p { margin: 0; color: #756a84; font-size: 11px; }
+.mentor-asset-detail-copy dl { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 16px; margin: 24px 0; font-size: 11px; }
+.mentor-asset-detail-copy dt { color: #756a84; }
+.mentor-asset-detail-copy dd { margin: 0; color: #34264a; font-weight: 650; overflow-wrap: anywhere; }
+@media (max-width: 800px) { .mentor-asset-detail-panel { grid-template-columns: 1fr; } .mentor-asset-detail-image, .mentor-asset-detail-image img { min-height: 260px; height: 260px; } }
+@media (max-width: 900px) { .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 650px) { .asset-catalog { padding-top: 16px; } .asset-catalog-filter { grid-template-columns: 1fr; } .asset-catalog-summary { align-items: flex-start; flex-direction: column; } .asset-grid { grid-template-columns: 1fr; } }
