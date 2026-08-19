@@ -137,6 +137,11 @@ public class MaintenanceDAO {
 							"Thiết bị này đã có phiếu bảo trì đang chờ duyệt hoặc đang sửa chữa. Không thể tạo thêm phiếu mới.");
 				}
 
+				// Kiểm tra sự cố có thuộc đúng thiết bị này không
+				if (incidentId != null && !isIncidentMatchingAsset(connection, incidentId, assetId)) {
+					throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+				}
+
 				String sql = """
 						INSERT INTO dbo.maintenance_records (asset_id, incident_id, quantity, requested_by, description, status)
 						OUTPUT INSERTED.maintenance_id
@@ -173,21 +178,25 @@ public class MaintenanceDAO {
 		if (quantity < 1) {
 			throw new IllegalArgumentException("Số lượng phải lớn hơn 0.");
 		}
-		String sql = """
-				UPDATE dbo.maintenance_records
-				SET asset_id = ?, incident_id = ?, quantity = ?, description = ?, updated_at = SYSUTCDATETIME()
-				WHERE maintenance_id = ? AND requested_by = ? AND status = 'PENDING'
-				""";
-		try (Connection connection = db.getConnection();
-				PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.setLong(1, assetId);
-			setNullableLong(statement, 2, incidentId);
-			statement.setInt(3, quantity);
-			statement.setString(4, description.trim());
-			statement.setLong(5, id);
-			statement.setLong(6, userId);
-			if (statement.executeUpdate() != 1) {
-				throw new IllegalStateException("Chỉ có thể sửa yêu cầu bảo trì đang chờ phê duyệt của chính bạn.");
+		try (Connection connection = db.getConnection()) {
+			if (incidentId != null && !isIncidentMatchingAsset(connection, incidentId, assetId)) {
+				throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+			}
+			String sql = """
+					UPDATE dbo.maintenance_records
+					SET asset_id = ?, incident_id = ?, quantity = ?, description = ?, updated_at = SYSUTCDATETIME()
+					WHERE maintenance_id = ? AND requested_by = ? AND status = 'PENDING'
+					""";
+			try (PreparedStatement statement = connection.prepareStatement(sql)) {
+				statement.setLong(1, assetId);
+				setNullableLong(statement, 2, incidentId);
+				statement.setInt(3, quantity);
+				statement.setString(4, description.trim());
+				statement.setLong(5, id);
+				statement.setLong(6, userId);
+				if (statement.executeUpdate() != 1) {
+					throw new IllegalStateException("Chỉ có thể sửa yêu cầu bảo trì đang chờ phê duyệt của chính bạn.");
+				}
 			}
 		}
 	}
@@ -328,6 +337,17 @@ public class MaintenanceDAO {
 	}
 
 	// ─── PRIVATE HELPERS ────────────────────────────────────────────────────────
+
+	private boolean isIncidentMatchingAsset(Connection connection, long incidentId, long assetId) throws SQLException {
+		try (PreparedStatement statement = connection
+				.prepareStatement("SELECT 1 FROM dbo.incidents WHERE incident_id = ? AND asset_id = ?")) {
+			statement.setLong(1, incidentId);
+			statement.setLong(2, assetId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
 
 	private boolean hasActiveMaintenance(Connection connection, long assetId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(

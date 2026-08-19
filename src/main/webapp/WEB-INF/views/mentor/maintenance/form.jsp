@@ -63,7 +63,7 @@
 
                     <div class="form-group">
                         <label>Thiết bị cần bảo trì *</label>
-                        <select class="form-control" name="assetId" required>
+                        <select class="form-control" name="assetId" id="assetSelect" required>
                             <option value="">-- Chọn thiết bị --</option>
                             <c:forEach var="a" items="${assets}">
                                 <option value="${a.assetId}" ${(formMode == 'edit' && record.assetId == a.assetId) ? 'selected' : ''}>
@@ -82,16 +82,15 @@
 
                     <div class="form-group full-width">
                         <label>Sự cố liên quan (nếu có)</label>
-                        <select class="form-control" name="incidentId">
-                            <option value="">-- Không có sự cố (bảo dưỡng định kỳ / trực tiếp) --</option>
+                        <select class="form-control" name="incidentId" id="incidentSelect">
+                            <option value="" data-asset-id="">-- Không có sự cố (bảo dưỡng định kỳ / trực tiếp) --</option>
                             <c:forEach var="inc" items="${incidents}">
-                                <option value="${inc.incidentId}" ${(formMode == 'edit' && record.incidentId == inc.incidentId) ? 'selected' : ''}>
-                                    #INC-<c:out value="${inc.incidentId}"/>
-                                    – <c:out value="${inc.assetName}"/>:
-                                    <c:out value="${inc.description}"/>
+                                <option value="${inc.incidentId}" data-asset-id="${inc.assetId}" ${(formMode == 'edit' && record.incidentId == inc.incidentId) ? 'selected' : ''}>
+                                    #INC-<c:out value="${inc.incidentId}"/> – <c:out value="${inc.assetName}"/>: <c:out value="${inc.description}"/>
                                 </option>
                             </c:forEach>
                         </select>
+                        <small id="incidentCountNotice" style="display:block;margin-top:4px;font-size:12px;color:#5a6662;"></small>
                     </div>
 
                     <div class="form-group full-width">
@@ -100,11 +99,11 @@
                                   placeholder="Mô tả cụ thể: hiện tượng lỗi, bộ phận bị hỏng, nguyên nhân nghi ngờ, yêu cầu sửa chữa cụ thể..."><c:if test="${formMode == 'edit'}"><c:out value="${record.description}"/></c:if></textarea>
                     </div>
 
-                    <div class="form-group full-width" style="display:flex;gap:10px;">
+                    <div class="form-group full-width" style="display: flex; gap: 10px; margin-top: 10px;">
                         <button class="primary-button" type="submit">
                             <c:choose>
                                 <c:when test="${formMode == 'edit'}">Lưu thay đổi đề xuất</c:when>
-                                <c:otherwise><svg><use href="#i-wrench"/></svg> Gửi đề xuất bảo trì</c:otherwise>
+                                <c:otherwise>Gửi đề xuất bảo trì</c:otherwise>
                             </c:choose>
                         </button>
                         <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">Hủy</a>
@@ -114,5 +113,65 @@
         </section>
     </main>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const assetSelect = document.getElementById('assetSelect');
+        const incidentSelect = document.getElementById('incidentSelect');
+        const countNotice = document.getElementById('incidentCountNotice');
+
+        if (assetSelect && incidentSelect) {
+            function filterIncidents() {
+                const selectedAssetId = assetSelect.value;
+                const currentIncidentVal = incidentSelect.value;
+                let matchingCount = 0;
+                let isCurrentStillValid = false;
+
+                Array.from(incidentSelect.options).forEach(function(opt, index) {
+                    if (index === 0) {
+                        // Tùy chọn "Không có sự cố" luôn luôn hiển thị
+                        opt.hidden = false;
+                        opt.disabled = false;
+                        return;
+                    }
+
+                    const optAssetId = opt.getAttribute('data-asset-id');
+                    if (selectedAssetId && optAssetId === selectedAssetId) {
+                        opt.hidden = false;
+                        opt.disabled = false;
+                        matchingCount++;
+                        if (opt.value === currentIncidentVal) {
+                            isCurrentStillValid = true;
+                        }
+                    } else {
+                        opt.hidden = true;
+                        opt.disabled = true;
+                    }
+                });
+
+                // Nếu sự cố đang chọn không còn hợp lệ sau khi đổi thiết bị -> reset về không chọn
+                if (!isCurrentStillValid && currentIncidentVal !== '') {
+                    incidentSelect.value = '';
+                }
+
+                // Hiển thị thông báo số lượng sự cố tìm thấy
+                if (countNotice) {
+                    if (!selectedAssetId) {
+                        countNotice.textContent = 'Vui lòng chọn thiết bị ở trên để xem danh sách sự cố tương ứng.';
+                    } else if (matchingCount > 0) {
+                        countNotice.textContent = '💡 Tìm thấy ' + matchingCount + ' sự cố đang mở của thiết bị này.';
+                        countNotice.style.color = '#137a4d';
+                    } else {
+                        countNotice.textContent = 'ℹ️ Thiết bị này hiện không có sự cố nào đang mở.';
+                        countNotice.style.color = '#5a6662';
+                    }
+                }
+            }
+
+            assetSelect.addEventListener('change', filterIncidents);
+            filterIncidents();
+        }
+    });
+</script>
 </body>
 </html>
