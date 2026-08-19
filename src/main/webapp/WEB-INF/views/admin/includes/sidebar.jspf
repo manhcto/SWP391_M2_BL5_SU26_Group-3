@@ -1,3 +1,4 @@
+<%@ page pageEncoding="UTF-8" %>
 <svg class="svg-sprite" aria-hidden="true">
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
@@ -15,7 +16,7 @@
 
 <aside class="sidebar" id="sidebar">
     <a class="brand" href="${pageContext.request.contextPath}/admin/dashboard" aria-label="Trang chủ quản trị LAB Asset">
-        <span class="brand-mark"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="FPT University"></span>
+        <span class="brand-mark"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="Đại học FPT"></span>
         <span><strong>LAB ASSET</strong><small>CỔNG QUẢN TRỊ</small></span>
     </a>
     <nav class="side-nav" aria-label="Điều hướng quản trị viên">

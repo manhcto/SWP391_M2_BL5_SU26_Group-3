@@ -116,7 +116,7 @@
                         <form method="post" action="${pageContext.request.contextPath}/admin/users/add" class="form-grid">
                             <div class="form-group">
                                 <label>Họ và tên *</label>
-                                <input class="form-control" type="text" name="fullName" value="<c:out value='${user.fullName}'/>" required placeholder="e.g. Nguyễn Minh Anh">
+                                <input class="form-control" type="text" name="fullName" value="<c:out value='${user.fullName}'/>" required placeholder="Ví dụ: Nguyễn Minh Anh">
                             </div>
 
                             <div class="form-group">
@@ -192,13 +192,13 @@
 
         if (isIntern) {
             if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) *';
-            if (emailInput) emailInput.placeholder = 'e.g. anhnmse160123@fpt.edu.vn';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnmse160123@fpt.edu.vn';
         } else if (roleSelect.value === 'MENTOR') {
             if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn / @gmail.com) *';
-            if (emailInput) emailInput.placeholder = 'e.g. anhnm@fpt.edu.vn hoặc mentor@gmail.com';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnm@fpt.edu.vn hoặc mentor@gmail.com';
         } else {
             if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / @fpt.edu.vn) *';
-            if (emailInput) emailInput.placeholder = 'e.g. manager@gmail.com hoặc manager@fpt.edu.vn';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: manager@gmail.com hoặc manager@fpt.edu.vn';
         }
     }
     toggleStudentFields();

@@ -17,7 +17,7 @@
                 <div class="detail-item"><dt>Loại</dt><dd><c:out value="${app:label(inspection.inspectionType)}"/></dd></div>
                 <div class="detail-item"><dt>Học kỳ</dt><dd><c:out value="${inspection.semesterCode}"/> - <c:out value="${inspection.semesterName}"/></dd></div>
                 <div class="detail-item"><dt>Phạm vi</dt><dd><c:out value="${app:label(inspection.scope)}"/></dd></div>
-                <div class="detail-item"><dt>Inspector</dt><dd><c:out value="${inspection.inspectorName}"/></dd></div>
+                <div class="detail-item"><dt>Người kiểm tra</dt><dd><c:out value="${inspection.inspectorName}"/></dd></div>
                 <div class="detail-item"><dt>Thời gian kiểm tra</dt><dd><c:out value="${app:dateTime(inspection.inspectionDate)}"/></dd></div>
                 <div class="detail-item"><dt>Trạng thái</dt><dd><span class="status ${inspection.status == 'COMPLETED' ? 'returned' : 'review'}"><c:out value="${app:label(inspection.status)}"/></span></dd></div>
                 <div class="detail-item"><dt>Kết quả</dt><dd><c:choose><c:when test="${empty inspection.result}">-</c:when><c:otherwise><span class="status ${inspection.result == 'NORMAL' ? 'returned' : 'open'}"><c:out value="${app:label(inspection.result)}"/></span></c:otherwise></c:choose></dd></div>

@@ -48,7 +48,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Ghi chú phê duyệt / Kinh phí dự kiến</label>
-                                    <input class="form-control" type="text" name="approvalNote" placeholder="e.g. Duyệt chi phí 650.000 VNĐ mang sang FPT Tech Service">
+                                    <input class="form-control" type="text" name="approvalNote" placeholder="Ví dụ: Duyệt chi phí 650.000 VNĐ mang sang FPT Tech Service">
                                 </div>
                                 <div class="form-group full-width">
                                     <button class="primary-button" type="submit">Gửi quyết định phê duyệt</button>
@@ -71,11 +71,11 @@
                             </div>
                             <div class="form-group">
                                 <label>Đơn vị / Kỹ thuật viên sửa chữa</label>
-                                <input class="form-control" type="text" name="note" value="<c:out value='${record.note}'/>" placeholder="e.g. Kỹ thuật viên Tektronix VN / FPT Services">
+                                <input class="form-control" type="text" name="note" value="<c:out value='${record.note}'/>" placeholder="Ví dụ: Kỹ thuật viên Tektronix VN / FPT Services">
                             </div>
                             <div class="form-group full-width">
                                 <label>Kết quả sửa chữa / Linh kiện thay thế</label>
-                                <textarea class="form-control" name="repairResult" placeholder="e.g. Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
+                                <textarea class="form-control" name="repairResult" placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
                             </div>
                             <div class="form-group full-width" style="display: flex; gap: 10px;">
                                 <button class="primary-button" type="submit">Lưu tiến độ bảo trì</button>

@@ -42,7 +42,7 @@
                 <c:choose>
                     <c:when test="${empty inspections}"><div class="empty-box"><div class="empty-box-icon"><svg><use href="#i-inspect"/></svg></div><h3>Chưa có hồ sơ kiểm tra</h3><p>Tạo bản nháp kiểm tra cho toàn bộ phòng LAB hoặc các thiết bị chưa thanh lý được chọn.</p><a class="primary-button" href="${pageContext.request.contextPath}${roleBase}/inspections/new">Tạo đợt kiểm tra</a></div></c:when>
                     <c:otherwise>
-                        <div class="table-scroll inspection-table-scroll"><table class="inspection-table inspection-list-table"><thead><tr><th>Mã kiểm tra</th><th>Loại</th><th>Học kỳ</th><th>Phạm vi</th><th>Thời gian kiểm tra</th><th>Inspector</th><th>Trạng thái</th><th>Kết quả</th><th>Thao tác</th></tr></thead><tbody>
+                        <div class="table-scroll inspection-table-scroll"><table class="inspection-table inspection-list-table"><thead><tr><th>Mã kiểm tra</th><th>Loại</th><th>Học kỳ</th><th>Phạm vi</th><th>Thời gian kiểm tra</th><th>Người kiểm tra</th><th>Trạng thái</th><th>Kết quả</th><th>Thao tác</th></tr></thead><tbody>
                             <c:forEach var="inspection" items="${inspections}"><tr>
                                 <td><strong>#INS-${inspection.inspectionId}</strong></td>
                                 <td><span class="badge badge-blue"><c:out value="${app:label(inspection.inspectionType)}"/></span></td>

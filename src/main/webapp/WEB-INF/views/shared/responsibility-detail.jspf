@@ -1,3 +1,4 @@
+<%@ page pageEncoding="UTF-8" %>
 <article class="panel">
     <div class="form-grid">
         <div class="form-group"><label>Mã trách nhiệm</label><input class="form-control readonly-field" value="#<c:out value='${responsibility.responsibilityCode}'/>" readonly></div>
