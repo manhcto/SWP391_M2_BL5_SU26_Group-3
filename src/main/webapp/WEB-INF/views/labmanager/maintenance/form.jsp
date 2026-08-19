@@ -166,13 +166,13 @@
                                        placeholder="Ví dụ: Kỹ thuật viên Tektronix VN / FPT Services">
                             </div>
 
-                            <div class="form-group full-width" id="repairResultField" style="display:none;">
-                                <label>Kết quả sửa chữa / Linh kiện thay thế</label>
-                                <textarea class="form-control" name="repairResult" rows="4"
+                            <div class="form-group full-width" id="repairResultField" style="display: none; grid-column: span 2;">
+                                <label style="font-weight: 650; margin-bottom: 4px;">Kết quả sửa chữa / Linh kiện thay thế</label>
+                                <textarea class="form-control" name="repairResult" rows="4" style="width: 100%; min-height: 90px; box-sizing: border-box;"
                                           placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
                             </div>
 
-                            <div class="form-group full-width" style="display: flex; gap: 10px; margin-top: 10px;">
+                            <div class="form-group full-width" style="display: flex; gap: 10px; margin-top: 10px; grid-column: span 2;">
                                 <button class="primary-button" type="submit">Lưu tiến độ bảo trì</button>
                                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">Hủy</a>
                             </div>
@@ -186,7 +186,7 @@
                                     function toggleRepairResult() {
                                         const val = progressStatusSelect.value;
                                         if (val === 'COMPLETED_SUCCESS' || val === 'COMPLETED_FAILED') {
-                                            repairResultField.style.display = 'block';
+                                            repairResultField.style.display = 'flex';
                                         } else {
                                             repairResultField.style.display = 'none';
                                         }
