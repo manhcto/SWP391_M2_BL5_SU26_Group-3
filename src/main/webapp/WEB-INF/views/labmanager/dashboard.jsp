@@ -19,8 +19,9 @@
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
         </header>
         <section class="content-area">
-            <div class="content-heading"><div><p class="eyebrow">CỔNG QUẢN LÝ PHÒNG LAB</p><h2>Tổng quan vận hành</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/labmanager/maintenance"><svg><use href="#i-wrench"/></svg>Mở bảo trì</a></div>
+            <div class="content-heading"><div><p class="eyebrow">CỔNG QUẢN LÝ PHÒNG LAB</p><h2>Tổng quan vận hành</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/lab-manager/assets"><svg><use href="#i-box"/></svg>Quản lý thiết bị</a></div>
             <div class="stats-grid">
+                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/lab-manager/assets"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong>Thiết bị</strong><span>Quản lý từng sản phẩm và mã riêng</span><small>Mở danh sách thiết bị</small></div></a>
                 <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/labmanager/maintenance"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong>Bảo trì</strong><span>Duyệt và cập nhật phiếu sửa chữa</span><small>Mở quản lý bảo trì</small></div></a>
                 <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/usages"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong>Sử dụng thiết bị</strong><span>Xem lịch sử mượn và trả thiết bị</span><small>Mở lịch sử sử dụng thiết bị</small></div></a>
                 <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><div class="stat-icon"><svg><use href="#i-list"/></svg></div><div><strong>Trách nhiệm</strong><span>Xem kết luận và quyết định xử lý của người hướng dẫn</span><small>Mở hồ sơ trách nhiệm</small></div></a>

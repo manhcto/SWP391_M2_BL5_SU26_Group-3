@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LabUsageRequest {
+public class InternList {
 	private Long requestId;
 	private Long semesterId;
 	private Long mentorId;
@@ -21,12 +21,12 @@ public class LabUsageRequest {
 	private String mentorName;
 	private String mentorEmail;
 	private int studentCount;
-	private List<LabUsageRequestStudent> students = new ArrayList<>();
+	private List<InternListStudent> students = new ArrayList<>();
 
-	public LabUsageRequest() {
+	public InternList() {
 	}
 
-	public LabUsageRequest(Long requestId, Long semesterId, Long mentorId, String status, String requestNote,
+	public InternList(Long requestId, Long semesterId, Long mentorId, String status, String requestNote,
 			Long approvedBy, LocalDateTime approvedAt, String approvalNote, LocalDateTime createdAt,
 			LocalDateTime updatedAt) {
 		this.requestId = requestId;
@@ -169,11 +169,11 @@ public class LabUsageRequest {
 		this.studentCount = studentCount;
 	}
 
-	public List<LabUsageRequestStudent> getStudents() {
+	public List<InternListStudent> getStudents() {
 		return students;
 	}
 
-	public void setStudents(List<LabUsageRequestStudent> students) {
+	public void setStudents(List<InternListStudent> students) {
 		this.students = students;
 	}
 }

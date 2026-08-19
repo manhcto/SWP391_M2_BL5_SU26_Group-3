@@ -66,7 +66,7 @@
                                 <c:forEach var="incident" items="${incidents}">
                                     <tr>
                                         <td><strong>#INC-<c:out value="${incident.incidentId}"/></strong></td>
-                                        <td><strong><c:out value="${incident.assetName}"/></strong><br><small><c:out value="${incident.assetCode}"/></small></td>
+                                        <td><strong><c:out value="${incident.assetName}"/></strong><br><small><c:out value="${empty incident.assetItemCode ? incident.assetCode : incident.assetItemCode}"/></small></td>
                                         <td><c:out value="${app:label(incident.incidentType)}"/></td>
                                         <td><span class="status ${incident.severity == 'CRITICAL' || incident.severity == 'HIGH' ? 'open' : 'review'}"><c:out value="${app:label(incident.severity)}"/></span></td>
                                         <td><c:out value="${incident.reporterName}"/><c:if test="${not empty incident.internName}"><br><small>Thực tập sinh: <c:out value="${incident.internName}"/></small></c:if></td>

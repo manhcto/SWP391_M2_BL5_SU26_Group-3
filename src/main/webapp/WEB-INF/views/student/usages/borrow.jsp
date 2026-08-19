@@ -29,14 +29,13 @@
                 <form method="post">
                     <input type="hidden" name="action" value="borrow">
                     <div class="form-grid">
-                        <div class="form-group full-width"><label for="assetId">Thiết bị</label><select class="form-control" id="assetId" name="assetId" required><c:forEach items="${assets}" var="a"><option value="${a.assetId}"><c:out value="${a.assetCode}"/> · <c:out value="${a.assetName}"/> · ${a.totalQuantity} tổng cộng</option></c:forEach></select></div>
-                        <div class="form-group"><label for="quantity">Số lượng</label><input class="form-control" id="quantity" type="number" name="quantity" min="1" value="1" required></div>
+                        <div class="form-group full-width"><label for="assetItemId">Sản phẩm cụ thể</label><select class="form-control" id="assetItemId" name="assetItemId" required><c:forEach items="${assetItems}" var="item"><option value="${item.assetItemId}"><c:out value="${item.itemCode}"/> · <c:out value="${item.assetName}"/><c:if test="${not empty item.serialNumber}"> · Serial <c:out value="${item.serialNumber}"/></c:if> · <c:out value="${app:label(item.condition)}"/></option></c:forEach></select><small>Mỗi lượt mượn gắn với một mã sản phẩm riêng để theo dõi khi trả và báo hỏng.</small></div>
                         <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field" value="Kết thúc học kỳ đã được phê duyệt" readonly></div>
                         <div class="form-group full-width"><label for="note">Ghi chú sử dụng</label><textarea class="form-control" id="note" name="note" placeholder="Mục đích hoặc lưu ý sử dụng"></textarea></div>
-                        <div class="form-group full-width form-actions"><button class="primary-button" type="submit" <c:if test="${empty assets}">disabled</c:if>><svg><use href="#i-box"/></svg>Xác nhận mượn</button></div>
+                        <div class="form-group full-width form-actions"><button class="primary-button" type="submit" <c:if test="${empty assetItems}">disabled</c:if>><svg><use href="#i-box"/></svg>Xác nhận mượn</button></div>
                     </div>
                 </form>
-                <c:if test="${empty assets}"><div class="empty-box"><p>Không có thiết bị đủ điều kiện để mượn.</p></div></c:if>
+                <c:if test="${empty assetItems}"><div class="empty-box"><p>Không có sản phẩm đủ điều kiện để mượn.</p></div></c:if>
             </article>
         </section>
     </main>

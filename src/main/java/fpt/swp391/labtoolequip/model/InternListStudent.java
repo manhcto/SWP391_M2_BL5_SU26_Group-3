@@ -2,7 +2,7 @@ package fpt.swp391.labtoolequip.model;
 
 import java.time.LocalDateTime;
 
-public class LabUsageRequestStudent {
+public class InternListStudent {
 	private Long requestId;
 	private Long semesterId;
 	private Long studentId;
@@ -12,10 +12,10 @@ public class LabUsageRequestStudent {
 	private String cohort;
 	private LocalDateTime addedAt;
 
-	public LabUsageRequestStudent() {
+	public InternListStudent() {
 	}
 
-	public LabUsageRequestStudent(Long requestId, Long semesterId, Long studentId, LocalDateTime addedAt) {
+	public InternListStudent(Long requestId, Long semesterId, Long studentId, LocalDateTime addedAt) {
 		this.requestId = requestId;
 		this.semesterId = semesterId;
 		this.studentId = studentId;

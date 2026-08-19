@@ -1,6 +1,6 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
-import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
+import fpt.swp391.labtoolequip.dao.InternListDAO;
 import fpt.swp391.labtoolequip.dao.UserDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -11,7 +11,7 @@ import java.io.IOException;
 
 @WebServlet("/admin/dashboard")
 public class AdminDashboardController extends HttpServlet {
-	private final LabUsageRequestDAO requestDAO = new LabUsageRequestDAO();
+	private final InternListDAO internListDAO = new InternListDAO();
 	private final UserDAO userDAO = new UserDAO();
 
 	@Override
@@ -28,10 +28,10 @@ public class AdminDashboardController extends HttpServlet {
 			request.setAttribute("labManagerCount", 0);
 		}
 		try {
-			request.setAttribute("pendingLabRequestCount", requestDAO.countByStatus("PENDING"));
+			request.setAttribute("pendingInternListCount", internListDAO.countByStatus("PENDING"));
 		} catch (Exception exception) {
-			getServletContext().log("Could not load pending Lab Usage Request count", exception);
-			request.setAttribute("pendingLabRequestCount", 0);
+			getServletContext().log("Could not load pending Intern List count", exception);
+			request.setAttribute("pendingInternListCount", 0);
 		}
 		request.getRequestDispatcher("/WEB-INF/views/admin/dashboard.jsp").forward(request, response);
 	}
