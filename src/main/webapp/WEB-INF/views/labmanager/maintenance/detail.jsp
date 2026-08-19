@@ -71,7 +71,14 @@
                                     <span class="status maintenance">Đang sửa</span>
                                 </c:when>
                                 <c:when test="${record.status == 'COMPLETED'}">
-                                    <span class="status returned">Hoàn tất</span>
+                                    <c:choose>
+                                        <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
+                                            <span class="status overdue">Sửa thất bại</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="status returned">Đã sửa xong</span>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </c:when>
                                 <c:when test="${record.status == 'REJECTED'}">
                                     <span class="status overdue">Bị từ chối</span>
@@ -234,9 +241,16 @@
                             </c:if>
                             <c:if test="${not empty record.repairCompletedAt}">
                                 <div class="timeline-item">
-                                    <div class="timeline-dot"></div>
+                                    <div class="timeline-dot ${record.assetStatus == 'UNAVAILABLE' ? 'rejected' : ''}"></div>
                                     <div>
-                                        <b>Hoàn tất – Thiết bị về AVAILABLE</b>
+                                        <c:choose>
+                                            <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
+                                                <b style="color:#c62828;">Hoàn tất – Sửa thất bại (Thiết bị chuyển UNAVAILABLE chờ thanh lý)</b>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <b>Hoàn tất – Sửa thành công (Thiết bị về AVAILABLE)</b>
+                                            </c:otherwise>
+                                        </c:choose>
                                         <br><small style="color:#5a6662"><c:out value="${app:dateTime(record.repairCompletedAt)}"/></small>
                                         <c:if test="${not empty record.repairResult}">
                                             <br><small style="font-style:italic"><c:out value="${record.repairResult}"/></small>

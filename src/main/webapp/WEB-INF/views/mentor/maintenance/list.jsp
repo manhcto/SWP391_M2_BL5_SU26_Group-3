@@ -130,8 +130,15 @@
                                                     <span class="status maintenance">Đang sửa</span>
                                                 </c:when>
                                                 <c:when test="${r.status == 'COMPLETED'}">
-                                                    <span class="status returned">Hoàn tất</span>
-                                                </c:when>
+                                                     <c:choose>
+                                                         <c:when test="${r.assetStatus == 'UNAVAILABLE'}">
+                                                             <span class="status overdue">Sửa thất bại</span>
+                                                         </c:when>
+                                                         <c:otherwise>
+                                                             <span class="status returned">Đã sửa xong</span>
+                                                         </c:otherwise>
+                                                     </c:choose>
+                                                 </c:when>
                                                 <c:when test="${r.status == 'REJECTED'}">
                                                     <span class="status overdue">Từ chối</span>
                                                 </c:when>

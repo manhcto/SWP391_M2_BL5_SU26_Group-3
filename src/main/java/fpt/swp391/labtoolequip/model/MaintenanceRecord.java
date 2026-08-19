@@ -24,13 +24,21 @@ public class MaintenanceRecord {
 	// Joined display fields
 	private String assetCode;
 	private String assetName;
-	private String assetCode2; // storage location
+	private String assetStatus;
 	private String storageLocation;
 	private String requesterName;
 	private String approverName;
 	private String incidentDescription;
 
 	public MaintenanceRecord() {
+	}
+
+	public String getAssetStatus() {
+		return assetStatus;
+	}
+
+	public void setAssetStatus(String assetStatus) {
+		this.assetStatus = assetStatus;
 	}
 
 	public Long getMaintenanceId() {

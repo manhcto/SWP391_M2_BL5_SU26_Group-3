@@ -15,7 +15,7 @@ import java.util.Optional;
 
 public class MaintenanceDAO {
 	private static final String SELECT = """
-			SELECT m.*, a.asset_code, a.asset_name, a.storage_location,
+			SELECT m.*, a.asset_code, a.asset_name, a.storage_location, a.status AS asset_status,
 			       requester.full_name AS requester_name,
 			       approver.full_name AS approver_name,
 			       i.description AS incident_description
@@ -399,6 +399,7 @@ public class MaintenanceDAO {
 				// Joined fields
 				record.setAssetCode(result.getString("asset_code"));
 				record.setAssetName(result.getString("asset_name"));
+				record.setAssetStatus(result.getString("asset_status"));
 				record.setStorageLocation(result.getString("storage_location"));
 				record.setRequesterName(result.getString("requester_name"));
 				record.setApproverName(result.getString("approver_name"));
