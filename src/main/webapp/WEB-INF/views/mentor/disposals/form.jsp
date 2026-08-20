@@ -1,78 +1,23 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core"%>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Create Disposal Request</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css">
-</head>
-<body>
+<html lang="vi">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tạo yêu cầu thanh lý | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"></head>
+<body class="mentor-page">
+<c:set var="activeMenu" value="disposals" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../../includes/operations-sidebar.jspf" %>
-    <div class="workspace">
-        <main class="content">
-            <div class="page-heading">
-                <h1>Create Disposal Request</h1>
-                <a class="button" href="${pageContext.request.contextPath}/mentor/disposals">Back</a>
-            </div>
-            <p class="alert"><c:out value="${message}"/></p>
-            <c:if test="${empty quantityAssets and empty assetItems}">
-                <section class="card"><p>No eligible disposal targets are available.</p></section>
-            </c:if>
-            <c:if test="${not empty quantityAssets}">
-                <section class="card form-card">
-                    <h2>Quantity-tracked asset</h2>
-                    <p>Requests retire the aggregate asset and its recorded quantity. No physical item identity is implied.</p>
-                    <form method="post">
-                        <input type="hidden" name="csrfToken" value="${csrfToken}">
-                        <input type="hidden" name="action" value="create">
-                        <label>
-                            Asset
-                            <select name="assetId" required>
-                                <option value="">Select an asset</option>
-                                <c:forEach items="${quantityAssets}" var="a">
-                                    <option value="${a.assetId}" ${param.assetId == a.assetId ? 'selected' : ''}><c:out
-                                            value="${a.assetCode}"/> - <c:out value="${a.assetName}"/> (${a.totalQuantity} units)</option>
-                                </c:forEach>
-                            </select>
-                        </label>
-                        <label>
-                            Reason
-                            <textarea name="reason" required><c:out value="${param.reason}"/></textarea>
-                        </label>
-                        <button class="button primary">Submit aggregate request</button>
-                    </form>
-                </section>
-            </c:if>
-            <c:if test="${not empty assetItems}">
-                <section class="card form-card">
-                    <h2>Serialized asset item</h2>
-                    <p>Select the exact item tag. Only unavailable, damaged, or broken items are listed.</p>
-                    <form method="post">
-                        <input type="hidden" name="csrfToken" value="${csrfToken}">
-                        <input type="hidden" name="action" value="create">
-                        <label>
-                            Item tag
-                            <select name="assetItemId" required>
-                                <option value="">Select an item</option>
-                                <c:forEach items="${assetItems}" var="item">
-                                    <option value="${item.assetItemId}" ${param.assetItemId == item.assetItemId ? 'selected' : ''}><c:out
-                                            value="${item.itemTag}"/> - <c:out value="${item.assetName}"/> (${item.condition})</option>
-                                </c:forEach>
-                            </select>
-                        </label>
-                        <label>
-                            Reason
-                            <textarea name="reason" required><c:out value="${param.reason}"/></textarea>
-                        </label>
-                        <button class="button primary">Submit item request</button>
-                    </form>
-                </section>
-            </c:if>
-        </main>
-    </div>
+    <%@ include file="../includes/sidebar.jspf" %>
+    <main class="main-content">
+        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Tạo yêu cầu thanh lý</h1><p>Đề xuất xử lý tài sản không còn an toàn hoặc phù hợp sử dụng</p></div></div><div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/disposals">Quay lại danh sách</a></div></header>
+        <section class="content-area">
+            <div class="content-heading"><div><p class="eyebrow">CỔNG NGƯỜI HƯỚNG DẪN</p><h2>Chọn tài sản cần thanh lý</h2></div></div>
+            <c:if test="${not empty message}"><p class="error-message"><c:out value="${message}"/></p></c:if>
+            <c:if test="${empty quantityAssets and empty assetItems}"><article class="panel"><div class="empty-box"><div class="empty-box-icon"><svg><use href="#i-trash"/></svg></div><h3>Không có tài sản đủ điều kiện</h3><p>Hiện chưa có tài sản phù hợp để tạo yêu cầu thanh lý.</p></div></article></c:if>
+            <c:if test="${not empty quantityAssets}"><article class="panel"><header class="panel-header"><div class="panel-title"><h3>Tài sản quản lý theo số lượng</h3></div></header><form class="form-grid" method="post"><input type="hidden" name="csrfToken" value="${csrfToken}"><input type="hidden" name="action" value="create"><div class="form-group full-width"><label for="assetId">Tài sản *</label><select class="form-control" id="assetId" name="assetId" required><option value="">Chọn tài sản</option><c:forEach items="${quantityAssets}" var="a"><option value="${a.assetId}" ${param.assetId == a.assetId ? 'selected' : ''}><c:out value="${a.assetCode}"/> - <c:out value="${a.assetName}"/> (${a.totalQuantity})</option></c:forEach></select><small>Yêu cầu áp dụng cho toàn bộ tài sản và số lượng đang ghi nhận.</small></div><div class="form-group full-width"><label for="quantityReason">Lý do *</label><textarea class="form-control" id="quantityReason" name="reason" required maxlength="1000"><c:out value="${param.reason}"/></textarea></div><div class="form-group full-width"><button class="primary-button" type="submit">Gửi yêu cầu</button></div></form></article></c:if>
+            <c:if test="${not empty assetItems}"><article class="panel"><header class="panel-header"><div class="panel-title"><h3>Thiết bị có mã định danh</h3></div></header><form class="form-grid" method="post"><input type="hidden" name="csrfToken" value="${csrfToken}"><input type="hidden" name="action" value="create"><div class="form-group full-width"><label for="assetItemId">Thiết bị *</label><select class="form-control" id="assetItemId" name="assetItemId" required><option value="">Chọn thiết bị</option><c:forEach items="${assetItems}" var="item"><option value="${item.assetItemId}" ${param.assetItemId == item.assetItemId ? 'selected' : ''}><c:out value="${item.itemTag}"/> - <c:out value="${item.assetName}"/> (<c:out value="${item.condition}"/>)</option></c:forEach></select><small>Chỉ hiển thị thiết bị không khả dụng, hư hỏng hoặc bị vỡ.</small></div><div class="form-group full-width"><label for="itemReason">Lý do *</label><textarea class="form-control" id="itemReason" name="reason" required maxlength="1000"><c:out value="${param.reason}"/></textarea></div><div class="form-group full-width"><button class="primary-button" type="submit">Gửi yêu cầu</button></div></form></article></c:if>
+        </section>
+    </main>
 </div>
 </body>
 </html>

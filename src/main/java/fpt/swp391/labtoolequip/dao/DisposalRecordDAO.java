@@ -307,6 +307,17 @@ public class DisposalRecordDAO {
 				throw new IllegalStateException("Không thể cập nhật thiết bị theo mã riêng đã thanh lý.");
 			}
 		}
+		try (PreparedStatement statement = connection
+				.prepareStatement("UPDATE dbo.assets SET total_quantity = total_quantity - 1, "
+						+ "status = CASE WHEN total_quantity = 1 THEN 'DISPOSED' ELSE status END, "
+						+ "is_borrowable = CASE WHEN total_quantity = 1 THEN 0 ELSE is_borrowable END, "
+						+ "updated_at = SYSUTCDATETIME() WHERE asset_id = ? AND tracking_mode = 'SERIALIZED' "
+						+ "AND total_quantity > 0")) {
+			statement.setLong(1, assetId);
+			if (statement.executeUpdate() != 1) {
+				throw new IllegalStateException("Không thể cập nhật số lượng thiết bị sau thanh lý.");
+			}
+		}
 	}
 
 	private void markDisposalCompleted(Connection connection, long disposalId, String note) throws SQLException {
