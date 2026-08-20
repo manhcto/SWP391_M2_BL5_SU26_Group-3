@@ -12,7 +12,7 @@
 <body class="intern-dashboard-page">
 <c:set var="activeMenu" value="borrow" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../includes/sidebar.jspf" %>
+    <%@ include file="../../student/includes/sidebar.jspf" %>
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap">
