@@ -44,7 +44,7 @@
                         <div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span>
                             <h3>Thiết bị theo số lượng</h3></div>
                     </header>
-                    <form method="post">
+                    <form method="post" action="${pageContext.request.contextPath}/intern/usages/borrow">
                         <input type="hidden" name="csrfToken" value="${csrfToken}">
                         <input type="hidden" name="action" value="borrow">
                         <div class="form-grid">
@@ -64,6 +64,9 @@
                             <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field"
                                                                                   value="Cuối học kỳ đã được phê duyệt"
                                                                                   readonly></div>
+                            <div class="form-group full-width"><label for="quantityBorrowedAt">Ngày và giờ mượn</label>
+                                <input class="form-control" id="quantityBorrowedAt" type="datetime-local" name="borrowedAt"
+                                       value="${empty param.borrowedAt ? defaultBorrowedAt : param.borrowedAt}" required></div>
                             <div class="form-group full-width"><label for="quantityNote">Ghi chú sử dụng</label><textarea
                                     class="form-control" id="quantityNote" name="note"
                                     placeholder="Mục đích hoặc lưu ý sử dụng"><c:out value="${param.note}"/></textarea></div>
@@ -80,7 +83,7 @@
                         <div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span>
                             <h3>Thiết bị theo mã riêng</h3></div>
                     </header>
-                    <form method="post">
+                    <form method="post" action="${pageContext.request.contextPath}/intern/usages/borrow">
                         <input type="hidden" name="csrfToken" value="${csrfToken}">
                         <input type="hidden" name="action" value="borrow">
                         <input type="hidden" name="quantity" value="1">
@@ -99,6 +102,9 @@
                             <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field"
                                                                                   value="Cuối học kỳ đã được phê duyệt"
                                                                                   readonly></div>
+                            <div class="form-group full-width"><label for="serializedBorrowedAt">Ngày và giờ mượn</label>
+                                <input class="form-control" id="serializedBorrowedAt" type="datetime-local" name="borrowedAt"
+                                       value="${empty param.borrowedAt ? defaultBorrowedAt : param.borrowedAt}" required></div>
                             <div class="form-group full-width"><label for="serializedNote">Ghi chú sử dụng</label><textarea
                                     class="form-control" id="serializedNote" name="note"
                                     placeholder="Mục đích hoặc lưu ý sử dụng"><c:out value="${param.note}"/></textarea></div>

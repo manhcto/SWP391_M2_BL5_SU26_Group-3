@@ -34,14 +34,10 @@
                 </div>
             </div>
             <div class="topbar-actions">
-                <c:if test="${record.status == 'PENDING' || record.status == 'APPROVED' || record.status == 'IN_PROGRESS'}">
+                <c:if test="${record.status == 'APPROVED' || record.status == 'IN_PROGRESS'}">
                     <a class="primary-button"
                        href="${pageContext.request.contextPath}/lab-manager/maintenance/${record.maintenanceId}/edit">
-                        <svg><use href="#i-wrench"/></svg>
-                        <c:choose>
-                            <c:when test="${record.status == 'PENDING'}">Phê duyệt</c:when>
-                            <c:otherwise>Cập nhật tiến độ</c:otherwise>
-                        </c:choose>
+                        <svg><use href="#i-wrench"/></svg>Cập nhật tiến độ
                     </a>
                 </c:if>
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">‹ Quay lại</a>
@@ -61,14 +57,8 @@
                         <div style="padding:14px 18px;border-bottom:1px solid #edf0ec;display:flex;justify-content:space-between;align-items:center;">
                             <strong>Thông tin phiếu bảo trì</strong>
                             <c:choose>
-                                <c:when test="${record.status == 'PENDING'}">
-                                    <span class="status review">Chờ duyệt</span>
-                                </c:when>
-                                <c:when test="${record.status == 'APPROVED'}">
-                                    <span class="status in-use">Đã duyệt</span>
-                                </c:when>
                                 <c:when test="${record.status == 'IN_PROGRESS'}">
-                                    <span class="status maintenance">Đang sửa</span>
+                                    <span class="status maintenance">Đang sửa chữa</span>
                                 </c:when>
                                 <c:when test="${record.status == 'COMPLETED'}">
                                     <c:choose>
@@ -80,9 +70,9 @@
                                         </c:otherwise>
                                     </c:choose>
                                 </c:when>
-                                <c:when test="${record.status == 'REJECTED'}">
-                                    <span class="status overdue">Bị từ chối</span>
-                                </c:when>
+                                <c:otherwise>
+                                    <span class="status"><c:out value="${record.status}"/></span>
+                                </c:otherwise>
                             </c:choose>
                         </div>
                         <div class="info-grid">

@@ -31,7 +31,7 @@ public class AssetUsageDAO {
 			FROM dbo.asset_usages au
 			JOIN dbo.assets a ON a.asset_id = au.asset_id
 			LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = au.asset_item_id AND ai.asset_id = au.asset_id
-			JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+			JOIN dbo.intern_profiles ip ON ip.intern_id = au.student_id
 			JOIN dbo.users u ON u.user_id = ip.user_id
 			""";
 	private final DBConnection db = new DBConnection();
@@ -169,7 +169,7 @@ public class AssetUsageDAO {
 				  AND a.total_quantity > (
 					SELECT COALESCE(SUM(au.quantity), 0)
 					FROM dbo.asset_usages au
-					WHERE au.asset_id = a.asset_id AND au.status = 'IN_USE'
+					WHERE au.asset_id = a.asset_id AND au.status IN ('IN_USE', 'MAINTENANCE')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
@@ -215,7 +215,7 @@ public class AssetUsageDAO {
 				  AND ai.condition IN ('GOOD', 'FAIR')
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.asset_usages au
-					WHERE au.asset_item_id = ai.asset_item_id AND au.status = 'IN_USE'
+					WHERE au.asset_item_id = ai.asset_item_id AND au.status IN ('IN_USE', 'MAINTENANCE')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
@@ -248,20 +248,29 @@ public class AssetUsageDAO {
 	}
 
 	public long borrow(long userId, Long assetId, Long assetItemId, int quantity, String note) throws SQLException {
+		return borrow(userId, assetId, assetItemId, quantity, note, null);
+	}
+
+	public long borrow(long userId, Long assetId, Long assetItemId, int quantity, String note, LocalDateTime borrowedAt)
+			throws SQLException {
+		ZonedDateTime borrowTime = borrowedAt == null ? ZonedDateTime.now(labZone) : borrowedAt.atZone(labZone);
+		if (borrowTime.isAfter(ZonedDateTime.now(labZone))) {
+			throw new IllegalArgumentException("Ngày và giờ mượn không được ở tương lai.");
+		}
 		if (assetItemId != null) {
 			if (assetId != null) {
 				throw new IllegalArgumentException("Chỉ chọn một thiết bị theo mã riêng hoặc theo số lượng.");
 			}
-			return borrowSerialized(userId, assetItemId, quantity, note);
+			return borrowSerialized(userId, assetItemId, quantity, note, borrowTime);
 		}
 		if (assetId == null) {
 			throw new IllegalArgumentException("Vui lòng chọn thiết bị để mượn.");
 		}
-		return borrowQuantity(userId, assetId, quantity, note);
+		return borrowQuantity(userId, assetId, quantity, note, borrowTime);
 	}
 
-	private long borrowQuantity(long userId, long assetId, int quantity, String note) throws SQLException {
-		ZonedDateTime now = ZonedDateTime.now(labZone);
+	private long borrowQuantity(long userId, long assetId, int quantity, String note, ZonedDateTime borrowedAt)
+			throws SQLException {
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -271,10 +280,10 @@ public class AssetUsageDAO {
 				if (hasPendingDisposal(connection, assetId, null)) {
 					throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
 				}
-				Membership membership = currentMembership(connection, userId, now);
+				Membership membership = currentMembership(connection, userId, borrowedAt);
 				validateAvailableQuantity(activeQuantity(connection, assetId), quantity, asset.getTotalQuantity());
 				long id = insertUsage(connection, userId, asset.getAssetId(), null, quantity, asset.getCondition(),
-						note, membership, now);
+						note, membership, borrowedAt);
 				connection.commit();
 				return id;
 			} catch (SQLException | RuntimeException exception) {
@@ -284,8 +293,8 @@ public class AssetUsageDAO {
 		}
 	}
 
-	private long borrowSerialized(long userId, long assetItemId, int quantity, String note) throws SQLException {
-		ZonedDateTime now = ZonedDateTime.now(labZone);
+	private long borrowSerialized(long userId, long assetItemId, int quantity, String note, ZonedDateTime borrowedAt)
+			throws SQLException {
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -297,13 +306,13 @@ public class AssetUsageDAO {
 				if (hasPendingDisposal(connection, asset.getAssetId(), assetItemId)) {
 					throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
 				}
-				Membership membership = currentMembership(connection, userId, now);
+				Membership membership = currentMembership(connection, userId, borrowedAt);
 				if (hasActiveUsageForItem(connection, assetItemId)) {
 					throw new IllegalStateException("Thiết bị theo mã riêng đang được sử dụng.");
 				}
 				markAssetItemInUse(connection, assetItemId);
 				long id = insertUsage(connection, userId, asset.getAssetId(), assetItemId, 1, item.getCondition(), note,
-						membership, now);
+						membership, borrowedAt);
 				connection.commit();
 				return id;
 			} catch (SQLException | RuntimeException exception) {
@@ -406,7 +415,7 @@ public class AssetUsageDAO {
 		String sql = """
 				SELECT au.asset_id, au.asset_item_id
 				FROM dbo.asset_usages au
-				JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+				JOIN dbo.intern_profiles ip ON ip.intern_id = au.student_id
 				WHERE au.asset_usage_id = ? AND ip.user_id = ? AND au.status = 'IN_USE' AND au.returned_at IS NULL
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -425,7 +434,7 @@ public class AssetUsageDAO {
 		String sql = """
 				SELECT au.asset_id, au.asset_item_id
 				FROM dbo.asset_usages au WITH (UPDLOCK, HOLDLOCK)
-				JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+				JOIN dbo.intern_profiles ip ON ip.intern_id = au.student_id
 				WHERE au.asset_usage_id = ? AND ip.user_id = ? AND au.status = 'IN_USE' AND au.returned_at IS NULL
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -447,7 +456,7 @@ public class AssetUsageDAO {
 				SET returned_at = SYSUTCDATETIME(), condition_after = ?, return_note = ?, status = 'RETURNED',
 				    updated_at = SYSUTCDATETIME()
 				FROM dbo.asset_usages au
-				JOIN dbo.intern_profiles ip ON ip.intern_id = au.intern_id
+				JOIN dbo.intern_profiles ip ON ip.intern_id = au.student_id
 				WHERE au.asset_usage_id = ? AND ip.user_id = ? AND au.status = 'IN_USE' AND au.returned_at IS NULL
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -592,7 +601,7 @@ public class AssetUsageDAO {
 
 	private int activeQuantity(Connection connection, long assetId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT COALESCE(SUM(quantity), 0) FROM dbo.asset_usages WHERE asset_id = ? AND status = 'IN_USE'")) {
+				"SELECT COALESCE(SUM(quantity), 0) FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				result.next();
@@ -602,11 +611,11 @@ public class AssetUsageDAO {
 	}
 
 	private long insertUsage(Connection connection, long userId, long assetId, Long assetItemId, int quantity,
-			String conditionBefore, String note, Membership membership, ZonedDateTime now) throws SQLException {
+			String conditionBefore, String note, Membership membership, ZonedDateTime borrowedAt) throws SQLException {
 		String sql = """
-				INSERT dbo.asset_usages (request_id, semester_id, intern_id, asset_id, asset_item_id, quantity, borrowed_at,
+				INSERT dbo.asset_usages (request_id, semester_id, student_id, asset_id, asset_item_id, quantity, borrowed_at,
 				 due_at, condition_before, status, note, created_by) OUTPUT INSERTED.asset_usage_id
-				VALUES (?, ?, ?, ?, ?, ?, SYSUTCDATETIME(), ?, ?, 'IN_USE', ?, ?)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN_USE', ?, ?)
 				""";
 		Instant due = ZonedDateTime.of(membership.endDate(), java.time.LocalTime.of(23, 59, 59), labZone).toInstant();
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -620,10 +629,12 @@ public class AssetUsageDAO {
 				statement.setLong(5, assetItemId);
 			}
 			statement.setInt(6, quantity);
-			statement.setTimestamp(7, Timestamp.valueOf(LocalDateTime.ofInstant(due, java.time.ZoneOffset.UTC)));
-			statement.setString(8, conditionBefore);
-			statement.setString(9, blankToNull(note));
-			statement.setLong(10, userId);
+			statement.setTimestamp(7,
+					Timestamp.valueOf(LocalDateTime.ofInstant(borrowedAt.toInstant(), java.time.ZoneOffset.UTC)));
+			statement.setTimestamp(8, Timestamp.valueOf(LocalDateTime.ofInstant(due, java.time.ZoneOffset.UTC)));
+			statement.setString(9, conditionBefore);
+			statement.setString(10, blankToNull(note));
+			statement.setLong(11, userId);
 			try (ResultSet result = statement.executeQuery()) {
 				result.next();
 				return result.getLong(1);
@@ -639,7 +650,7 @@ public class AssetUsageDAO {
 				usage.setAssetUsageId(result.getLong("asset_usage_id"));
 				usage.setRequestId(result.getLong("request_id"));
 				usage.setSemesterId(result.getLong("semester_id"));
-				usage.setInternId(result.getLong("intern_id"));
+				usage.setInternId(result.getLong("student_id"));
 				usage.setAssetId(result.getLong("asset_id"));
 				usage.setAssetItemId(nullableLong(result, "asset_item_id"));
 				usage.setQuantity(result.getInt("quantity"));
@@ -704,8 +715,8 @@ public class AssetUsageDAO {
 	}
 
 	private boolean hasActiveUsageForItem(Connection connection, long assetItemId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status = 'IN_USE'")) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();

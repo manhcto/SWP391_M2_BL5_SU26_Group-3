@@ -51,6 +51,8 @@ public final class ViewFormat {
 		return switch (value) {
 			case "ADMIN" -> "Quản trị viên";
 			case "INTERN" -> "Thực tập sinh";
+			case "NATURAL" -> "Tự nhiên / không do thực tập sinh";
+			case "UNKNOWN" -> "Chưa rõ nguyên nhân";
 			case "MENTOR" -> "Người hướng dẫn";
 			case "LAB_MANAGER" -> "Quản lý phòng LAB";
 			case "ACTIVE" -> "Hoạt động";

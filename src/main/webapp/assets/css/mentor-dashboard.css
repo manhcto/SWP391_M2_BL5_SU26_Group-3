@@ -363,6 +363,7 @@ td { padding: 8px 8px; border-top: 1px solid #edf0ec; color: #46514d; font-size:
 .status { display: inline-block; min-width: 48px; padding: 3px 5px; border-radius: 4px; font-size: 7.5px; text-align: center; font-weight: 600; }
 .status.returned { color: #23734d; background: #e5f3eb; }
 .status.in-use { color: #2f67aa; background: #e6eef9; }
+.status.maintenance { color: #a96812; background: #fbefd8; }
 .status.review { color: #a96812; background: #fbefd8; }
 .status.open { color: #b33838; background: #fae5e5; }
 .status.completed, .status.approved { color: #23734d; background: #e5f3eb; }

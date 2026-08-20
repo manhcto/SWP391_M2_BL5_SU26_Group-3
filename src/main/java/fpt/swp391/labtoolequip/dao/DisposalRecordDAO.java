@@ -114,11 +114,11 @@ public class DisposalRecordDAO {
 				FROM dbo.asset_items ai
 				JOIN dbo.assets a ON a.asset_id = ai.asset_id
 				WHERE a.tracking_mode = 'SERIALIZED' AND a.status <> 'DISPOSED'
-				  AND ai.status NOT IN ('DISPOSED', 'IN_USE')
+				  AND ai.status NOT IN ('DISPOSED', 'IN_USE', 'MAINTENANCE')
 				  AND (ai.status = 'UNAVAILABLE' OR ai.condition IN ('DAMAGED', 'BROKEN'))
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.asset_usages au
-					WHERE au.asset_item_id = ai.asset_item_id AND au.status = 'IN_USE'
+					WHERE au.asset_item_id = ai.asset_item_id AND au.status IN ('IN_USE', 'MAINTENANCE')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
@@ -295,7 +295,8 @@ public class DisposalRecordDAO {
 		}
 		if ("DISPOSED".equals(item.getStatus()))
 			throw new IllegalStateException("Thiết bị theo mã riêng đã được thanh lý.");
-		if ("IN_USE".equals(item.getStatus()) || hasActiveUsageForItem(connection, assetItemId))
+		if ("IN_USE".equals(item.getStatus()) || "MAINTENANCE".equals(item.getStatus())
+				|| hasActiveUsageForItem(connection, assetItemId))
 			throw new IllegalStateException(
 					"Phải hoàn trả lượt mượn đang hoạt động của thiết bị theo mã riêng trước khi thanh lý.");
 		markDisposalCompleted(connection, disposalId, note);
@@ -367,8 +368,8 @@ public class DisposalRecordDAO {
 	}
 
 	private boolean hasActiveUsage(Connection connection, long assetId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE asset_id = ? AND status = 'IN_USE'")) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -377,8 +378,8 @@ public class DisposalRecordDAO {
 	}
 
 	private boolean hasActiveUsageForItem(Connection connection, long assetItemId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status = 'IN_USE'")) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -484,8 +485,8 @@ public class DisposalRecordDAO {
 	}
 
 	static void validateSerializedDisposalEligibility(AssetItem item) {
-		if ("IN_USE".equals(item.getStatus())) {
-			throw new IllegalStateException("Thiết bị theo mã riêng đang được sử dụng.");
+		if ("IN_USE".equals(item.getStatus()) || "MAINTENANCE".equals(item.getStatus())) {
+			throw new IllegalStateException("Thiết bị theo mã riêng đang được sử dụng hoặc bảo trì.");
 		}
 		if (!"UNAVAILABLE".equals(item.getStatus()) && !"DAMAGED".equals(item.getCondition())
 				&& !"BROKEN".equals(item.getCondition())) {

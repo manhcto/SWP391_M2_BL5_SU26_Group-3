@@ -7,8 +7,17 @@ import org.junit.jupiter.api.Test;
 
 class AuthSessionTest {
 	@Test
-	void mapsInternToItsDashboard() {
+	void mapsEachRoleToItsDashboard() {
+		assertEquals("/app/admin/dashboard", AuthSession.dashboard("/app", "ADMIN"));
+		assertEquals("/app/lab-manager/dashboard", AuthSession.dashboard("/app", "LAB_MANAGER"));
+		assertEquals("/app/mentor/dashboard", AuthSession.dashboard("/app", "MENTOR"));
 		assertEquals("/app/intern/dashboard", AuthSession.dashboard("/app", "INTERN"));
+	}
+
+	@Test
+	void sendsUnknownRoleToLogin() {
+		assertEquals("/app/login", AuthSession.dashboard("/app", "VISITOR"));
+		assertEquals("/app/login", AuthSession.dashboard("/app", null));
 	}
 
 	@Test

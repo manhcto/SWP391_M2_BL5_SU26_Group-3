@@ -31,7 +31,7 @@ class DisposalRecordDAOTest {
 	void serializedDisposalRequiresAnUnsafeItem() {
 		assertDoesNotThrow(() -> DisposalRecordDAO.validateSerializedDisposalEligibility(item("UNAVAILABLE", "GOOD")));
 		assertDoesNotThrow(() -> DisposalRecordDAO.validateSerializedDisposalEligibility(item("AVAILABLE", "DAMAGED")));
-		assertDoesNotThrow(
+		assertThrows(IllegalStateException.class,
 				() -> DisposalRecordDAO.validateSerializedDisposalEligibility(item("MAINTENANCE", "BROKEN")));
 		assertThrows(IllegalStateException.class,
 				() -> DisposalRecordDAO.validateSerializedDisposalEligibility(item("AVAILABLE", "GOOD")));

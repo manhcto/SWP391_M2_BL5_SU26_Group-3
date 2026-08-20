@@ -40,7 +40,7 @@
                                     <td>#AU-${u.assetUsageId}</td>
                                     <td><strong><c:out value="${u.assetName}"/></strong><br><small><c:out value="${empty u.itemCode ? u.assetCode : u.itemCode}"/></small></td>
                                     <td><c:out value="${u.quantity}"/></td><td><c:out value="${app:dateTime(u.borrowedAt)}"/></td><td><c:out value="${app:dateTime(u.dueAt)}"/></td>
-                                    <td><span class="status ${u.status == 'RETURNED' ? 'returned' : 'in-use'}"><c:out value="${app:label(u.status)}"/></span></td>
+                                    <td><span class="status ${u.status == 'RETURNED' ? 'returned' : (u.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out value="${app:label(u.status)}"/></span></td>
                                     <td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/intern/usages/${u.assetUsageId}">Xem</a></td>
                                 </tr></c:forEach></tbody>
                             </table>

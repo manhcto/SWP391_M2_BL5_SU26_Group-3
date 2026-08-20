@@ -33,7 +33,7 @@
             <div class="content-heading">
                 <div><p class="eyebrow">CỔNG INTERN</p>
                     <h2><c:out value="${usage.assetName}"/></h2></div>
-                <span class="status ${usage.status == 'RETURNED' ? 'returned' : 'in-use'}"><c:out
+                <span class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out
                         value="${app:label(usage.status)}"/></span></div>
             <dl class="panel detail-grid">
                 <div class="detail-item">

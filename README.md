@@ -166,8 +166,7 @@ DEV_AUTH_ENABLED=false
 
 Khởi tạo database mới bằng hai file theo thứ tự:
 
-1. `database/schema.sql`: chỉ tạo database, bảng, ràng buộc, index và compatibility view.
-2. `database/mock_data.sql`: thêm dữ liệu demo idempotent, gồm tài khoản nội bộ, Intern FPT, kỳ thực tập và thiết bị mẫu.
+Chạy `database/lab_asset_management_full.sql` để tạo database, schema và dữ liệu demo.
 
 Các tài khoản Intern demo không có mật khẩu nội bộ; đăng nhập bằng tài khoản Google FPT tương ứng.
 
