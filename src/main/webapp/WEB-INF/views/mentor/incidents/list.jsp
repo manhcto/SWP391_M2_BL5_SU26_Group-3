@@ -1,0 +1,61 @@
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sự cố | LAB Asset</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+</head>
+<body class="mentor-page">
+<c:set var="activeMenu" value="incidents" scope="request"/>
+<div class="app-shell">
+    <%@ include file="../includes/sidebar.jspf" %>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="heading-wrap">
+                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button>
+                <div><h1>Sự cố</h1><p>Báo cáo hỏng hóc lớn và theo dõi tiến trình xử lý của Quản lý phòng LAB</p></div>
+            </div>
+            <div class="topbar-actions"><a class="primary-button" href="${pageContext.request.contextPath}/mentor/incidents/new"><svg><use href="#i-plus"/></svg>Báo cáo sự cố</a></div>
+        </header>
+        <section class="content-area">
+            <div class="content-heading"><div><p class="eyebrow">CỔNG NGƯỜI HƯỚNG DẪN</p><h2>Sự cố đã gửi (${incidents.size()})</h2></div></div>
+            <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/mentor/incidents">
+                <div class="filter-group">
+                    <input class="form-control" type="search" name="keyword" value="<c:out value='${keyword}'/>" placeholder="Tìm theo mã hoặc thiết bị" style="width:280px">
+                    <select class="form-control" name="status"><option value="">Tất cả trạng thái</option><option value="OPEN" ${selectedStatus == 'OPEN' ? 'selected' : ''}>Chờ xử lý</option><option value="INVESTIGATING" ${selectedStatus == 'INVESTIGATING' ? 'selected' : ''}>Đang xử lý</option><option value="RESOLVED" ${selectedStatus == 'RESOLVED' ? 'selected' : ''}>Đã giải quyết</option><option value="CLOSED" ${selectedStatus == 'CLOSED' ? 'selected' : ''}>Đã đóng</option></select>
+                    <select class="form-control" name="severity"><option value="">Tất cả mức độ</option><option value="HIGH" ${selectedSeverity == 'HIGH' ? 'selected' : ''}>Cao</option><option value="CRITICAL" ${selectedSeverity == 'CRITICAL' ? 'selected' : ''}>Nghiêm trọng</option></select>
+                    <button class="primary-button" type="submit">Lọc</button>
+                    <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/incidents">Đặt lại</a>
+                </div>
+            </form>
+            <article class="panel">
+                <c:choose>
+                    <c:when test="${empty incidents}">
+                        <div class="empty-box"><div class="empty-box-icon"><svg><use href="#i-alert"/></svg></div><h3>Chưa có sự cố nào</h3><p>Chỉ báo cáo hỏng hóc mức cao hoặc nghiêm trọng cần Quản lý phòng LAB xử lý.</p><a class="primary-button" href="${pageContext.request.contextPath}/mentor/incidents/new">Báo cáo sự cố</a></div>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="table-scroll"><table><thead><tr><th>Mã sự cố</th><th>Thiết bị</th><th>Thực tập sinh</th><th>Loại sự cố</th><th>Mức độ</th><th>Thời gian</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>
+                            <c:forEach var="incident" items="${incidents}"><tr>
+                                <td><strong>#INC-<c:out value="${incident.incidentId}"/></strong></td>
+                                <td><strong><c:out value="${incident.assetName}"/></strong><br><small><c:out value="${empty incident.assetItemCode ? incident.assetCode : incident.assetItemCode}"/></small></td>
+                                <td><c:out value="${empty incident.internName ? '—' : incident.internName}"/></td>
+                                <td><c:out value="${app:label(incident.incidentType)}"/></td>
+                                <td><span class="status open"><c:out value="${app:label(incident.severity)}"/></span></td>
+                                <td><c:out value="${app:dateTime(incident.reportedAt)}"/></td>
+                                <td><span class="status ${incident.status == 'OPEN' ? 'open' : incident.status == 'RESOLVED' || incident.status == 'CLOSED' ? 'returned' : 'review'}"><c:out value="${app:label(incident.status)}"/></span></td>
+                                <td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/mentor/incidents/${incident.incidentId}">Xem</a></td>
+                            </tr></c:forEach>
+                        </tbody></table></div>
+                        <div class="table-footer"><span>Hiển thị ${incidents.size()} sự cố</span></div>
+                    </c:otherwise>
+                </c:choose>
+            </article>
+        </section>
+    </main>
+</div>
+</body>
+</html>

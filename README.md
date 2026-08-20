@@ -45,7 +45,7 @@ Intern được di chuyển tự do trong LAB; hệ thống không quản lý ho
 
 ## Xác thực và cấp quyền
 
-Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuất. Đăng nhập development bằng email chỉ xuất hiện khi `DEV_AUTH_ENABLED=true`.
+Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuất. Đăng nhập development bằng email và mật khẩu chỉ xuất hiện khi `DEV_AUTH_ENABLED=true`.
 
 - Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `INTERN`.
 - Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Đăng nhập Google không tự tạo tài khoản và không quyết định quyền hạn.
@@ -166,7 +166,7 @@ DEV_AUTH_ENABLED=false
 
 Để tạo database nền và toàn bộ dữ liệu demo, chạy duy nhất `database/lab_asset_management_full.sql`. File full đã bao gồm danh mục Major, `asset_items`, bộ dữ liệu 2 kit với tối đa 3 item mỗi kit, incident mẫu và responsibility test data; không còn tạo category hoặc asset `Tài sản cố định` hay `Cơ sở vật chất`. Với database đã tồn tại, chạy `database/update_asset_categories_vietnamese.sql` để dịch tên category và xóa hai category cùng dữ liệu liên quan; chạy `database/limit_asset_items_to_three.sql` để giảm mỗi asset quantity còn tối đa 3 item.
 
-Nếu database đã chạy bản cũ có `asset_items`, chạy thêm `database/migrations/003_asset_item_usage.sql` để thêm liên kết `asset_item_id` cho các lượt mượn mới.
+Nếu database đã chạy bản cũ có `asset_items`, chạy thêm `database/migrations/003_asset_item_usage.sql` để thêm liên kết `asset_item_id` cho các lượt mượn mới. Nếu cần đăng nhập bằng email/mật khẩu trên database cũ, chạy trước `database/migrations/005_auth_login_columns.sql`, sau đó mới chạy `004_fe04_fe09_auth_prerequisites.sql` khi database đã có đủ các bảng workflow.
 
 Các tài khoản demo đều dùng mật khẩu `123` khi `DEV_AUTH_ENABLED=true`:
 

@@ -15,7 +15,7 @@
                 <div style="font-size: 12px; font-weight: 700; color: #0284c7; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">🔑 Dành cho Cán bộ / Quản lý / Mentor</div>
                 <label class="login-field" for="email"><span>Địa chỉ email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập địa chỉ email cán bộ" required><span class="field-icon">✉</span></label>
                 <label class="login-field" for="password"><span>Mật khẩu</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu (Mặc định: 123)" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
-                <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><span>Quên mật khẩu?</span></div>
+                <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><a href="${pageContext.request.contextPath}/password-reset">Quên mật khẩu?</a></div>
                 <button class="login-submit" type="submit">Đăng nhập bằng Mật khẩu</button>
             </form>
             <div class="login-divider"><span>hoặc</span></div>

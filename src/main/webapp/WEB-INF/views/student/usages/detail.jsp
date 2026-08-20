@@ -22,7 +22,7 @@
             <div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/intern/usages">Quay lại lịch sử</a></div>
         </header>
         <section class="content-area">
-            <div class="content-heading"><div><p class="eyebrow">CỔNG THỰC TẬP SINH</p><h2><c:out value="${usage.assetName}"/></h2></div><span class="status ${usage.status == 'RETURNED' ? 'returned' : 'in-use'}"><c:out value="${app:label(usage.status)}"/></span></div>
+            <div class="content-heading"><div><p class="eyebrow">CỔNG THỰC TẬP SINH</p><h2><c:out value="${usage.assetName}"/></h2></div><span class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out value="${app:label(usage.status)}"/></span></div>
             <dl class="panel detail-grid">
                 <div class="detail-item"><dt>Mã thiết bị</dt><dd><c:out value="${usage.assetCode}"/></dd></div>
                 <div class="detail-item"><dt>Mã sản phẩm</dt><dd><c:out value="${empty usage.itemCode ? 'Theo thiết bị chung' : usage.itemCode}"/></dd></div>

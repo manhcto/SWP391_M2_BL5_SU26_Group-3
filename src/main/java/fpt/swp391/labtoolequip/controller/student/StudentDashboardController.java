@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet({"/intern/dashboard", "/student/dashboard"})
+@WebServlet("/intern/dashboard")
 public class StudentDashboardController extends HttpServlet {
 	private final AssetUsageDAO assetUsageDAO = new AssetUsageDAO();
 	private final IncidentDAO incidentDAO = new IncidentDAO();

@@ -12,6 +12,10 @@ import java.io.IOException;
 
 @WebFilter("/*")
 public class AuthorizationFilter implements Filter {
+	static boolean isAuthorized(Permission permission, String role) {
+		return Authorization.has(role, permission);
+	}
+
 	@Override
 	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
 			throws IOException, ServletException {
@@ -29,10 +33,15 @@ public class AuthorizationFilter implements Filter {
 			response.sendRedirect(request.getContextPath() + "/login");
 			return;
 		}
+		if (AuthSession.mustChangePassword(request)) {
+			response.sendRedirect(request.getContextPath() + "/change-password");
+			return;
+		}
 		if (!requiredRole.equals(role)) {
 			response.sendError(HttpServletResponse.SC_FORBIDDEN);
 			return;
 		}
+		request.setAttribute("permissions", Authorization.view(role));
 		chain.doFilter(request, response);
 	}
 

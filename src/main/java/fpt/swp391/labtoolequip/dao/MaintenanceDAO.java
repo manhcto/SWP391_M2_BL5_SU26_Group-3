@@ -62,15 +62,20 @@ public class MaintenanceDAO {
 		}
 	}
 
-	/**
-	 * Danh sách thiết bị đang hoạt động (chưa bị thanh lý) để chọn khi tạo phiếu
-	 * bảo trì.
-	 */
-	public List<Asset> findEligibleAssets() throws SQLException {
+	/** Tài sản không có sự cố mở, dùng cho bảo dưỡng định kỳ hoặc trực tiếp. */
+	public List<Asset> findRoutineMaintenanceAssets() throws SQLException {
 		String sql = """
-				SELECT asset_id, asset_code, asset_name, storage_location
-				FROM dbo.assets
-				WHERE status <> 'DISPOSED'
+				SELECT a.asset_id, a.asset_code, a.asset_name, a.storage_location
+				FROM dbo.assets a
+				WHERE a.status <> 'DISPOSED'
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.incidents i
+					WHERE i.asset_id = a.asset_id AND i.status IN ('OPEN', 'INVESTIGATING')
+				  )
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.maintenance_records m
+					WHERE m.asset_id = a.asset_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
+				  )
 				ORDER BY asset_name
 				""";
 		try (Connection connection = db.getConnection();
@@ -89,13 +94,17 @@ public class MaintenanceDAO {
 		}
 	}
 
-	/** Danh sách sự cố còn mở để liên kết tùy chọn khi tạo phiếu bảo trì. */
+	/** Danh sách sự cố đang xử lý nhưng chưa có phiếu bảo trì đang chạy. */
 	public List<Incident> findOpenIncidents() throws SQLException {
 		String sql = """
 				SELECT i.incident_id, i.asset_id, i.description, a.asset_name, a.asset_code
 				FROM dbo.incidents i
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
 				WHERE i.status IN ('OPEN', 'INVESTIGATING')
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.maintenance_records m
+					WHERE m.incident_id = i.incident_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
+				  )
 				ORDER BY i.reported_at DESC
 				""";
 		try (Connection connection = db.getConnection();

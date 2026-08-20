@@ -134,27 +134,25 @@
                                 <label>Thiết bị cần bảo trì *</label>
                                 <select class="form-control" name="assetId" id="assetSelect" required>
                                     <option value="">-- Chọn thiết bị --</option>
-                                    <c:forEach var="a" items="${assets}">
-                                        <option value="${a.assetId}">
-                                            <c:out value="${a.assetName}"/> (<c:out value="${a.assetCode}"/>)
-                                            <c:if test="${not empty a.storageLocation}"> – <c:out value="${a.storageLocation}"/></c:if>
-                                        </option>
-                                    </c:forEach>
+                                    <c:if test="${not empty incidents}"><optgroup label="Sự cố đang xử lý">
+                                        <c:forEach var="inc" items="${incidents}">
+                                            <option value="${inc.assetId}" data-incident-id="${inc.incidentId}">
+                                                #INC-<c:out value="${inc.incidentId}"/> · <c:out value="${inc.assetName}"/> (<c:out value="${inc.assetCode}"/>) — <c:out value="${inc.description}"/>
+                                            </option>
+                                        </c:forEach>
+                                    </optgroup></c:if>
+                                    <c:if test="${not empty routineAssets}"><optgroup label="Bảo trì định kỳ / tài sản còn lại">
+                                        <c:forEach var="a" items="${routineAssets}">
+                                            <option value="${a.assetId}" data-incident-id="">
+                                                <c:out value="${a.assetName}"/> (<c:out value="${a.assetCode}"/>)
+                                                <c:if test="${not empty a.storageLocation}"> – <c:out value="${a.storageLocation}"/></c:if>
+                                            </option>
+                                        </c:forEach>
+                                    </optgroup></c:if>
                                 </select>
+                                <small id="maintenanceTargetNotice" style="display:block;margin-top:4px;font-size:12px;color:#5a6662;">Chọn sự cố để sửa chữa, hoặc chọn tài sản còn lại cho bảo trì định kỳ.</small>
                             </div>
-
-                            <div class="form-group full-width">
-                                <label>Sự cố liên quan (nếu có)</label>
-                                <select class="form-control" name="incidentId" id="incidentSelect">
-                                    <option value="" data-asset-id="">-- Không có sự cố (bảo dưỡng định kỳ / trực tiếp) --</option>
-                                    <c:forEach var="inc" items="${incidents}">
-                                        <option value="${inc.incidentId}" data-asset-id="${inc.assetId}">
-                                            #INC-<c:out value="${inc.incidentId}"/> – <c:out value="${inc.assetName}"/>: <c:out value="${inc.description}"/>
-                                        </option>
-                                    </c:forEach>
-                                </select>
-                                <small id="incidentCountNotice" style="display:block;margin-top:4px;font-size:12px;color:#5a6662;"></small>
-                            </div>
+                            <input type="hidden" name="incidentId" id="incidentId">
 
                             <div class="form-group">
                                 <label>Dự toán kinh phí sửa chữa</label>
@@ -183,74 +181,24 @@
                         <script>
                             document.addEventListener('DOMContentLoaded', function() {
                                 const assetSelect = document.getElementById('assetSelect');
-                                const incidentSelect = document.getElementById('incidentSelect');
-                                const countNotice = document.getElementById('incidentCountNotice');
+                                const incidentId = document.getElementById('incidentId');
+                                const targetNotice = document.getElementById('maintenanceTargetNotice');
 
-                                if (assetSelect && incidentSelect) {
-                                    function filterIncidents() {
-                                        const selectedAssetId = assetSelect.value;
-                                        const currentIncidentVal = incidentSelect.value;
-                                        let matchingCount = 0;
-                                        let firstMatchingVal = '';
-                                        let isCurrentStillValid = false;
-
-                                        Array.from(incidentSelect.options).forEach(function(opt, index) {
-                                            if (index === 0) return;
-
-                                            const optAssetId = opt.getAttribute('data-asset-id');
-                                            if (selectedAssetId && optAssetId === selectedAssetId) {
-                                                opt.hidden = false;
-                                                opt.disabled = false;
-                                                matchingCount++;
-                                                if (!firstMatchingVal) {
-                                                    firstMatchingVal = opt.value;
-                                                }
-                                                if (opt.value === currentIncidentVal) {
-                                                    isCurrentStillValid = true;
-                                                }
-                                            } else {
-                                                opt.hidden = true;
-                                                opt.disabled = true;
-                                            }
-                                        });
-
-                                        const noneOption = incidentSelect.options[0];
-
-                                        if (matchingCount > 0) {
-                                            // Thiết bị có sự cố mở -> Bắt buộc chọn sự cố
-                                            noneOption.hidden = true;
-                                            noneOption.disabled = true;
-                                            incidentSelect.required = true;
-
-                                            if (!isCurrentStillValid) {
-                                                incidentSelect.value = firstMatchingVal;
-                                            }
-
-                                            if (countNotice) {
-                                                countNotice.innerHTML = '⚠️ Thiết bị này đang có <b>' + matchingCount + '</b> sự cố hỏng hóc chưa xử lý. Hệ thống đã tự động chọn sự cố cần khắc phục.';
-                                                countNotice.style.color = '#c62828';
-                                            }
-                                        } else {
-                                            // Thiết bị không có sự cố -> Cho phép chọn "Không có sự cố (bảo dưỡng định kỳ)"
-                                            noneOption.hidden = false;
-                                            noneOption.disabled = false;
-                                            incidentSelect.required = false;
-                                            incidentSelect.value = '';
-
-                                            if (countNotice) {
-                                                if (!selectedAssetId) {
-                                                    countNotice.textContent = 'Vui lòng chọn thiết bị ở trên để xem danh sách sự cố tương ứng.';
-                                                    countNotice.style.color = '#5a6662';
-                                                } else {
-                                                    countNotice.textContent = 'ℹ️ Thiết bị này hiện không có sự cố nào. Bạn có thể tạo phiếu bảo dưỡng định kỳ.';
-                                                    countNotice.style.color = '#137a4d';
-                                                }
-                                            }
+                                if (assetSelect && incidentId) {
+                                    function syncTarget() {
+                                        const option = assetSelect.options[assetSelect.selectedIndex];
+                                        const linkedIncident = option ? option.getAttribute('data-incident-id') : '';
+                                        incidentId.value = linkedIncident || '';
+                                        if (targetNotice) {
+                                            targetNotice.textContent = linkedIncident
+                                                ? 'Sự cố được liên kết tự động với phiếu bảo trì này.'
+                                                : 'Bảo trì định kỳ: không liên kết sự cố.';
+                                            targetNotice.style.color = linkedIncident ? '#c62828' : '#137a4d';
                                         }
                                     }
 
-                                    assetSelect.addEventListener('change', filterIncidents);
-                                    filterIncidents();
+                                    assetSelect.addEventListener('change', syncTarget);
+                                    syncTarget();
                                 }
                             });
                         </script>

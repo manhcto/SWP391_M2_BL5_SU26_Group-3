@@ -26,7 +26,7 @@
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">TT</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i>Thực tập sinh</span></div></div>
-        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
     </div>
 </aside>
 <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Đóng thanh điều hướng"></button>
