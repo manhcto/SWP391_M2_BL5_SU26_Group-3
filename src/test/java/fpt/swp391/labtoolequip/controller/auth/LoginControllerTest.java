@@ -39,4 +39,16 @@ class LoginControllerTest {
 		user.setPasswordExpiresAt(ViewFormat.now().plusMinutes(1));
 		assertTrue(LoginController.validInternalPassword(user, "123"));
 	}
+
+	@Test
+	void generatesDifferentUrlSafeOAuthStates() {
+		LoginController controller = new LoginController();
+
+		String firstState = controller.newState();
+		String secondState = controller.newState();
+
+		assertTrue(firstState.matches("[A-Za-z0-9_-]{43}"));
+		assertTrue(secondState.matches("[A-Za-z0-9_-]{43}"));
+		assertFalse(firstState.equals(secondState));
+	}
 }

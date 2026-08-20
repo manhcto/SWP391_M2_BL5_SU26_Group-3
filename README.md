@@ -166,7 +166,7 @@ DEV_AUTH_ENABLED=false
 
 Để tạo database nền và toàn bộ dữ liệu demo, chạy duy nhất `database/lab_asset_management_full.sql`. File full đã bao gồm danh mục Major, `asset_items`, bộ dữ liệu 2 kit với tối đa 3 item mỗi kit, incident mẫu và responsibility test data; không còn tạo category hoặc asset `Tài sản cố định` hay `Cơ sở vật chất`. Với database đã tồn tại, chạy `database/update_asset_categories_vietnamese.sql` để dịch tên category và xóa hai category cùng dữ liệu liên quan; chạy `database/limit_asset_items_to_three.sql` để giảm mỗi asset quantity còn tối đa 3 item.
 
-Nếu database đã chạy bản cũ có `asset_items`, chạy thêm `database/migrations/003_asset_item_usage.sql` để thêm liên kết `asset_item_id` cho các lượt mượn mới.
+Nếu database đã chạy bản cũ có `asset_items`, chạy thêm `database/migrations/003_asset_item_usage.sql` để thêm liên kết `asset_item_id` cho các lượt mượn mới. Nếu cần đăng nhập bằng email/mật khẩu trên database cũ, chạy trước `database/migrations/005_auth_login_columns.sql`, sau đó mới chạy `004_fe04_fe09_auth_prerequisites.sql` khi database đã có đủ các bảng workflow.
 
 Các tài khoản demo đều dùng mật khẩu `123` khi `DEV_AUTH_ENABLED=true`:
 

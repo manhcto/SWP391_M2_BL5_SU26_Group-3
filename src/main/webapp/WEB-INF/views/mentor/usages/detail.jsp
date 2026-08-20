@@ -1,72 +1,20 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ taglib prefix="c" uri="jakarta.tags.core"%>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Asset Usage Detail</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css">
-</head>
-<body>
+<html lang="vi">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lượt sử dụng #${usage.assetUsageId} | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css"></head>
+<body class="mentor-page">
+<c:set var="activeMenu" value="usages" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../../includes/operations-sidebar.jspf"%>
-    <div class="workspace">
-<main class="content">
-    <div class="page-heading">
-        <h1><c:out value="${usage.assetName}"/></h1>
-        <a class="button" href="${pageContext.request.contextPath}/mentor/usages">Back</a>
-    </div>
-    <dl class="card detail-grid">
-        <div>
-            <dt>Intern</dt>
-            <dd><c:out value="${usage.internName}"/></dd>
-        </div>
-        <div>
-            <dt>Quantity</dt>
-            <dd>${usage.quantity}</dd>
-        </div>
-        <c:if test="${not empty usage.assetItemTag}">
-            <div>
-                <dt>Item</dt>
-                <dd><c:out value="${usage.assetItemTag}"/></dd>
-            </div>
-        </c:if>
-        <div>
-            <dt>Borrowed</dt>
-            <dd>${usage.borrowedAt}</dd>
-        </div>
-        <div>
-            <dt>Due</dt>
-            <dd>${usage.dueAt}</dd>
-        </div>
-        <div>
-            <dt>Status</dt>
-            <dd>${usage.status}</dd>
-        </div>
-        <div>
-            <dt>Returned</dt>
-            <dd>${usage.returnedAt}</dd>
-        </div>
-        <div>
-            <dt>Condition before</dt>
-            <dd>${usage.conditionBefore}</dd>
-        </div>
-        <div>
-            <dt>Condition after</dt>
-            <dd>${usage.conditionAfter}</dd>
-        </div>
-        <div>
-            <dt>Usage note</dt>
-            <dd><c:out value="${usage.note}"/></dd>
-        </div>
-        <div>
-            <dt>Return note</dt>
-            <dd><c:out value="${usage.returnNote}"/></dd>
-        </div>
-    </dl>
-</main>
-    </div>
+    <%@ include file="../includes/sidebar.jspf" %>
+    <main class="main-content">
+        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Chi tiết sử dụng thiết bị</h1><p>Thông tin mượn, trả thiết bị của thực tập sinh</p></div></div><div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/usages">Quay lại lịch sử</a></div></header>
+        <section class="content-area">
+            <div class="content-heading"><div><p class="eyebrow">LƯỢT SỬ DỤNG #AU-${usage.assetUsageId}</p><h2><c:out value="${usage.assetName}"/></h2></div><span class="status ${usage.status == 'IN_USE' ? 'in-use' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'returned')}"><c:out value="${app:label(usage.status)}"/></span></div>
+            <dl class="panel detail-grid"><div class="detail-item"><dt>Mã thiết bị</dt><dd><c:out value="${usage.assetCode}"/></dd></div><div class="detail-item"><dt>Mã sản phẩm / Serial</dt><dd><c:out value="${empty usage.assetItemTag ? 'Theo thiết bị chung' : usage.assetItemTag}"/></dd></div><div class="detail-item"><dt>Thực tập sinh</dt><dd><c:out value="${usage.internName}"/></dd></div><div class="detail-item"><dt>Số lượng</dt><dd><c:out value="${usage.quantity}"/></dd></div><div class="detail-item"><dt>Mượn lúc</dt><dd><c:out value="${app:dateTime(usage.borrowedAt)}"/></dd></div><div class="detail-item"><dt>Hạn trả</dt><dd><c:out value="${app:dateTime(usage.dueAt)}"/></dd></div><div class="detail-item"><dt>Trả lúc</dt><dd><c:out value="${empty usage.returnedAt ? 'Chưa trả' : app:dateTime(usage.returnedAt)}"/></dd></div><div class="detail-item"><dt>Tình trạng trước khi mượn</dt><dd><c:out value="${app:label(usage.conditionBefore)}"/></dd></div><div class="detail-item"><dt>Tình trạng sau khi trả</dt><dd><c:out value="${empty usage.conditionAfter ? 'Chờ trả' : app:label(usage.conditionAfter)}"/></dd></div><div class="detail-item wide"><dt>Ghi chú sử dụng</dt><dd><c:out value="${empty usage.note ? 'Không có ghi chú.' : usage.note}"/></dd></div><div class="detail-item wide"><dt>Ghi chú trả thiết bị</dt><dd><c:out value="${empty usage.returnNote ? 'Chưa có ghi chú trả thiết bị.' : usage.returnNote}"/></dd></div></dl>
+        </section>
+    </main>
 </div>
 </body>
 </html>

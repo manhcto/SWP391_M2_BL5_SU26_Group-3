@@ -18,6 +18,8 @@ public class Incident {
 	private LocalDateTime reportedAt;
 	private String investigationNote;
 	private String handlingResult;
+	private String reportedCause;
+	private String determinedCause;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 	private String assetCode;
@@ -171,6 +173,11 @@ public class Incident {
 	public void setHandlingResult(String handlingResult) {
 		this.handlingResult = handlingResult;
 	}
+
+	public String getReportedCause() { return reportedCause; }
+	public void setReportedCause(String reportedCause) { this.reportedCause = reportedCause; }
+	public String getDeterminedCause() { return determinedCause; }
+	public void setDeterminedCause(String determinedCause) { this.determinedCause = determinedCause; }
 
 	public LocalDateTime getCreatedAt() {
 		return createdAt;

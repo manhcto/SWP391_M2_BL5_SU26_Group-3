@@ -23,10 +23,18 @@ BEGIN TRY
     IF OBJECT_ID(N'dbo.intern_profiles') IS NULL
        AND OBJECT_ID(N'dbo.student_profiles', N'U') IS NOT NULL
     BEGIN
-        EXEC(N'CREATE VIEW dbo.intern_profiles AS
-               SELECT student_id AS intern_id, user_id, student_code AS intern_code,
-                      major, cohort, status, created_at, updated_at
-               FROM dbo.student_profiles');
+        IF COL_LENGTH(N'dbo.student_profiles', N'major_id') IS NOT NULL
+           AND OBJECT_ID(N'dbo.majors', N'U') IS NOT NULL
+            EXEC(N'CREATE VIEW dbo.intern_profiles AS
+                   SELECT sp.student_id AS intern_id, sp.user_id, sp.student_code AS intern_code,
+                          m.major_name AS major, sp.cohort, sp.status, sp.created_at, sp.updated_at
+                   FROM dbo.student_profiles sp
+                   LEFT JOIN dbo.majors m ON m.major_id = sp.major_id');
+        ELSE
+            EXEC(N'CREATE VIEW dbo.intern_profiles AS
+                   SELECT student_id AS intern_id, user_id, student_code AS intern_code,
+                          major, cohort, status, created_at, updated_at
+                   FROM dbo.student_profiles');
     END;
 
     IF OBJECT_ID(N'dbo.lab_usage_request_interns') IS NULL
@@ -154,9 +162,9 @@ BEGIN TRY
           AND name = N'FK_asset_usages_asset_item'
     )
     BEGIN
-        ALTER TABLE dbo.asset_usages WITH CHECK
-            ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id)
-                REFERENCES dbo.asset_items(asset_item_id);
+        EXEC(N'ALTER TABLE dbo.asset_usages WITH CHECK
+               ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id)
+                   REFERENCES dbo.asset_items(asset_item_id);');
     END;
 
     IF NOT EXISTS (
@@ -197,9 +205,9 @@ BEGIN TRY
           )
     )
     BEGIN
-        ALTER TABLE dbo.asset_usages WITH CHECK
-            ADD CONSTRAINT FK_asset_usages_asset_item_asset FOREIGN KEY (asset_item_id, asset_id)
-                REFERENCES dbo.asset_items(asset_item_id, asset_id);
+        EXEC(N'ALTER TABLE dbo.asset_usages WITH CHECK
+               ADD CONSTRAINT FK_asset_usages_asset_item_asset FOREIGN KEY (asset_item_id, asset_id)
+                   REFERENCES dbo.asset_items(asset_item_id, asset_id);');
     END;
 
     IF NOT EXISTS (
@@ -209,9 +217,9 @@ BEGIN TRY
           AND name = N'CK_asset_usages_asset_item_quantity'
     )
     BEGIN
-        ALTER TABLE dbo.asset_usages WITH CHECK
-            ADD CONSTRAINT CK_asset_usages_asset_item_quantity
-            CHECK (asset_item_id IS NULL OR quantity = 1);
+        EXEC(N'ALTER TABLE dbo.asset_usages WITH CHECK
+               ADD CONSTRAINT CK_asset_usages_asset_item_quantity
+               CHECK (asset_item_id IS NULL OR quantity = 1);');
     END;
 
     IF NOT EXISTS (
@@ -221,8 +229,8 @@ BEGIN TRY
           AND name = N'IX_asset_usages_asset_item'
     )
     BEGIN
-        CREATE INDEX IX_asset_usages_asset_item ON dbo.asset_usages (asset_item_id)
-            WHERE asset_item_id IS NOT NULL;
+        EXEC(N'CREATE INDEX IX_asset_usages_asset_item ON dbo.asset_usages (asset_item_id)
+               WHERE asset_item_id IS NOT NULL;');
     END;
 
     IF NOT EXISTS (
@@ -232,8 +240,8 @@ BEGIN TRY
           AND name = N'UX_asset_usages_active_asset_item'
     )
     BEGIN
-        CREATE UNIQUE INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages (asset_item_id)
-            WHERE asset_item_id IS NOT NULL AND status = 'IN_USE';
+        EXEC(N'CREATE UNIQUE INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages (asset_item_id)
+               WHERE asset_item_id IS NOT NULL AND status = ''IN_USE'';');
     END;
 
     IF COL_LENGTH(N'dbo.disposal_records', N'asset_item_id') IS NULL
@@ -286,9 +294,9 @@ BEGIN TRY
           AND name = N'CK_disposal_records_asset_item_quantity'
     )
     BEGIN
-        ALTER TABLE dbo.disposal_records WITH CHECK
-            ADD CONSTRAINT CK_disposal_records_asset_item_quantity
-            CHECK (asset_item_id IS NULL OR quantity = 1);
+        EXEC(N'ALTER TABLE dbo.disposal_records WITH CHECK
+               ADD CONSTRAINT CK_disposal_records_asset_item_quantity
+               CHECK (asset_item_id IS NULL OR quantity = 1);');
     END;
 
     IF NOT EXISTS (
@@ -298,9 +306,9 @@ BEGIN TRY
           AND name = N'FK_disposal_records_asset_item'
     )
     BEGIN
-        ALTER TABLE dbo.disposal_records WITH CHECK
-            ADD CONSTRAINT FK_disposal_records_asset_item FOREIGN KEY (asset_item_id)
-                REFERENCES dbo.asset_items(asset_item_id);
+        EXEC(N'ALTER TABLE dbo.disposal_records WITH CHECK
+               ADD CONSTRAINT FK_disposal_records_asset_item FOREIGN KEY (asset_item_id)
+                   REFERENCES dbo.asset_items(asset_item_id);');
     END;
 
     IF NOT EXISTS (
@@ -341,9 +349,9 @@ BEGIN TRY
           )
     )
     BEGIN
-        ALTER TABLE dbo.disposal_records WITH CHECK
-            ADD CONSTRAINT FK_disposal_records_asset_item_asset FOREIGN KEY (asset_item_id, asset_id)
-                REFERENCES dbo.asset_items(asset_item_id, asset_id);
+        EXEC(N'ALTER TABLE dbo.disposal_records WITH CHECK
+               ADD CONSTRAINT FK_disposal_records_asset_item_asset FOREIGN KEY (asset_item_id, asset_id)
+                   REFERENCES dbo.asset_items(asset_item_id, asset_id);');
     END;
 
     IF NOT EXISTS (
@@ -353,8 +361,8 @@ BEGIN TRY
           AND name = N'UX_disposal_records_open_asset_item'
     )
     BEGIN
-        CREATE UNIQUE INDEX UX_disposal_records_open_asset_item ON dbo.disposal_records (asset_item_id)
-            WHERE asset_item_id IS NOT NULL AND status IN ('PENDING', 'APPROVED');
+        EXEC(N'CREATE UNIQUE INDEX UX_disposal_records_open_asset_item ON dbo.disposal_records (asset_item_id)
+               WHERE asset_item_id IS NOT NULL AND status IN (''PENDING'', ''APPROVED'');');
     END;
 
     COMMIT TRANSACTION;

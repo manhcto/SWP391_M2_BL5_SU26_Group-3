@@ -76,7 +76,13 @@ public class GoogleCallbackController extends HttpServlet {
 		} catch (InterruptedException exception) {
 			Thread.currentThread().interrupt();
 			throw new ServletException(exception);
-		} catch (SQLException | GeneralSecurityException | RuntimeException exception) {
+		} catch (IOException exception) {
+			getServletContext().log("Could not connect to Google OAuth", exception);
+			deny(request, response, "Không thể kết nối với Google. Kiểm tra mạng hoặc proxy rồi thử lại.");
+		} catch (GeneralSecurityException | IllegalArgumentException | IllegalStateException exception) {
+			getServletContext().log("Could not complete Google OAuth", exception);
+			deny(request, response, "Không thể hoàn tất đăng nhập Google. Vui lòng thử lại.");
+		} catch (SQLException exception) {
 			throw new ServletException(exception);
 		}
 	}

@@ -59,7 +59,7 @@
                     <c:otherwise>
                         <div class="table-scroll">
                             <table>
-                                <thead><tr><th>Mã sự cố</th><th>Thiết bị</th><th>Loại sự cố</th><th>Mức độ</th><th>Người báo cáo</th><th>Thời gian</th><th>Trạng thái</th><th>Mô tả</th></tr></thead>
+                                <thead><tr><th>Mã sự cố</th><th>Thiết bị</th><th>Loại sự cố</th><th>Mức độ</th><th>Người báo cáo</th><th>Thời gian</th><th>Trạng thái</th><th>Mô tả</th><th>Thao tác</th></tr></thead>
                                 <tbody>
                                 <c:forEach var="incident" items="${incidents}">
                                     <tr>
@@ -71,6 +71,7 @@
                                         <td><c:out value="${app:dateTime(incident.reportedAt)}"/></td>
                                         <td><span class="status ${incident.status == 'OPEN' ? 'open' : incident.status == 'RESOLVED' || incident.status == 'CLOSED' ? 'returned' : 'review'}"><c:out value="${app:label(incident.status)}"/></span></td>
                                         <td class="wrap-cell"><c:out value="${incident.description}"/></td>
+                                        <td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/lab-manager/incidents/${incident.incidentId}">${incident.status == 'OPEN' ? 'Xử lý' : 'Xem'}</a></td>
                                     </tr>
                                 </c:forEach>
                                 </tbody>

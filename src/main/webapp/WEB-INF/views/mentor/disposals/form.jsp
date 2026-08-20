@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,7 +11,8 @@
 </head>
 <body>
 <div class="app-shell">
-    <%@ include file="../../includes/operations-sidebar.jspf" %>
+    <c:set var="activeMenu" value="disposals"/>
+    <%@ include file="../includes/sidebar.jspf" %>
     <div class="workspace">
         <main class="content">
             <div class="page-heading">

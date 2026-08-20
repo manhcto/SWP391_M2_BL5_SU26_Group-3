@@ -48,6 +48,8 @@ public final class AuthSession {
 	}
 
 	public static String dashboard(String contextPath, String role) {
+		if (role == null)
+			return contextPath + "/login";
 		return switch (role) {
 			case "ADMIN" -> contextPath + "/admin/dashboard";
 			case "LAB_MANAGER" -> contextPath + "/lab-manager/dashboard";

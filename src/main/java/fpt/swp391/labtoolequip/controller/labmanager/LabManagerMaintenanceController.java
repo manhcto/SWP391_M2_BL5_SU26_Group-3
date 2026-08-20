@@ -22,9 +22,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 
 			// /lab-manager/maintenance/new -> Lab Manager cũng có thể tạo phiếu bảo trì
 			if ("/new".equals(path)) {
-				request.setAttribute("assets", dao.findEligibleAssets());
-				request.setAttribute("incidents", dao.findOpenIncidents());
-				forward(request, response, "form.jsp");
+				showCreateForm(request, response);
 				return;
 			}
 
@@ -61,8 +59,8 @@ public class LabManagerMaintenanceController extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		String action = request.getParameter("action");
 		try {
-			String action = request.getParameter("action");
 			long id;
 
 			switch (action == null ? "" : action) {
@@ -101,8 +99,23 @@ public class LabManagerMaintenanceController extends HttpServlet {
 			throw new ServletException(exception);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			request.setAttribute("message", exception.getMessage());
-			doGet(request, response);
+			if ("create".equals(action)) {
+				try {
+					showCreateForm(request, response);
+				} catch (SQLException sqlException) {
+					throw new ServletException(sqlException);
+				}
+			} else {
+				doGet(request, response);
+			}
 		}
+	}
+
+	private void showCreateForm(HttpServletRequest request, HttpServletResponse response)
+			throws SQLException, ServletException, IOException {
+		request.setAttribute("routineAssets", dao.findRoutineMaintenanceAssets());
+		request.setAttribute("incidents", dao.findOpenIncidents());
+		forward(request, response, "form.jsp");
 	}
 
 	private void forward(HttpServletRequest request, HttpServletResponse response, String view)

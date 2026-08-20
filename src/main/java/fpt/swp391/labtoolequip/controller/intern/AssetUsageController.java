@@ -4,6 +4,7 @@ import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.auth.Authorization;
 import fpt.swp391.labtoolequip.auth.Csrf;
 import fpt.swp391.labtoolequip.auth.Permission;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.dao.AssetUsageDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -12,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 
 @WebServlet("/intern/usages/*")
 public class AssetUsageController extends HttpServlet {
@@ -62,7 +64,7 @@ public class AssetUsageController extends HttpServlet {
 				}
 				dao.borrow(AuthSession.userId(request), nullableLong(request, "assetId"),
 						nullableLong(request, "assetItemId"), Integer.parseInt(request.getParameter("quantity")),
-						request.getParameter("note"));
+						request.getParameter("note"), borrowedAt(request));
 			} else if ("return".equals(action)) {
 				if (!Authorization.has(request, Permission.ASSET_USAGE_RETURN)) {
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
@@ -99,9 +101,22 @@ public class AssetUsageController extends HttpServlet {
 	private void showBorrow(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		request.setAttribute("csrfToken", Csrf.token(request));
+		request.setAttribute("defaultBorrowedAt", ViewFormat.dateTimeInput(ViewFormat.now()));
 		request.setAttribute("assets", dao.findBorrowableAssets());
 		request.setAttribute("assetItems", dao.findBorrowableAssetItems());
 		forward(request, response, "borrow.jsp");
+	}
+
+	private LocalDateTime borrowedAt(HttpServletRequest request) {
+		String value = request.getParameter("borrowedAt");
+		if (value == null || value.isBlank()) {
+			throw new IllegalArgumentException("Vui lòng chọn ngày và giờ mượn.");
+		}
+		try {
+			return LocalDateTime.parse(value);
+		} catch (RuntimeException exception) {
+			throw new IllegalArgumentException("Ngày và giờ mượn không hợp lệ.");
+		}
 	}
 
 	private void forward(HttpServletRequest request, HttpServletResponse response, String view)

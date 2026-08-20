@@ -11,8 +11,10 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class AssetItemDAO {
 	private static final String SELECT = """
@@ -102,6 +104,21 @@ public class AssetItemDAO {
 		}
 	}
 
+	public List<AssetItem> findReportableItems() throws SQLException {
+		String sql = SELECT + """
+				WHERE i.status <> 'DISPOSED' AND a.status <> 'DISPOSED'
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.asset_usages usage
+					WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'MAINTENANCE')
+				  )
+				ORDER BY a.asset_name, i.item_code
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			return read(statement);
+		}
+	}
+
 	public List<AssetCategory> findCategories() throws SQLException {
 		String sql = "SELECT category_id, category_name FROM dbo.asset_categories WHERE status = 'ACTIVE' ORDER BY category_name";
 		try (Connection connection = db.getConnection();
@@ -150,6 +167,7 @@ public class AssetItemDAO {
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
+				validateSerialsAvailable(connection, items);
 				long assetId = insertAsset(connection, assetCode.trim(), assetName.trim(), categoryId, borrowable,
 						description, items.size());
 				for (int index = 0; index < items.size(); index++)
@@ -159,6 +177,8 @@ public class AssetItemDAO {
 				return assetId;
 			} catch (SQLException | RuntimeException exception) {
 				connection.rollback();
+				if (exception instanceof SQLException sqlException && isDuplicateSerial(sqlException))
+					throw new IllegalArgumentException("Serial đã tồn tại. Vui lòng nhập serial khác.");
 				throw exception;
 			}
 		}
@@ -177,6 +197,7 @@ public class AssetItemDAO {
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
+				validateSerialAvailable(connection, item.getSerialNumber(), item.getAssetItemId());
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
 					setNullableString(statement, 1, item.getSerialNumber());
 					setNullableString(statement, 2, item.getImagePath());
@@ -197,6 +218,8 @@ public class AssetItemDAO {
 				} catch (SQLException rollbackException) {
 					exception.addSuppressed(rollbackException);
 				}
+				if (exception instanceof SQLException sqlException && isDuplicateSerial(sqlException))
+					throw new IllegalArgumentException("Serial đã tồn tại. Vui lòng nhập serial khác.");
 				throw exception;
 			}
 		}
@@ -259,6 +282,43 @@ public class AssetItemDAO {
 				return result.getLong(1);
 			}
 		}
+	}
+
+	private void validateSerialsAvailable(Connection connection, List<AssetItem> items) throws SQLException {
+		validateDistinctSerials(items);
+		for (AssetItem item : items) validateSerialAvailable(connection, item.getSerialNumber(), null);
+	}
+
+	static void validateDistinctSerials(List<AssetItem> items) {
+		Set<String> serials = new HashSet<>();
+		for (AssetItem item : items) {
+			String serial = normalizedSerial(item == null ? null : item.getSerialNumber());
+			if (serial != null && !serials.add(serial.toLowerCase(java.util.Locale.ROOT)))
+				throw new IllegalArgumentException("Serial " + serial + " bị trùng trong danh sách nhập.");
+		}
+	}
+
+	private void validateSerialAvailable(Connection connection, String serial, Long excludedItemId) throws SQLException {
+		serial = normalizedSerial(serial);
+		if (serial == null) return;
+		String sql = "SELECT 1 FROM dbo.asset_items WHERE serial_number = ?"
+				+ (excludedItemId == null ? "" : " AND asset_item_id <> ?");
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, serial);
+			if (excludedItemId != null) statement.setLong(2, excludedItemId);
+			try (ResultSet result = statement.executeQuery()) {
+				if (result.next()) throw new IllegalArgumentException("Serial " + serial + " đã tồn tại.");
+			}
+		}
+	}
+
+	private static String normalizedSerial(String serial) {
+		return serial == null || serial.isBlank() ? null : serial.trim();
+	}
+
+	private static boolean isDuplicateSerial(SQLException exception) {
+		return (exception.getErrorCode() == 2601 || exception.getErrorCode() == 2627)
+				&& exception.getMessage().contains("UX_asset_items_serial");
 	}
 
 	private boolean hasUsageHistory(Connection connection, long assetId) throws SQLException {
@@ -380,7 +440,7 @@ public class AssetItemDAO {
 		}
 	}
 
-	private void validateItem(AssetItem item) {
+	static void validateItem(AssetItem item) {
 		if (item == null)
 			throw new IllegalArgumentException("Thông tin sản phẩm không hợp lệ.");
 		if (!List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(item.getCondition()))

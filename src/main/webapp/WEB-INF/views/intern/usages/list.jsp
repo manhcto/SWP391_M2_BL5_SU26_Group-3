@@ -12,7 +12,7 @@
 <body class="intern-dashboard-page">
 <c:set var="activeMenu" value="usages" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../includes/sidebar.jspf" %>
+    <%@ include file="../../student/includes/sidebar.jspf" %>
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap">
@@ -49,6 +49,7 @@
                         class="form-control" name="status">
                     <option value="">Tất cả trạng thái</option>
                     <option value="IN_USE" ${param.status == 'IN_USE' ? 'selected' : ''}>Đang sử dụng</option>
+                    <option value="MAINTENANCE" ${param.status == 'MAINTENANCE' ? 'selected' : ''}>Đang bảo trì</option>
                     <option value="RETURNED" ${param.status == 'RETURNED' ? 'selected' : ''}>Đã trả</option>
                 </select><input class="form-control" type="date" name="fromDate" value="<c:out value='${param.fromDate}'/>"
                                aria-label="Từ ngày mượn"><input class="form-control" type="date" name="toDate"
@@ -93,7 +94,7 @@
                                         <td><c:out value="${app:dateTime(usage.borrowedAt)}"/></td>
                                         <td><c:out value="${app:dateTime(usage.dueAt)}"/></td>
                                         <td><span
-                                                class="status ${usage.status == 'RETURNED' ? 'returned' : 'in-use'}"><c:out
+                                                class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out
                                                 value="${app:label(usage.status)}"/></span></td>
                                         <td><a class="btn-action btn-action-primary"
                                                href="${pageContext.request.contextPath}/intern/usages/${usage.assetUsageId}">Xem</a>

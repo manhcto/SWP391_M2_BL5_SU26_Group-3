@@ -245,7 +245,7 @@ BEGIN TRY
         returned_at datetime2(0) NULL,
         condition_before varchar(10) NOT NULL,
         condition_after varchar(10) NULL,
-        status varchar(10) NOT NULL CONSTRAINT DF_asset_usages_status DEFAULT ('IN_USE'),
+        status varchar(20) NOT NULL CONSTRAINT DF_asset_usages_status DEFAULT ('IN_USE'),
         note nvarchar(max) NULL,
         return_note nvarchar(max) NULL,
         created_by bigint NOT NULL,
@@ -262,13 +262,13 @@ BEGIN TRY
         CONSTRAINT CK_asset_usages_condition_after CHECK (
             condition_after IS NULL OR condition_after IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')
         ),
-        CONSTRAINT CK_asset_usages_status CHECK (status IN ('IN_USE', 'RETURNED')),
+        CONSTRAINT CK_asset_usages_status CHECK (status IN ('IN_USE', 'MAINTENANCE', 'RETURNED')),
         CONSTRAINT CK_asset_usages_dates CHECK (
             due_at >= borrowed_at
             AND (returned_at IS NULL OR returned_at >= borrowed_at)
         ),
         CONSTRAINT CK_asset_usages_return CHECK (
-            (status = 'IN_USE' AND returned_at IS NULL)
+            (status IN ('IN_USE', 'MAINTENANCE') AND returned_at IS NULL)
             OR (status = 'RETURNED' AND returned_at IS NOT NULL AND condition_after IS NOT NULL)
         )
     );
@@ -340,6 +340,7 @@ BEGIN TRY
         incident_id bigint IDENTITY(1,1) NOT NULL,
         asset_id bigint NOT NULL,
         asset_usage_id bigint NULL,
+		asset_item_id bigint NULL,
         inspection_item_id bigint NULL,
         reported_by bigint NOT NULL,
         affected_quantity int NOT NULL CONSTRAINT DF_incidents_affected_quantity DEFAULT (1),
@@ -351,22 +352,28 @@ BEGIN TRY
         reported_at datetime2(0) NOT NULL CONSTRAINT DF_incidents_reported_at DEFAULT (SYSUTCDATETIME()),
         investigation_note nvarchar(max) NULL,
         handling_result nvarchar(max) NULL,
+		reported_cause varchar(15) NOT NULL CONSTRAINT DF_incidents_reported_cause DEFAULT ('UNKNOWN'),
+		determined_cause varchar(15) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_incidents_created_at DEFAULT (SYSUTCDATETIME()),
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_incidents_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_incidents PRIMARY KEY (incident_id),
         CONSTRAINT FK_incidents_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT FK_incidents_usage FOREIGN KEY (asset_usage_id) REFERENCES dbo.asset_usages(asset_usage_id),
+		CONSTRAINT FK_incidents_asset_item FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id),
         CONSTRAINT FK_incidents_inspection_item FOREIGN KEY (inspection_item_id) REFERENCES dbo.inspection_items(inspection_item_id),
         CONSTRAINT FK_incidents_reporter FOREIGN KEY (reported_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_incidents_quantity CHECK (affected_quantity > 0),
         CONSTRAINT CK_incidents_type CHECK (incident_type IN ('DAMAGE', 'MISSING', 'LOSS', 'MALFUNCTION', 'OTHER')),
         CONSTRAINT CK_incidents_severity CHECK (severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
         CONSTRAINT CK_incidents_status CHECK (status IN ('OPEN', 'INVESTIGATING', 'RESOLVED', 'CLOSED')),
+		CONSTRAINT CK_incidents_reported_cause CHECK (reported_cause IN ('INTERN', 'NATURAL', 'UNKNOWN')),
+		CONSTRAINT CK_incidents_determined_cause CHECK (determined_cause IS NULL OR determined_cause IN ('INTERN', 'NATURAL', 'UNKNOWN')),
         CONSTRAINT CK_incidents_dates CHECK (occurred_at IS NULL OR occurred_at <= reported_at)
     );
 
     CREATE INDEX IX_incidents_asset ON dbo.incidents (asset_id);
     CREATE INDEX IX_incidents_usage ON dbo.incidents (asset_usage_id) WHERE asset_usage_id IS NOT NULL;
+	CREATE INDEX IX_incidents_asset_item ON dbo.incidents (asset_item_id) WHERE asset_item_id IS NOT NULL;
     CREATE INDEX IX_incidents_inspection_item ON dbo.incidents (inspection_item_id) WHERE inspection_item_id IS NOT NULL;
     CREATE INDEX IX_incidents_status ON dbo.incidents (status);
 
@@ -813,7 +820,7 @@ IF NOT EXISTS (
       AND object_id = OBJECT_ID('dbo.asset_usages')
 )
     CREATE UNIQUE INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages (asset_item_id)
-        WHERE asset_item_id IS NOT NULL AND status = 'IN_USE';
+        WHERE asset_item_id IS NOT NULL AND status IN ('IN_USE', 'MAINTENANCE');
 IF NOT EXISTS (
     SELECT 1 FROM sys.foreign_keys
     WHERE name = 'FK_disposal_records_asset_item'

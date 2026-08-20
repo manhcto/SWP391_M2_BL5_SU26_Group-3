@@ -12,7 +12,7 @@
 <body class="intern-dashboard-page">
 <c:set var="activeMenu" value="usages" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../includes/sidebar.jspf" %>
+    <%@ include file="../../student/includes/sidebar.jspf" %>
     <main class="main-content">
         <header class="topbar">
             <div class="heading-wrap">
@@ -33,7 +33,7 @@
             <div class="content-heading">
                 <div><p class="eyebrow">CỔNG INTERN</p>
                     <h2><c:out value="${usage.assetName}"/></h2></div>
-                <span class="status ${usage.status == 'RETURNED' ? 'returned' : 'in-use'}"><c:out
+                <span class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out
                         value="${app:label(usage.status)}"/></span></div>
             <dl class="panel detail-grid">
                 <div class="detail-item">
