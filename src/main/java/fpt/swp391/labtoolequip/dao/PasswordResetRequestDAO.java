@@ -15,7 +15,8 @@ public class PasswordResetRequestDAO {
 	public void create(String email, String note) throws SQLException {
 		String sql = """
 				INSERT dbo.password_reset_requests(target_user_id, request_note)
-				SELECT u.user_id, ? FROM dbo.users u WHERE LOWER(u.email)=LOWER(?)
+				SELECT u.user_id, ? FROM dbo.users u
+				WHERE LOWER(u.email)=LOWER(?)
 				AND u.role IN ('MENTOR','LAB_MANAGER') AND u.status='ACTIVE'
 				AND NOT EXISTS (
 					SELECT 1 FROM dbo.password_reset_requests r WITH (UPDLOCK,HOLDLOCK)
@@ -24,9 +25,23 @@ public class PasswordResetRequestDAO {
 				""";
 		try (Connection c = db.getConnection(); PreparedStatement s = c.prepareStatement(sql)) {
 			s.setString(1, blank(note));
-			s.setString(2, email == null ? "" : email.trim());
-			if (s.executeUpdate() != 1)
-				throw new IllegalArgumentException("Eligible account not found or request already open.");
+			s.setString(2, email);
+			try {
+				s.executeUpdate();
+			} catch (SQLException exception) {
+				if (exception.getErrorCode() != 2601 && exception.getErrorCode() != 2627)
+					throw exception;
+			}
+		}
+	}
+
+	public int countPending() throws SQLException {
+		try (Connection c = db.getConnection();
+				PreparedStatement s = c
+						.prepareStatement("SELECT COUNT(*) FROM dbo.password_reset_requests WHERE status='PENDING'");
+				ResultSet r = s.executeQuery()) {
+			r.next();
+			return r.getInt(1);
 		}
 	}
 
@@ -84,6 +99,41 @@ public class PasswordResetRequestDAO {
 				try (PreparedStatement s = c.prepareStatement(
 						"UPDATE dbo.password_reset_requests SET status='ISSUED',issued_at=SYSUTCDATETIME(),updated_at=SYSUTCDATETIME() WHERE reset_request_id=?")) {
 					s.setLong(1, id);
+					s.executeUpdate();
+				}
+				c.commit();
+			} catch (SQLException | RuntimeException e) {
+				c.rollback();
+				throw e;
+			}
+		}
+	}
+
+	public void resetPassword(long id, long adminId, String hash) throws SQLException {
+		try (Connection c = db.getConnection()) {
+			c.setAutoCommit(false);
+			try {
+				long userId;
+				try (PreparedStatement s = c.prepareStatement(
+						"SELECT target_user_id FROM dbo.password_reset_requests WITH (UPDLOCK,HOLDLOCK) WHERE reset_request_id=? AND status IN ('PENDING','APPROVED')")) {
+					s.setLong(1, id);
+					try (ResultSet r = s.executeQuery()) {
+						if (!r.next())
+							throw new IllegalStateException("Chỉ có thể đặt lại yêu cầu đang chờ xử lý.");
+						userId = r.getLong(1);
+					}
+				}
+				try (PreparedStatement s = c.prepareStatement(
+						"UPDATE dbo.users SET password_hash=?,must_change_password=1,password_expires_at=DATEADD(hour,24,SYSUTCDATETIME()),updated_at=SYSUTCDATETIME() WHERE user_id=? AND role IN ('MENTOR','LAB_MANAGER') AND status='ACTIVE'")) {
+					s.setString(1, hash);
+					s.setLong(2, userId);
+					if (s.executeUpdate() != 1)
+						throw new IllegalStateException("Tài khoản không còn đủ điều kiện đặt lại mật khẩu.");
+				}
+				try (PreparedStatement s = c.prepareStatement(
+						"UPDATE dbo.password_reset_requests SET status='ISSUED',reviewed_by=?,reviewed_at=SYSUTCDATETIME(),issued_at=SYSUTCDATETIME(),updated_at=SYSUTCDATETIME() WHERE reset_request_id=?")) {
+					s.setLong(1, adminId);
+					s.setLong(2, id);
 					s.executeUpdate();
 				}
 				c.commit();
