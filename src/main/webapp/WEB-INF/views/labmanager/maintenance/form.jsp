@@ -52,17 +52,23 @@
                 <c:choose>
                     <%-- CHẾ ĐỘ 1: CẬP NHẬT TIẾN ĐỘ & KẾT QUẢ SỬA CHỮA --%>
                     <c:when test="${formMode == 'edit'}">
-                        <div style="padding: 16px; border-bottom: 1px solid #edf0ec; background:#fafbf9; border-radius: 8px 8px 0 0;">
-                            <strong>Thông tin phiếu bảo trì:</strong>
-                            <p style="margin: 6px 0 0; font-size: 13px; color:#5a6662;">
-                                Thiết bị: <b><c:out value="${record.assetName}"/> (<c:out value="${record.assetCode}"/>)</b> &nbsp;·&nbsp;
-                                Người duyệt: <b><c:out value="${record.approverName}"/></b>
-                            </p>
-                        </div>
-
                         <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid">
                             <input type="hidden" name="action" value="updateProgress">
                             <input type="hidden" name="id" value="${record.maintenanceId}">
+
+                            <div class="form-group">
+                                <label>Thiết bị cần bảo trì</label>
+                                <input class="form-control" type="text"
+                                       value="<c:out value='${record.assetName}'/> (<c:out value='${record.assetCode}'/>)"
+                                       readonly style="background:#f8fafc; color:#334155; font-weight:550; cursor:not-allowed; border-color:#d1d5db;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sự cố liên quan</label>
+                                <input class="form-control" type="text"
+                                       value="<c:choose><c:when test='${not empty record.incidentId}'>#INC-${record.incidentId}: <c:out value='${record.incidentDescription}'/></c:when><c:otherwise>Không có (Bảo dưỡng định kỳ / Trực tiếp)</c:otherwise></c:choose>"
+                                       readonly style="background:#f8fafc; color:#334155; font-weight:550; cursor:not-allowed; border-color:#d1d5db;">
+                            </div>
 
                             <div class="form-group full-width">
                                 <label>Trạng thái tiến độ *</label>
