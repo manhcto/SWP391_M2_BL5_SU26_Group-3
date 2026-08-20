@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.controller.auth;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.User;
 import jakarta.servlet.ServletException;
@@ -24,6 +25,10 @@ public class LoginController extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		if (AuthSession.mustChangePassword(request)) {
+			response.sendRedirect(request.getContextPath() + "/change-password");
+			return;
+		}
 		String role = AuthSession.role(request);
 		if (role != null) {
 			response.sendRedirect(AuthSession.dashboard(request.getContextPath(), role));
@@ -46,13 +51,15 @@ public class LoginController extends HttpServlet {
 		request.setAttribute("email", email);
 		try {
 			Optional<User> found = userDAO.findByEmail(email);
-			if (found.isEmpty() || !validPassword(found.get(), password)) {
+			if (found.isEmpty() || !validInternalPassword(found.get(), password)) {
 				request.setAttribute("message", "Email hoặc mật khẩu không chính xác.");
 				doGet(request, response);
 				return;
 			}
 			AuthSession.login(request, found.get());
-			response.sendRedirect(AuthSession.dashboard(request.getContextPath(), found.get().getRole()));
+			response.sendRedirect(AuthSession.mustChangePassword(request)
+					? request.getContextPath() + "/change-password"
+					: AuthSession.dashboard(request.getContextPath(), found.get().getRole()));
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
 		}
@@ -68,6 +75,11 @@ public class LoginController extends HttpServlet {
 		} catch (IllegalArgumentException exception) {
 			return false;
 		}
+	}
+
+	static boolean validInternalPassword(User user, String password) {
+		return user != null && AuthSession.isInternalRole(user.getRole()) && validPassword(user, password)
+				&& !user.isTemporaryPasswordExpired(ViewFormat.now());
 	}
 
 	String newState() {

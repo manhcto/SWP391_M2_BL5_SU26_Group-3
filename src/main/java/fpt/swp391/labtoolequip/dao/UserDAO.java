@@ -16,11 +16,17 @@ import java.sql.Types;
 public class UserDAO {
 	private static final String SELECT_USER = """
 			SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
-			       u.role, u.status, u.created_at, u.updated_at,
+			       u.role, u.status, u.must_change_password, u.password_expires_at, u.created_at, u.updated_at,
 			       sp.student_code, sp.major_id, m.major_name AS major, sp.cohort
 			FROM dbo.users u
 			LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
 			LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
+			""";
+	private static final String SELECT_AUTH_USER = """
+			SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
+			       u.role, u.status, u.must_change_password, u.password_expires_at, u.created_at, u.updated_at,
+			       NULL AS student_code, NULL AS major_id, NULL AS major, NULL AS cohort
+			FROM dbo.users u
 			""";
 
 	private final DBConnection dbConnection = new DBConnection();
@@ -59,7 +65,7 @@ public class UserDAO {
 	}
 
 	public Optional<User> findById(long userId) throws SQLException {
-		String sql = SELECT_USER + "WHERE u.user_id = ?";
+		String sql = SELECT_AUTH_USER + "WHERE u.user_id = ?";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, userId);
@@ -70,7 +76,7 @@ public class UserDAO {
 	}
 
 	public Optional<User> findByEmail(String email) throws SQLException {
-		String sql = SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)";
+		String sql = SELECT_AUTH_USER + "WHERE LOWER(u.email) = LOWER(?)";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, valueOrEmpty(email));
@@ -257,6 +263,17 @@ public class UserDAO {
 		}
 	}
 
+	public boolean changePassword(long userId, String passwordHash) throws SQLException {
+		String sql = "UPDATE dbo.users SET password_hash = ?, must_change_password = 0, password_expires_at = NULL, "
+				+ "updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, passwordHash);
+			statement.setLong(2, userId);
+			return statement.executeUpdate() == 1;
+		}
+	}
+
 	private void insertStudentProfile(Connection connection, long userId, User user) throws SQLException {
 		String sql = """
 				INSERT INTO dbo.student_profiles (user_id, student_code, major_id, cohort, status)
@@ -307,6 +324,8 @@ public class UserDAO {
 		user.setGoogleSubject(result.getString("google_subject"));
 		user.setRole(result.getString("role"));
 		user.setStatus(result.getString("status"));
+		user.setMustChangePassword(result.getBoolean("must_change_password"));
+		user.setPasswordExpiresAt(ViewFormat.fromUtc(result.getTimestamp("password_expires_at")));
 		user.setStudentCode(result.getString("student_code"));
 		user.setMajorId(nullableLong(result, "major_id"));
 		user.setMajor(result.getString("major"));
