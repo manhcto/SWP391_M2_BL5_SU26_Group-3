@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
+import org.mindrot.jbcrypt.BCrypt;
 
 @WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit", "/admin/users/toggle-status",
 		"/admin/users/change-role"})
@@ -135,6 +136,12 @@ public class UserController extends HttpServlet {
 		if (!errors.isEmpty()) {
 			forwardWithErrors(request, response, user, errors, "add");
 			return;
+		}
+
+		// Tự động cấp mật khẩu mặc định là 123 cho các tài khoản Cán bộ (Mentor, Lab
+		// Manager, Admin)
+		if (!"INTERN".equals(user.getRole())) {
+			user.setPasswordHash(BCrypt.hashpw("123", BCrypt.gensalt()));
 		}
 
 		userDAO.create(user);

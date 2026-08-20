@@ -12,13 +12,14 @@
             <div class="login-welcome"><h1>Đăng nhập nội bộ Đại học FPT</h1><p>Vui lòng nhập thông tin đăng nhập.</p></div>
             <c:if test="${not empty message}"><p class="login-alert" role="alert"><c:out value="${message}"/></p></c:if>
             <form class="login-form" method="post" action="${pageContext.request.contextPath}/login">
-                <label class="login-field" for="email"><span>Địa chỉ email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập địa chỉ email" required><span class="field-icon">✉</span></label>
-                <label class="login-field" for="password"><span>Mật khẩu</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
+                <div style="font-size: 12px; font-weight: 700; color: #0284c7; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">🔑 Dành cho Cán bộ / Quản lý / Mentor</div>
+                <label class="login-field" for="email"><span>Địa chỉ email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập địa chỉ email cán bộ" required><span class="field-icon">✉</span></label>
+                <label class="login-field" for="password"><span>Mật khẩu</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu (Mặc định: 123)" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
                 <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><span>Quên mật khẩu?</span></div>
-                <button class="login-submit" type="submit">Đăng nhập</button>
+                <button class="login-submit" type="submit">Đăng nhập bằng Mật khẩu</button>
             </form>
             <div class="login-divider"><span>hoặc</span></div>
-            <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Gmail</span></a>
+            <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Gmail (Dành cho Sinh viên)</span></a>
         </div>
     </section>
     <aside class="login-visual" aria-label="Hệ thống quản lý tài sản phòng LAB"></aside>
