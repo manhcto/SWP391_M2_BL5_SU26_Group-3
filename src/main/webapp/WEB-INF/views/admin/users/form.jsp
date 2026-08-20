@@ -174,10 +174,6 @@
                                 </select>
                             </div>
 
-                            <div class="form-group full-width" id="passwordNotice" style="padding: 10px 14px; background: #f0f9ff; border: 1px dashed #bae6fd; border-radius: 6px; display: none;">
-                                <span style="font-size: 11.5px; color: #0369a1;">🔑 <b>Mật khẩu mặc định:</b> Tài khoản Cán bộ (Mentor, Quản lý phòng LAB) sẽ tự động được cấp mật khẩu đăng nhập là <b>123</b>.</span>
-                            </div>
-
                             <div class="form-group full-width" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #edf0ec; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
                                 <a class="btn-secondary" href="${pageContext.request.contextPath}/admin/users" style="height: 38px; padding: 0 18px; font-size: 12px;">‹ Hủy</a>
                                 <button class="primary-button" type="submit" style="height: 38px; padding: 0 22px; font-size: 12px; cursor: pointer;">Tạo tài khoản</button>
@@ -200,12 +196,10 @@
         const chGroup = document.getElementById('cohortGroup');
         const emailLabel = document.getElementById('emailLabel');
         const emailInput = document.getElementById('emailInput');
-        const pwdNotice = document.getElementById('passwordNotice');
 
         if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
         if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
         if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
-        if (pwdNotice) pwdNotice.style.display = isIntern ? 'none' : 'block';
 
         if (isIntern) {
             if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) * <span style="color:#0284c7; font-weight:normal;">(Đăng nhập qua Google OAuth)</span>';
