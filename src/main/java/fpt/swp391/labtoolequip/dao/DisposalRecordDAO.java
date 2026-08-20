@@ -357,8 +357,8 @@ public class DisposalRecordDAO {
 	}
 
 	private boolean hasActiveUsage(Connection connection, long assetId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -367,8 +367,8 @@ public class DisposalRecordDAO {
 	}
 
 	private boolean hasActiveUsageForItem(Connection connection, long assetItemId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();

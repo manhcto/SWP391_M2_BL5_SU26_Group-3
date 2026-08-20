@@ -68,17 +68,21 @@ public class IncidentController extends HttpServlet {
 		}
 		try {
 			long incidentId = incidentId(request);
-			dao.updateByLabManager(incidentId, request.getParameter("status"), request.getParameter("investigationNote"),
-					request.getParameter("handlingResult"), request.getParameter("determinedCause"));
+			dao.updateByLabManager(incidentId, request.getParameter("status"),
+					request.getParameter("investigationNote"), request.getParameter("handlingResult"),
+					request.getParameter("determinedCause"));
 			if ("createResponsibility".equals(action)) {
 				var incident = dao.findById(incidentId).orElseThrow();
 				if (!"INTERN".equals(incident.getDeterminedCause()) || incident.getInternName() == null)
-					throw new IllegalStateException("Chỉ tạo trách nhiệm khi Lab Manager kết luận Intern gây ra và có Intern liên quan.");
+					throw new IllegalStateException(
+							"Chỉ tạo trách nhiệm khi Lab Manager kết luận Intern gây ra và có Intern liên quan.");
 				String conclusion = request.getParameter("investigationNote");
-				if (conclusion == null || conclusion.isBlank()) conclusion = "Lab Manager xác định thực tập sinh chịu trách nhiệm.";
-				long responsibilityId = responsibilityDAO.create(AuthSession.userId(request), incidentId,
-						conclusion, null, "CONFIRMED", null);
-				response.sendRedirect(request.getContextPath() + "/lab-manager/responsibilities/" + responsibilityId + "/edit");
+				if (conclusion == null || conclusion.isBlank())
+					conclusion = "Lab Manager xác định thực tập sinh chịu trách nhiệm.";
+				long responsibilityId = responsibilityDAO.create(AuthSession.userId(request), incidentId, conclusion,
+						null, "CONFIRMED", null);
+				response.sendRedirect(
+						request.getContextPath() + "/lab-manager/responsibilities/" + responsibilityId + "/edit");
 				return;
 			}
 			response.sendRedirect(request.getContextPath() + "/lab-manager/incidents/" + incidentId + "?updated=1");

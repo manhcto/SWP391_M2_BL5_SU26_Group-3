@@ -57,8 +57,8 @@ class AssetItemDAOTest {
 	@Test
 	void rejectsDuplicateSerialsInOneAssetSubmission() {
 		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-				() -> AssetItemDAO.validateDistinctSerials(List.of(item("GOOD", "AVAILABLE", "G102"),
-						item("GOOD", "AVAILABLE", "g102"))));
+				() -> AssetItemDAO.validateDistinctSerials(
+						List.of(item("GOOD", "AVAILABLE", "G102"), item("GOOD", "AVAILABLE", "g102"))));
 
 		assertEquals("Serial g102 bị trùng trong danh sách nhập.", exception.getMessage());
 	}

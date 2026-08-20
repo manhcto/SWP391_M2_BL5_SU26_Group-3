@@ -174,10 +174,18 @@ public class Incident {
 		this.handlingResult = handlingResult;
 	}
 
-	public String getReportedCause() { return reportedCause; }
-	public void setReportedCause(String reportedCause) { this.reportedCause = reportedCause; }
-	public String getDeterminedCause() { return determinedCause; }
-	public void setDeterminedCause(String determinedCause) { this.determinedCause = determinedCause; }
+	public String getReportedCause() {
+		return reportedCause;
+	}
+	public void setReportedCause(String reportedCause) {
+		this.reportedCause = reportedCause;
+	}
+	public String getDeterminedCause() {
+		return determinedCause;
+	}
+	public void setDeterminedCause(String determinedCause) {
+		this.determinedCause = determinedCause;
+	}
 
 	public LocalDateTime getCreatedAt() {
 		return createdAt;

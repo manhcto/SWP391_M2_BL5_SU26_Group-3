@@ -251,8 +251,8 @@ public class AssetUsageDAO {
 		return borrow(userId, assetId, assetItemId, quantity, note, null);
 	}
 
-	public long borrow(long userId, Long assetId, Long assetItemId, int quantity, String note,
-			LocalDateTime borrowedAt) throws SQLException {
+	public long borrow(long userId, Long assetId, Long assetItemId, int quantity, String note, LocalDateTime borrowedAt)
+			throws SQLException {
 		ZonedDateTime borrowTime = borrowedAt == null ? ZonedDateTime.now(labZone) : borrowedAt.atZone(labZone);
 		if (borrowTime.isAfter(ZonedDateTime.now(labZone))) {
 			throw new IllegalArgumentException("Ngày và giờ mượn không được ở tương lai.");
@@ -715,8 +715,8 @@ public class AssetUsageDAO {
 	}
 
 	private boolean hasActiveUsageForItem(Connection connection, long assetItemId) throws SQLException {
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
 			statement.setLong(1, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();

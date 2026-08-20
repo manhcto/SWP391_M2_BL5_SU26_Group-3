@@ -85,13 +85,10 @@
                                         value="<c:out value='${keyword}'/>" placeholder="Tìm theo tên, mã sinh viên hoặc email..."
                                         style="width: 240px;">
                                     <select class="form-control" name="role">
-                                        <option value="">Tất cả vai trò (3)</option>
-                                        <option value="INTERN" ${selectedRole=='INTERN' ? 'selected' : '' }>Thực tập sinh
-                                        </option>
-                                        <option value="MENTOR" ${selectedRole=='MENTOR' ? 'selected' : '' }>Người hướng dẫn (2)
-                                        </option>
-                                        <option value="LAB_MANAGER" ${selectedRole=='LAB_MANAGER' ? 'selected' : '' }>
-                                            Quản lý phòng LAB (3)</option>
+                                        <option value="">Tất cả vai trò</option>
+                                        <option value="INTERN" ${selectedRole=='INTERN' ? 'selected' : '' }>Thực tập sinh</option>
+                                        <option value="MENTOR" ${selectedRole=='MENTOR' ? 'selected' : '' }>Người hướng dẫn</option>
+                                        <option value="LAB_MANAGER" ${selectedRole=='LAB_MANAGER' ? 'selected' : '' }>Quản lý phòng LAB</option>
                                     </select>
                                     <select class="form-control" name="status">
                                         <option value="">Tất cả trạng thái</option>

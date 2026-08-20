@@ -25,9 +25,8 @@ class IncidentDAOTest {
 
 	@Test
 	void rejectsBlankDescriptionsAndFutureOccurrenceTime() {
+		assertThrows(IllegalArgumentException.class, () -> IncidentDAO.validateReport("DAMAGE", "HIGH", " ", null));
 		assertThrows(IllegalArgumentException.class,
-				() -> IncidentDAO.validateReport("DAMAGE", "HIGH", " ", null));
-		assertThrows(IllegalArgumentException.class, () -> IncidentDAO.validateReport("DAMAGE", "HIGH", "Mô tả hợp lệ.",
-				ViewFormat.now().plusMinutes(1)));
+				() -> IncidentDAO.validateReport("DAMAGE", "HIGH", "Mô tả hợp lệ.", ViewFormat.now().plusMinutes(1)));
 	}
 }

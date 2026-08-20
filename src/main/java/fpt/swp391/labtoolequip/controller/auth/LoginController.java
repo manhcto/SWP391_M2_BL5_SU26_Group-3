@@ -15,7 +15,6 @@ import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Optional;
 import org.mindrot.jbcrypt.BCrypt;
-import util.AppConfig;
 
 @WebServlet("/login")
 public class LoginController extends HttpServlet {
@@ -34,23 +33,24 @@ public class LoginController extends HttpServlet {
 			response.sendRedirect(AuthSession.dashboard(request.getContextPath(), role));
 			return;
 		}
-		request.setAttribute("devAuthEnabled", Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false")));
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		if (!Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false"))) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-			return;
-		}
 		request.setCharacterEncoding("UTF-8");
 		String email = request.getParameter("email");
 		String password = request.getParameter("password");
 		request.setAttribute("email", email);
 		try {
 			Optional<User> found = userDAO.findByEmail(email);
+			if (found.isPresent() && "INTERN".equals(found.get().getRole())) {
+				request.setAttribute("message",
+						"Thực tập sinh (Sinh viên) vui lòng đăng nhập bằng tài khoản Google trường FPT (@fpt.edu.vn).");
+				doGet(request, response);
+				return;
+			}
 			if (found.isEmpty() || !validInternalPassword(found.get(), password)) {
 				request.setAttribute("message", "Email hoặc mật khẩu không chính xác.");
 				doGet(request, response);

@@ -192,9 +192,11 @@ public class IncidentDAO {
 			throw new IllegalArgumentException("Vui lòng chọn ít nhất một vật dụng hỏng.");
 		LinkedHashSet<String> uniqueTargets = new LinkedHashSet<>();
 		for (String value : targetValues) {
-			if (value != null && !value.isBlank()) uniqueTargets.add(value);
+			if (value != null && !value.isBlank())
+				uniqueTargets.add(value);
 		}
-		if (uniqueTargets.isEmpty()) throw new IllegalArgumentException("Vui lòng chọn ít nhất một vật dụng hỏng.");
+		if (uniqueTargets.isEmpty())
+			throw new IllegalArgumentException("Vui lòng chọn ít nhất một vật dụng hỏng.");
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -219,7 +221,10 @@ public class IncidentDAO {
 						insert.setString(6, incidentType);
 						insert.setString(7, description.trim());
 						insert.setString(8, severity);
-						if (occurredAt == null) insert.setNull(9, Types.TIMESTAMP); else insert.setTimestamp(9, ViewFormat.toUtc(occurredAt));
+						if (occurredAt == null)
+							insert.setNull(9, Types.TIMESTAMP);
+						else
+							insert.setTimestamp(9, ViewFormat.toUtc(occurredAt));
 						insert.setString(10, reportedCause);
 						try (ResultSet result = insert.executeQuery()) {
 							result.next();
@@ -238,8 +243,7 @@ public class IncidentDAO {
 	}
 
 	public void updateByLabManager(long incidentId, String status, String investigationNote, String handlingResult,
-			String determinedCause)
-			throws SQLException {
+			String determinedCause) throws SQLException {
 		if (status == null || !Set.of("OPEN", "INVESTIGATING", "RESOLVED", "CLOSED").contains(status)) {
 			throw new IllegalArgumentException("Trạng thái xử lý sự cố không hợp lệ.");
 		}
@@ -263,7 +267,8 @@ public class IncidentDAO {
 	}
 
 	static void validateReport(String incidentType, String severity, String description, LocalDateTime occurredAt) {
-		if (incidentType == null || !Set.of("DAMAGE", "MISSING", "LOSS", "MALFUNCTION", "OTHER").contains(incidentType)) {
+		if (incidentType == null
+				|| !Set.of("DAMAGE", "MISSING", "LOSS", "MALFUNCTION", "OTHER").contains(incidentType)) {
 			throw new IllegalArgumentException("Loại sự cố không hợp lệ.");
 		}
 		if (severity == null || !Set.of("HIGH", "CRITICAL").contains(severity)) {
@@ -280,17 +285,24 @@ public class IncidentDAO {
 	private IncidentTarget resolveTarget(Connection connection, String value) throws SQLException {
 		boolean usage = value.startsWith("usage:");
 		boolean item = value.startsWith("item:");
-		if (!usage && !item) throw new IllegalArgumentException("Vật dụng được chọn không hợp lệ.");
+		if (!usage && !item)
+			throw new IllegalArgumentException("Vật dụng được chọn không hợp lệ.");
 		long id;
-		try { id = Long.parseLong(value.substring(value.indexOf(':') + 1)); } catch (RuntimeException exception) { throw new IllegalArgumentException("Vật dụng được chọn không hợp lệ."); }
+		try {
+			id = Long.parseLong(value.substring(value.indexOf(':') + 1));
+		} catch (RuntimeException exception) {
+			throw new IllegalArgumentException("Vật dụng được chọn không hợp lệ.");
+		}
 		String sql = usage
 				? "SELECT asset_id, asset_item_id, quantity, asset_usage_id FROM dbo.asset_usages WHERE asset_usage_id = ? AND status = 'IN_USE'"
 				: "SELECT ai.asset_id, ai.asset_item_id, 1 AS quantity, CAST(NULL AS bigint) AS asset_usage_id FROM dbo.asset_items ai JOIN dbo.assets a ON a.asset_id = ai.asset_id WHERE ai.asset_item_id = ? AND ai.status <> 'DISPOSED' AND a.status <> 'DISPOSED' AND NOT EXISTS (SELECT 1 FROM dbo.asset_usages usage WHERE usage.asset_item_id = ai.asset_item_id AND usage.status IN ('IN_USE', 'MAINTENANCE'))";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, id);
 			try (ResultSet result = statement.executeQuery()) {
-				if (!result.next()) throw new IllegalArgumentException("Vật dụng không còn đủ điều kiện để báo sự cố.");
-				return new IncidentTarget(result.getLong("asset_id"), nullableLong(result, "asset_item_id"), nullableLong(result, "asset_usage_id"), result.getInt("quantity"));
+				if (!result.next())
+					throw new IllegalArgumentException("Vật dụng không còn đủ điều kiện để báo sự cố.");
+				return new IncidentTarget(result.getLong("asset_id"), nullableLong(result, "asset_item_id"),
+						nullableLong(result, "asset_usage_id"), result.getInt("quantity"));
 			}
 		}
 	}
@@ -301,7 +313,9 @@ public class IncidentDAO {
 			setNullableLong(statement, 1, target.usageId());
 			setNullableLong(statement, 2, target.assetItemId());
 			setNullableLong(statement, 3, target.assetItemId());
-			try (ResultSet result = statement.executeQuery()) { return result.next(); }
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
 		}
 	}
 
@@ -322,16 +336,18 @@ public class IncidentDAO {
 					WHERE asset_item_id = ? AND status <> 'DISPOSED'
 					""")) {
 				statement.setLong(1, target.assetItemId());
-				if (statement.executeUpdate() != 1) throw new IllegalStateException("Không thể chuyển sản phẩm sang bảo trì.");
+				if (statement.executeUpdate() != 1)
+					throw new IllegalStateException("Không thể chuyển sản phẩm sang bảo trì.");
 			}
 			return;
 		}
 		try (PreparedStatement statement = connection.prepareStatement("""
-			UPDATE dbo.assets SET status = 'MAINTENANCE', updated_at = SYSUTCDATETIME()
-			WHERE asset_id = ? AND status <> 'DISPOSED'
-			""")) {
+				UPDATE dbo.assets SET status = 'MAINTENANCE', updated_at = SYSUTCDATETIME()
+				WHERE asset_id = ? AND status <> 'DISPOSED'
+				""")) {
 			statement.setLong(1, target.assetId());
-			if (statement.executeUpdate() != 1) throw new IllegalStateException("Không thể chuyển thiết bị sang bảo trì.");
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Không thể chuyển thiết bị sang bảo trì.");
 		}
 	}
 
@@ -341,16 +357,21 @@ public class IncidentDAO {
 	}
 
 	private String normalizeCause(String value) {
-		if (value == null || value.isBlank()) return null;
+		if (value == null || value.isBlank())
+			return null;
 		validateCause(value);
 		return value;
 	}
 
 	private void setNullableLong(PreparedStatement statement, int index, Long value) throws SQLException {
-		if (value == null) statement.setNull(index, Types.BIGINT); else statement.setLong(index, value);
+		if (value == null)
+			statement.setNull(index, Types.BIGINT);
+		else
+			statement.setLong(index, value);
 	}
 
-	private record IncidentTarget(long assetId, Long assetItemId, Long usageId, int quantity) { }
+	private record IncidentTarget(long assetId, Long assetItemId, Long usageId, int quantity) {
+	}
 
 	private String blankToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();

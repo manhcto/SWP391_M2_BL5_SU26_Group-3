@@ -202,13 +202,13 @@
         if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
 
         if (isIntern) {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) *';
+            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) * <span style="color:#0284c7; font-weight:normal;">(Đăng nhập qua Google OAuth)</span>';
             if (emailInput) emailInput.placeholder = 'Ví dụ: anhnmse160123@fpt.edu.vn';
         } else if (roleSelect.value === 'MENTOR') {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn / @gmail.com) *';
+            if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
             if (emailInput) emailInput.placeholder = 'Ví dụ: anhnm@fpt.edu.vn hoặc mentor@gmail.com';
         } else {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / @fpt.edu.vn) *';
+            if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
             if (emailInput) emailInput.placeholder = 'Ví dụ: manager@gmail.com hoặc manager@fpt.edu.vn';
         }
     }

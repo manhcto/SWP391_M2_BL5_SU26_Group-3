@@ -11,13 +11,13 @@
             <div class="login-brand"><img src="${pageContext.request.contextPath}/assets/images/fpt-university-logo.png" alt="Đại học FPT"><span>QUẢN LÝ TÀI SẢN PHÒNG LAB</span></div>
             <div class="login-welcome"><h1>Đăng nhập nội bộ Đại học FPT</h1><p>Vui lòng nhập thông tin đăng nhập.</p></div>
             <c:if test="${not empty message}"><p class="login-alert" role="alert"><c:out value="${message}"/></p></c:if>
-            <c:if test="${devAuthEnabled}"><form class="login-form" method="post" action="${pageContext.request.contextPath}/login">
+            <form class="login-form" method="post" action="${pageContext.request.contextPath}/login">
                 <label class="login-field" for="email"><span>Địa chỉ email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập địa chỉ email" required><span class="field-icon">✉</span></label>
                 <label class="login-field" for="password"><span>Mật khẩu</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
                 <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><a href="${pageContext.request.contextPath}/password-reset">Quên mật khẩu?</a></div>
                 <button class="login-submit" type="submit">Đăng nhập</button>
             </form>
-            <div class="login-divider"><span>hoặc</span></div></c:if>
+            <div class="login-divider"><span>hoặc</span></div>
             <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Gmail</span></a>
         </div>
     </section>

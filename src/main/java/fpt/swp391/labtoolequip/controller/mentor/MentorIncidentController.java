@@ -40,8 +40,9 @@ public class MentorIncidentController extends HttpServlet {
 				return;
 			}
 			if (path != null && path.matches("/\\d+")) {
-				request.setAttribute("incident", incidentDAO
-						.findByIdForMentor(Long.parseLong(path.substring(1)), AuthSession.userId(request)).orElseThrow());
+				request.setAttribute("incident",
+						incidentDAO.findByIdForMentor(Long.parseLong(path.substring(1)), AuthSession.userId(request))
+								.orElseThrow());
 				forward(request, response, "detail.jsp");
 				return;
 			}
@@ -75,9 +76,10 @@ public class MentorIncidentController extends HttpServlet {
 			return;
 		}
 		try {
-			var incidentIds = incidentDAO.createForMentor(AuthSession.userId(request), request.getParameterValues("targets"),
-					request.getParameter("incidentType"), request.getParameter("severity"), occurredAt(request),
-					request.getParameter("description"), request.getParameter("reportedCause"));
+			var incidentIds = incidentDAO.createForMentor(AuthSession.userId(request),
+					request.getParameterValues("targets"), request.getParameter("incidentType"),
+					request.getParameter("severity"), occurredAt(request), request.getParameter("description"),
+					request.getParameter("reportedCause"));
 			response.sendRedirect(request.getContextPath() + "/mentor/incidents?created=" + incidentIds.size());
 		} catch (SQLException exception) {
 			throw new ServletException(exception);

@@ -286,7 +286,8 @@ public class AssetItemDAO {
 
 	private void validateSerialsAvailable(Connection connection, List<AssetItem> items) throws SQLException {
 		validateDistinctSerials(items);
-		for (AssetItem item : items) validateSerialAvailable(connection, item.getSerialNumber(), null);
+		for (AssetItem item : items)
+			validateSerialAvailable(connection, item.getSerialNumber(), null);
 	}
 
 	static void validateDistinctSerials(List<AssetItem> items) {
@@ -298,16 +299,20 @@ public class AssetItemDAO {
 		}
 	}
 
-	private void validateSerialAvailable(Connection connection, String serial, Long excludedItemId) throws SQLException {
+	private void validateSerialAvailable(Connection connection, String serial, Long excludedItemId)
+			throws SQLException {
 		serial = normalizedSerial(serial);
-		if (serial == null) return;
+		if (serial == null)
+			return;
 		String sql = "SELECT 1 FROM dbo.asset_items WHERE serial_number = ?"
 				+ (excludedItemId == null ? "" : " AND asset_item_id <> ?");
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, serial);
-			if (excludedItemId != null) statement.setLong(2, excludedItemId);
+			if (excludedItemId != null)
+				statement.setLong(2, excludedItemId);
 			try (ResultSet result = statement.executeQuery()) {
-				if (result.next()) throw new IllegalArgumentException("Serial " + serial + " đã tồn tại.");
+				if (result.next())
+					throw new IllegalArgumentException("Serial " + serial + " đã tồn tại.");
 			}
 		}
 	}

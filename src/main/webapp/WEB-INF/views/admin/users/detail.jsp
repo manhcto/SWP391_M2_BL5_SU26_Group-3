@@ -28,7 +28,7 @@
                 <div class="form-grid">
                     <div class="form-group"><label>Mã người dùng</label><input class="form-control" type="text" value="#USR-${user.userId}" readonly style="background:#f4f6f4;"></div>
                     <div class="form-group"><label>Họ và tên</label><input class="form-control" type="text" value="<c:out value='${user.fullName}'/>" readonly style="background:#f4f6f4;"></div>
-                    <div class="form-group"><label>Địa chỉ email (@fpt.edu.vn)</label><input class="form-control" type="text" value="<c:out value='${user.email}'/>" readonly style="background:#f4f6f4;"></div>
+                    <div class="form-group"><label>Địa chỉ email</label><input class="form-control" type="text" value="<c:out value='${user.email}'/>" readonly style="background:#f4f6f4;"></div>
                     <div class="form-group"><label>Vai trò được cấp</label><input class="form-control" type="text" value="<c:out value='${app:label(user.role)}'/>" readonly style="background:#f4f6f4; font-weight:700;"></div>
                     <c:if test="${not empty user.studentCode}">
                         <div class="form-group"><label>Mã sinh viên</label><input class="form-control" type="text" value="<c:out value='${user.studentCode}'/>" readonly style="background:#f4f6f4;"></div>

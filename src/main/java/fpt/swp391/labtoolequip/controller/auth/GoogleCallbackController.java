@@ -51,12 +51,16 @@ public class GoogleCallbackController extends HttpServlet {
 				return;
 			}
 			Optional<User> found = userDAO.findByEmail(payload.getEmail());
-			if (found.isEmpty() || !"INTERN".equals(found.get().getRole())
-					|| !"ACTIVE".equals(found.get().getStatus())) {
+			if (found.isEmpty() || !"ACTIVE".equals(found.get().getStatus())) {
 				deny(request, response, "Access denied: account is not authorized or active.");
 				return;
 			}
 			User user = found.get();
+			if (!"INTERN".equals(user.getRole())) {
+				deny(request, response,
+						"Đăng nhập Google chỉ dành riêng cho Thực tập sinh (Sinh viên). Cán bộ/Quản lý vui lòng đăng nhập bằng Email và Mật khẩu.");
+				return;
+			}
 			String domain = required("FPT_EMAIL_DOMAIN");
 			if (!payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
 				deny(request, response,
@@ -76,13 +80,7 @@ public class GoogleCallbackController extends HttpServlet {
 		} catch (InterruptedException exception) {
 			Thread.currentThread().interrupt();
 			throw new ServletException(exception);
-		} catch (IOException exception) {
-			getServletContext().log("Could not connect to Google OAuth", exception);
-			deny(request, response, "Không thể kết nối với Google. Kiểm tra mạng hoặc proxy rồi thử lại.");
-		} catch (GeneralSecurityException | IllegalArgumentException | IllegalStateException exception) {
-			getServletContext().log("Could not complete Google OAuth", exception);
-			deny(request, response, "Không thể hoàn tất đăng nhập Google. Vui lòng thử lại.");
-		} catch (SQLException exception) {
+		} catch (SQLException | GeneralSecurityException | RuntimeException exception) {
 			throw new ServletException(exception);
 		}
 	}
@@ -105,31 +103,30 @@ public class GoogleCallbackController extends HttpServlet {
 		return matcher.group(1);
 	}
 
-	private GoogleIdToken verify(String token) throws IOException, GeneralSecurityException {
+	private GoogleIdToken verify(String idToken) throws GeneralSecurityException, IOException {
 		GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
 				GsonFactory.getDefaultInstance()).setAudience(Collections.singletonList(required("GOOGLE_CLIENT_ID")))
-				.setIssuers(java.util.List.of("accounts.google.com", "https://accounts.google.com")).build();
-		GoogleIdToken verified = verifier.verify(token);
-		if (verified == null)
-			throw new IllegalArgumentException("ID token của Google không hợp lệ.");
-		return verified;
-	}
-
-	private void deny(HttpServletRequest request, HttpServletResponse response, String message)
-			throws ServletException, IOException {
-		request.setAttribute("message", message);
-		request.setAttribute("devAuthEnabled", Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false")));
-		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
+				.build();
+		GoogleIdToken token = verifier.verify(idToken);
+		if (token == null)
+			throw new IllegalStateException("ID token từ Google không hợp lệ.");
+		return token;
 	}
 
 	private String required(String key) {
 		String value = AppConfig.get(key);
 		if (value == null || value.isBlank())
-			throw new IllegalStateException("Thiếu cấu hình " + key);
-		return value;
+			throw new IllegalStateException("Thiếu cấu hình bắt buộc: " + key);
+		return value.trim();
 	}
 
 	private String encode(String value) {
 		return URLEncoder.encode(value, StandardCharsets.UTF_8);
+	}
+
+	private void deny(HttpServletRequest request, HttpServletResponse response, String message)
+			throws ServletException, IOException {
+		request.setAttribute("message", message);
+		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
 	}
 }
