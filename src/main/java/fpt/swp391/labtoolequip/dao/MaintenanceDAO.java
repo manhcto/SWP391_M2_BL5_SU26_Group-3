@@ -245,6 +245,13 @@ public class MaintenanceDAO {
 					if (isFailed) {
 						// Sửa thất bại -> thiết bị chuyển sang UNAVAILABLE để chờ lập hồ sơ thanh lý
 						setAssetStatus(connection, target.assetId(), "UNAVAILABLE");
+						// Tự động chuyển sự cố sang RESOLVED (kết luận không thể sửa, chuyển thanh lý)
+						if (target.incidentId() != null) {
+							String failNote = blankToNull(repairResult) != null
+									? repairResult
+									: "Sửa chữa không thành công (hư hỏng nặng). Thiết bị đã chuyển sang trạng thái Không khả dụng để chờ thanh lý.";
+							setIncidentResolved(connection, target.incidentId(), failNote);
+						}
 					} else {
 						// Sửa thành công -> thiết bị phục hồi về AVAILABLE
 						setAssetStatus(connection, target.assetId(), "AVAILABLE");
