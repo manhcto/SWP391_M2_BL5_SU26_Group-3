@@ -1,6 +1,8 @@
 /*
   LAB Asset Management System - Microsoft SQL Server
-  Standalone database script for the intern-list workflow.
+  Standalone database script for a fresh LAB Asset Management database.
+  This is the consolidated final schema and demo seed; do not run the
+  individual migration or mock-data scripts after this file.
 
   Rules represented here:
   - One mentor manages the lab.
@@ -359,7 +361,6 @@ BEGIN TRY
         CONSTRAINT PK_incidents PRIMARY KEY (incident_id),
         CONSTRAINT FK_incidents_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT FK_incidents_usage FOREIGN KEY (asset_usage_id) REFERENCES dbo.asset_usages(asset_usage_id),
-		CONSTRAINT FK_incidents_asset_item FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id),
         CONSTRAINT FK_incidents_inspection_item FOREIGN KEY (inspection_item_id) REFERENCES dbo.inspection_items(inspection_item_id),
         CONSTRAINT FK_incidents_reporter FOREIGN KEY (reported_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_incidents_quantity CHECK (affected_quantity > 0),
@@ -373,7 +374,6 @@ BEGIN TRY
 
     CREATE INDEX IX_incidents_asset ON dbo.incidents (asset_id);
     CREATE INDEX IX_incidents_usage ON dbo.incidents (asset_usage_id) WHERE asset_usage_id IS NOT NULL;
-	CREATE INDEX IX_incidents_asset_item ON dbo.incidents (asset_item_id) WHERE asset_item_id IS NOT NULL;
     CREATE INDEX IX_incidents_inspection_item ON dbo.incidents (inspection_item_id) WHERE inspection_item_id IS NOT NULL;
     CREATE INDEX IX_incidents_status ON dbo.incidents (status);
 
@@ -737,6 +737,17 @@ IF COL_LENGTH('dbo.student_profiles', 'major') IS NOT NULL
 COMMIT TRANSACTION;
 GO
 
+/* The major lookup replaces student_profiles.major, so refresh compatibility views. */
+EXEC(N'CREATE OR ALTER VIEW dbo.intern_profiles AS
+       SELECT sp.student_id AS intern_id, sp.user_id, sp.student_code AS intern_code,
+              m.major_name AS major, sp.cohort, sp.status, sp.created_at, sp.updated_at
+       FROM dbo.student_profiles sp
+       LEFT JOIN dbo.majors m ON m.major_id = sp.major_id');
+EXEC(N'CREATE OR ALTER VIEW dbo.lab_usage_request_interns AS
+       SELECT request_id, semester_id, student_id AS intern_id, added_at
+       FROM dbo.lab_usage_request_students');
+GO
+
 /* One row per physical asset item */
 IF OBJECT_ID(N'dbo.asset_items', N'U') IS NULL
 BEGIN
@@ -782,6 +793,24 @@ BEGIN
     JOIN Numbers n ON n.item_number <= a.total_quantity
     WHERE NOT EXISTS (SELECT 1 FROM dbo.asset_items i WHERE i.asset_id = a.asset_id);
 END;
+GO
+
+/* asset_items is available only after the initial schema and seed above. */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE name = 'FK_incidents_asset_item'
+      AND parent_object_id = OBJECT_ID('dbo.incidents')
+)
+    ALTER TABLE dbo.incidents
+        ADD CONSTRAINT FK_incidents_asset_item FOREIGN KEY (asset_item_id)
+        REFERENCES dbo.asset_items(asset_item_id);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_incidents_asset_item'
+      AND object_id = OBJECT_ID('dbo.incidents')
+)
+    CREATE INDEX IX_incidents_asset_item ON dbo.incidents (asset_item_id)
+        WHERE asset_item_id IS NOT NULL;
 GO
 
 /* Existing databases may already have asset_items; keep the usage link idempotent. */
