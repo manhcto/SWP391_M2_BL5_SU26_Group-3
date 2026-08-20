@@ -45,7 +45,7 @@ Intern được di chuyển tự do trong LAB; hệ thống không quản lý ho
 
 ## Xác thực và cấp quyền
 
-Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuất. Đăng nhập development bằng email chỉ xuất hiện khi `DEV_AUTH_ENABLED=true`.
+Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuất. Đăng nhập development bằng email và mật khẩu chỉ xuất hiện khi `DEV_AUTH_ENABLED=true`.
 
 - Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `INTERN`.
 - Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Đăng nhập Google không tự tạo tài khoản và không quyết định quyền hạn.

@@ -39,6 +39,8 @@ BEGIN TRY
         full_name nvarchar(100) NOT NULL,
         email varchar(255) NOT NULL,
         password_hash varchar(255) NULL,
+        must_change_password bit NOT NULL CONSTRAINT DF_users_must_change_password DEFAULT (0),
+        password_expires_at datetime2(0) NULL,
         google_subject varchar(255) NULL,
         role varchar(20) NOT NULL,
         status varchar(10) NOT NULL CONSTRAINT DF_users_status DEFAULT ('ACTIVE'),
@@ -53,6 +55,32 @@ BEGIN TRY
     CREATE UNIQUE INDEX UX_users_google_subject
         ON dbo.users (google_subject)
         WHERE google_subject IS NOT NULL;
+
+    CREATE TABLE dbo.password_reset_requests (
+        reset_request_id bigint IDENTITY(1,1) NOT NULL,
+        target_user_id bigint NOT NULL,
+        status varchar(10) NOT NULL CONSTRAINT DF_password_reset_requests_status DEFAULT ('PENDING'),
+        request_note nvarchar(max) NULL,
+        reviewed_by bigint NULL,
+        reviewed_at datetime2(0) NULL,
+        review_note nvarchar(max) NULL,
+        issued_at datetime2(0) NULL,
+        consumed_at datetime2(0) NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_password_reset_requests_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_password_reset_requests_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_password_reset_requests PRIMARY KEY (reset_request_id),
+        CONSTRAINT FK_password_reset_requests_target FOREIGN KEY (target_user_id) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_password_reset_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_password_reset_requests_status CHECK (
+            status IN ('PENDING', 'APPROVED', 'REJECTED', 'ISSUED', 'CONSUMED')
+        )
+    );
+
+    CREATE INDEX IX_password_reset_requests_target_status
+        ON dbo.password_reset_requests (target_user_id, status);
+    CREATE UNIQUE INDEX UX_password_reset_requests_open_target
+        ON dbo.password_reset_requests (target_user_id)
+        WHERE status IN ('PENDING', 'APPROVED', 'ISSUED');
 
     CREATE TABLE dbo.student_profiles (
         student_id bigint IDENTITY(1,1) NOT NULL,
@@ -132,6 +160,14 @@ BEGIN TRY
     CREATE INDEX IX_lab_usage_request_students_semester ON dbo.lab_usage_request_students (semester_id);
     CREATE INDEX IX_lab_usage_request_students_student ON dbo.lab_usage_request_students (student_id);
 
+    EXEC(N'CREATE VIEW dbo.intern_profiles AS
+           SELECT student_id AS intern_id, user_id, student_code AS intern_code,
+                  major, cohort, status, created_at, updated_at
+           FROM dbo.student_profiles');
+    EXEC(N'CREATE VIEW dbo.lab_usage_request_interns AS
+           SELECT request_id, semester_id, student_id AS intern_id, added_at
+           FROM dbo.lab_usage_request_students');
+
     CREATE TABLE dbo.lab_usage_request_student_entries (
         request_id bigint NOT NULL,
         semester_id bigint NOT NULL,
@@ -202,6 +238,7 @@ BEGIN TRY
         semester_id bigint NOT NULL,
         student_id bigint NOT NULL,
         asset_id bigint NOT NULL,
+        asset_item_id bigint NULL,
         quantity int NOT NULL CONSTRAINT DF_asset_usages_quantity DEFAULT (1),
         borrowed_at datetime2(0) NOT NULL CONSTRAINT DF_asset_usages_borrowed_at DEFAULT (SYSUTCDATETIME()),
         due_at datetime2(0) NOT NULL,
@@ -210,6 +247,7 @@ BEGIN TRY
         condition_after varchar(10) NULL,
         status varchar(10) NOT NULL CONSTRAINT DF_asset_usages_status DEFAULT ('IN_USE'),
         note nvarchar(max) NULL,
+        return_note nvarchar(max) NULL,
         created_by bigint NOT NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_asset_usages_created_at DEFAULT (SYSUTCDATETIME()),
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_asset_usages_updated_at DEFAULT (SYSUTCDATETIME()),
@@ -219,6 +257,7 @@ BEGIN TRY
         CONSTRAINT FK_asset_usages_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT FK_asset_usages_creator FOREIGN KEY (created_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_asset_usages_quantity CHECK (quantity > 0),
+        CONSTRAINT CK_asset_usages_asset_item_quantity CHECK (asset_item_id IS NULL OR quantity = 1),
         CONSTRAINT CK_asset_usages_condition_before CHECK (condition_before IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')),
         CONSTRAINT CK_asset_usages_condition_after CHECK (
             condition_after IS NULL OR condition_after IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')
@@ -423,6 +462,7 @@ BEGIN TRY
     CREATE TABLE dbo.disposal_records (
         disposal_id bigint IDENTITY(1,1) NOT NULL,
         asset_id bigint NOT NULL,
+        asset_item_id bigint NULL,
         maintenance_id bigint NULL,
         quantity int NOT NULL CONSTRAINT DF_disposal_records_quantity DEFAULT (1),
         requested_by bigint NOT NULL,
@@ -442,12 +482,8 @@ BEGIN TRY
         CONSTRAINT FK_disposal_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_disposal_records_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_disposal_records_quantity CHECK (quantity > 0),
+        CONSTRAINT CK_disposal_records_asset_item_quantity CHECK (asset_item_id IS NULL OR quantity = 1),
         CONSTRAINT CK_disposal_records_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')),
-        CONSTRAINT CK_disposal_records_approval CHECK (
-            (status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL)
-            OR (status IN ('APPROVED', 'REJECTED', 'COMPLETED')
-                AND approved_by IS NOT NULL AND approved_at IS NOT NULL)
-        ),
         CONSTRAINT CK_disposal_records_completion CHECK (
             (status = 'COMPLETED' AND completed_at IS NOT NULL)
             OR (status <> 'COMPLETED' AND completed_at IS NULL)
@@ -457,6 +493,7 @@ BEGIN TRY
     CREATE INDEX IX_disposal_records_asset ON dbo.disposal_records (asset_id);
     CREATE INDEX IX_disposal_records_maintenance ON dbo.disposal_records (maintenance_id) WHERE maintenance_id IS NOT NULL;
     CREATE INDEX IX_disposal_records_status ON dbo.disposal_records (status);
+    CREATE UNIQUE INDEX UX_disposal_records_pending_asset ON dbo.disposal_records (asset_id) WHERE status = 'PENDING';
 
     INSERT dbo.semesters (code, name, start_date, end_date, status)
     VALUES ('FA26', N'Fall 2026', '2026-08-01', '2026-12-31', 'ACTIVE');
@@ -704,6 +741,7 @@ BEGIN
         image_path nvarchar(500) NULL,
         condition varchar(10) NOT NULL CONSTRAINT DF_asset_items_condition DEFAULT ('GOOD'),
         status varchar(15) NOT NULL CONSTRAINT DF_asset_items_status DEFAULT ('AVAILABLE'),
+        is_borrowable bit NOT NULL CONSTRAINT DF_asset_items_is_borrowable DEFAULT (1),
         storage_location nvarchar(150) NULL,
         purchase_date date NULL,
         warranty_until date NULL,
@@ -712,9 +750,10 @@ BEGIN
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_asset_items_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_asset_items PRIMARY KEY (asset_item_id),
         CONSTRAINT UQ_asset_items_code UNIQUE (item_code),
+        CONSTRAINT UQ_asset_items_item_asset UNIQUE (asset_item_id, asset_id),
         CONSTRAINT FK_asset_items_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT CK_asset_items_condition CHECK (condition IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')),
-        CONSTRAINT CK_asset_items_status CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'UNAVAILABLE', 'DISPOSED')),
+        CONSTRAINT CK_asset_items_status CHECK (status IN ('AVAILABLE', 'IN_USE', 'MAINTENANCE', 'UNAVAILABLE', 'DISPOSED')),
         CONSTRAINT CK_asset_items_dates CHECK (warranty_until IS NULL OR purchase_date IS NULL OR warranty_until >= purchase_date)
     );
 
@@ -751,8 +790,16 @@ IF NOT EXISTS (
       AND parent_object_id = OBJECT_ID('dbo.asset_usages')
 )
     ALTER TABLE dbo.asset_usages
-        ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id)
-        REFERENCES dbo.asset_items(asset_item_id);
+        ADD CONSTRAINT FK_asset_usages_asset_item FOREIGN KEY (asset_item_id, asset_id)
+        REFERENCES dbo.asset_items(asset_item_id, asset_id);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_asset_usages_asset_item_quantity'
+      AND parent_object_id = OBJECT_ID('dbo.asset_usages')
+)
+    ALTER TABLE dbo.asset_usages
+        ADD CONSTRAINT CK_asset_usages_asset_item_quantity
+        CHECK (asset_item_id IS NULL OR quantity = 1);
 IF NOT EXISTS (
     SELECT 1 FROM sys.indexes
     WHERE name = 'IX_asset_usages_asset_item'
@@ -760,6 +807,28 @@ IF NOT EXISTS (
 )
     CREATE INDEX IX_asset_usages_asset_item ON dbo.asset_usages (asset_item_id)
         WHERE asset_item_id IS NOT NULL;
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UX_asset_usages_active_asset_item'
+      AND object_id = OBJECT_ID('dbo.asset_usages')
+)
+    CREATE UNIQUE INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages (asset_item_id)
+        WHERE asset_item_id IS NOT NULL AND status = 'IN_USE';
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE name = 'FK_disposal_records_asset_item'
+      AND parent_object_id = OBJECT_ID('dbo.disposal_records')
+)
+    ALTER TABLE dbo.disposal_records
+        ADD CONSTRAINT FK_disposal_records_asset_item FOREIGN KEY (asset_item_id, asset_id)
+        REFERENCES dbo.asset_items(asset_item_id, asset_id);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UX_disposal_records_open_asset_item'
+      AND object_id = OBJECT_ID('dbo.disposal_records')
+)
+    CREATE UNIQUE INDEX UX_disposal_records_open_asset_item ON dbo.disposal_records (asset_item_id)
+        WHERE asset_item_id IS NOT NULL AND status IN ('PENDING', 'APPROVED');
 GO
 
 /* Reduce the demo inventory to two borrowable kits. */

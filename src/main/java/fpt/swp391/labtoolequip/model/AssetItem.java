@@ -19,6 +19,7 @@ public class AssetItem {
 	private LocalDate purchaseDate;
 	private LocalDate warrantyUntil;
 	private String note;
+	private Boolean disposalEligible;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
@@ -63,6 +64,18 @@ public class AssetItem {
 	}
 	public void setItemCode(String itemCode) {
 		this.itemCode = itemCode;
+	}
+	public String getItemTag() {
+		return itemCode;
+	}
+	public void setItemTag(String itemTag) {
+		this.itemCode = itemTag;
+	}
+	public Boolean getDisposalEligible() {
+		return disposalEligible;
+	}
+	public void setDisposalEligible(Boolean disposalEligible) {
+		this.disposalEligible = disposalEligible;
 	}
 	public String getSerialNumber() {
 		return serialNumber;

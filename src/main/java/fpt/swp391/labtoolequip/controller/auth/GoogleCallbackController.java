@@ -15,10 +15,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
@@ -51,14 +51,14 @@ public class GoogleCallbackController extends HttpServlet {
 				return;
 			}
 			Optional<User> found = userDAO.findByEmail(payload.getEmail());
-			if (found.isEmpty() || !"ACTIVE".equals(found.get().getStatus())) {
+			if (found.isEmpty() || !"INTERN".equals(found.get().getRole())
+					|| !"ACTIVE".equals(found.get().getStatus())) {
 				deny(request, response, "Access denied: account is not authorized or active.");
 				return;
 			}
 			User user = found.get();
 			String domain = required("FPT_EMAIL_DOMAIN");
-			if ("INTERN".equals(user.getRole())
-					&& !payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
+			if (!payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
 				deny(request, response,
 						"Access denied: an FPT Google account (@" + domain + ") is required for students.");
 				return;
@@ -112,6 +112,7 @@ public class GoogleCallbackController extends HttpServlet {
 	private void deny(HttpServletRequest request, HttpServletResponse response, String message)
 			throws ServletException, IOException {
 		request.setAttribute("message", message);
+		request.setAttribute("devAuthEnabled", Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false")));
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
 	}
 
