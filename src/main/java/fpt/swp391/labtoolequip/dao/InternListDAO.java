@@ -2,8 +2,8 @@ package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
 import fpt.swp391.labtoolequip.common.ViewFormat;
-import fpt.swp391.labtoolequip.model.LabUsageRequest;
-import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
+import fpt.swp391.labtoolequip.model.InternList;
+import fpt.swp391.labtoolequip.model.InternListStudent;
 import fpt.swp391.labtoolequip.model.Semester;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,8 +18,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class LabUsageRequestDAO {
-	private static final String SELECT_REQUEST = """
+public class InternListDAO {
+	private static final String SELECT_INTERN_LIST = """
 			SELECT r.request_id, r.semester_id, r.mentor_id, r.group_name, r.status,
 			       r.request_note, r.approved_by, r.approved_at, r.approval_note,
 			       r.created_at, r.updated_at, se.code AS semester_code, se.name AS semester_name,
@@ -33,9 +33,9 @@ public class LabUsageRequestDAO {
 
 	private final DBConnection dbConnection = new DBConnection();
 
-	public List<LabUsageRequest> findByMentor(long mentorId, String keyword, String status, Long semesterId)
+	public List<InternList> findByMentor(long mentorId, String keyword, String status, Long semesterId)
 			throws SQLException {
-		String sql = SELECT_REQUEST + """
+		String sql = SELECT_INTERN_LIST + """
 				WHERE r.mentor_id = ?
 				  AND (? = '' OR r.group_name LIKE ? OR se.code LIKE ? OR se.name LIKE ?)
 				  AND (? = '' OR r.status = ?)
@@ -55,12 +55,12 @@ public class LabUsageRequestDAO {
 			statement.setString(7, statusFilter);
 			setNullableLong(statement, 8, semesterId);
 			setNullableLong(statement, 9, semesterId);
-			return readRequests(statement);
+			return readInternLists(statement);
 		}
 	}
 
-	public List<LabUsageRequest> findAll(String keyword, String status, Long semesterId) throws SQLException {
-		String sql = SELECT_REQUEST + """
+	public List<InternList> findAll(String keyword, String status, Long semesterId) throws SQLException {
+		String sql = SELECT_INTERN_LIST + """
 				WHERE (? = '' OR r.group_name LIKE ? OR se.code LIKE ? OR se.name LIKE ?
 				       OR mentor.full_name LIKE ? OR mentor.email LIKE ?)
 				  AND (? = '' OR r.status = ?)
@@ -80,19 +80,20 @@ public class LabUsageRequestDAO {
 			statement.setString(8, statusFilter);
 			setNullableLong(statement, 9, semesterId);
 			setNullableLong(statement, 10, semesterId);
-			return readRequests(statement);
+			return readInternLists(statement);
 		}
 	}
 
-	public Optional<LabUsageRequest> findById(long requestId) throws SQLException {
+	public Optional<InternList> findById(long requestId) throws SQLException {
 		try (Connection connection = dbConnection.getConnection();
-				PreparedStatement statement = connection.prepareStatement(SELECT_REQUEST + "WHERE r.request_id = ?")) {
+				PreparedStatement statement = connection
+						.prepareStatement(SELECT_INTERN_LIST + "WHERE r.request_id = ?")) {
 			statement.setLong(1, requestId);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
 					return Optional.empty();
 				}
-				LabUsageRequest request = mapRequest(result);
+				InternList request = mapInternList(result);
 				request.setStudents(findStudents(connection, requestId));
 				return Optional.of(request);
 			}
@@ -111,16 +112,16 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	public List<LabUsageRequest> findApprovedSchedule() throws SQLException {
+	public List<InternList> findApprovedSchedule() throws SQLException {
 		return findApproved(null);
 	}
 
-	public List<LabUsageRequest> findApprovedSchedule(long mentorId) throws SQLException {
+	public List<InternList> findApprovedSchedule(long mentorId) throws SQLException {
 		return findApproved(mentorId);
 	}
 
-	private List<LabUsageRequest> findApproved(Long mentorId) throws SQLException {
-		String sql = SELECT_REQUEST + "WHERE r.status = 'APPROVED' AND se.status = 'ACTIVE'"
+	private List<InternList> findApproved(Long mentorId) throws SQLException {
+		String sql = SELECT_INTERN_LIST + "WHERE r.status = 'APPROVED' AND se.status = 'ACTIVE'"
 				+ (mentorId == null ? "" : " AND r.mentor_id = ?") + " ORDER BY r.request_id";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -128,28 +129,28 @@ public class LabUsageRequestDAO {
 				statement.setLong(1, mentorId);
 			}
 			try (ResultSet result = statement.executeQuery()) {
-				List<LabUsageRequest> requests = new ArrayList<>();
+				List<InternList> internLists = new ArrayList<>();
 				while (result.next()) {
-					LabUsageRequest request = mapRequest(result);
+					InternList request = mapInternList(result);
 					request.setStudents(findStudents(connection, request.getRequestId()));
-					requests.add(request);
+					internLists.add(request);
 				}
-				return requests;
+				return internLists;
 			}
 		}
 	}
 
-	public Optional<LabUsageRequest> findByIdForMentor(long requestId, long mentorId) throws SQLException {
+	public Optional<InternList> findByIdForMentor(long requestId, long mentorId) throws SQLException {
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection
-						.prepareStatement(SELECT_REQUEST + "WHERE r.request_id = ? AND r.mentor_id = ?")) {
+						.prepareStatement(SELECT_INTERN_LIST + "WHERE r.request_id = ? AND r.mentor_id = ?")) {
 			statement.setLong(1, requestId);
 			statement.setLong(2, mentorId);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
 					return Optional.empty();
 				}
-				LabUsageRequest request = mapRequest(result);
+				InternList request = mapInternList(result);
 				request.setStudents(findStudents(connection, requestId));
 				return Optional.of(request);
 			}
@@ -183,7 +184,7 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	public long create(LabUsageRequest request) throws SQLException {
+	public long create(InternList request) throws SQLException {
 		String sql = """
 				INSERT dbo.lab_usage_requests (semester_id, mentor_id, group_name, status, request_note)
 				VALUES (?, ?, ?, 'PENDING', ?)
@@ -215,7 +216,7 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	public boolean updatePending(LabUsageRequest request) throws SQLException {
+	public boolean updatePending(InternList request) throws SQLException {
 		try (Connection connection = dbConnection.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -275,7 +276,7 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	public boolean updateByAdmin(LabUsageRequest request, long adminId) throws SQLException {
+	public boolean updateByAdmin(InternList request, long adminId) throws SQLException {
 		try (Connection connection = dbConnection.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -363,10 +364,10 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	private void synchronizeApprovedMemberships(Connection connection, LabUsageRequest request) throws SQLException {
+	private void synchronizeApprovedMemberships(Connection connection, InternList request) throws SQLException {
 		Set<Long> previousStudentIds = findMembershipStudentIds(connection, request.getRequestId());
 		Set<Long> currentStudentIds = new HashSet<>();
-		for (LabUsageRequestStudent intern : request.getStudents()) {
+		for (InternListStudent intern : request.getStudents()) {
 			intern.setRequestId(request.getRequestId());
 			intern.setSemesterId(request.getSemesterId());
 			long studentId = activateIntern(connection, intern);
@@ -529,7 +530,7 @@ public class LabUsageRequestDAO {
 					return false;
 				}
 				if ("APPROVED".equals(decision)) {
-					for (LabUsageRequestStudent intern : findStudents(connection, requestId)) {
+					for (InternListStudent intern : findStudents(connection, requestId)) {
 						long studentId = activateIntern(connection, intern);
 						insertMembership(connection, intern, studentId);
 					}
@@ -557,25 +558,25 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	private List<LabUsageRequest> readRequests(PreparedStatement statement) throws SQLException {
+	private List<InternList> readInternLists(PreparedStatement statement) throws SQLException {
 		try (ResultSet result = statement.executeQuery()) {
-			List<LabUsageRequest> requests = new ArrayList<>();
+			List<InternList> internLists = new ArrayList<>();
 			while (result.next()) {
-				requests.add(mapRequest(result));
+				internLists.add(mapInternList(result));
 			}
-			return requests;
+			return internLists;
 		}
 	}
 
 	private void insertStudents(Connection connection, long requestId, long semesterId,
-			List<LabUsageRequestStudent> students) throws SQLException {
+			List<InternListStudent> students) throws SQLException {
 		String sql = """
 				INSERT dbo.lab_usage_request_student_entries
 				       (request_id, semester_id, student_code, full_name, email, cohort)
 				VALUES (?, ?, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-			for (LabUsageRequestStudent intern : students) {
+			for (InternListStudent intern : students) {
 				statement.setLong(1, requestId);
 				statement.setLong(2, semesterId);
 				statement.setString(3, intern.getStudentCode().trim());
@@ -588,7 +589,7 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	private long activateIntern(Connection connection, LabUsageRequestStudent intern) throws SQLException {
+	private long activateIntern(Connection connection, InternListStudent intern) throws SQLException {
 		Long userId = null;
 		Long studentId = null;
 		String existingCode = null;
@@ -673,8 +674,7 @@ public class LabUsageRequestDAO {
 		return studentId;
 	}
 
-	private void insertMembership(Connection connection, LabUsageRequestStudent intern, long studentId)
-			throws SQLException {
+	private void insertMembership(Connection connection, InternListStudent intern, long studentId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement("""
 				INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
 				SELECT ?, ?, ?
@@ -744,7 +744,7 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	private List<LabUsageRequestStudent> findStudents(Connection connection, long requestId) throws SQLException {
+	private List<InternListStudent> findStudents(Connection connection, long requestId) throws SQLException {
 		String sql = """
 				SELECT e.request_id, e.semester_id, approved.student_id, e.added_at,
 				       e.student_code, e.full_name, e.email, e.cohort
@@ -759,9 +759,9 @@ public class LabUsageRequestDAO {
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, requestId);
 			try (ResultSet result = statement.executeQuery()) {
-				List<LabUsageRequestStudent> students = new ArrayList<>();
+				List<InternListStudent> students = new ArrayList<>();
 				while (result.next()) {
-					LabUsageRequestStudent intern = new LabUsageRequestStudent();
+					InternListStudent intern = new InternListStudent();
 					intern.setRequestId(result.getLong("request_id"));
 					intern.setSemesterId(result.getLong("semester_id"));
 					intern.setStudentId(nullableLong(result, "student_id"));
@@ -777,8 +777,8 @@ public class LabUsageRequestDAO {
 		}
 	}
 
-	private LabUsageRequest mapRequest(ResultSet result) throws SQLException {
-		LabUsageRequest request = new LabUsageRequest();
+	private InternList mapInternList(ResultSet result) throws SQLException {
+		InternList request = new InternList();
 		request.setRequestId(result.getLong("request_id"));
 		request.setSemesterId(result.getLong("semester_id"));
 		request.setMentorId(result.getLong("mentor_id"));

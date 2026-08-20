@@ -8,6 +8,7 @@ public class AssetUsage {
 	private Long semesterId;
 	private Long studentId;
 	private Long assetId;
+	private Long assetItemId;
 	private Integer quantity;
 	private LocalDateTime borrowedAt;
 	private LocalDateTime dueAt;
@@ -21,6 +22,8 @@ public class AssetUsage {
 	private LocalDateTime updatedAt;
 	private String assetCode;
 	private String assetName;
+	private String itemCode;
+	private String itemSerialNumber;
 	private String studentName;
 
 	public AssetUsage() {
@@ -86,6 +89,14 @@ public class AssetUsage {
 
 	public void setAssetId(Long assetId) {
 		this.assetId = assetId;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
 	}
 
 	public Integer getQuantity() {
@@ -190,6 +201,22 @@ public class AssetUsage {
 
 	public void setAssetName(String assetName) {
 		this.assetName = assetName;
+	}
+
+	public String getItemCode() {
+		return itemCode;
+	}
+
+	public void setItemCode(String itemCode) {
+		this.itemCode = itemCode;
+	}
+
+	public String getItemSerialNumber() {
+		return itemSerialNumber;
+	}
+
+	public void setItemSerialNumber(String itemSerialNumber) {
+		this.itemSerialNumber = itemSerialNumber;
 	}
 
 	public String getStudentName() {

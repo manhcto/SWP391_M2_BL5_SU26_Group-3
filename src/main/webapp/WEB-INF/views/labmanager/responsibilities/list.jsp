@@ -84,8 +84,9 @@
                                 <td><span
                                         class="status ${r.status == 'RESOLVED' || r.status == 'CONFIRMED' || r.status == 'APPROVED' ? 'returned' : 'review'}"><c:out
                                         value="${app:label(r.status)}"/></span></td>
-                                <td><a class="btn-action btn-action-primary"
-                                       href="${pageContext.request.contextPath}/lab-manager/responsibilities/${r.responsibilityId}">Xem</a>
+                                <td><a class="btn-action"
+                                       href="${pageContext.request.contextPath}/lab-manager/responsibilities/${r.responsibilityId}">Xem</a><a class="btn-action btn-action-primary"
+                                       href="${pageContext.request.contextPath}/lab-manager/responsibilities/${r.responsibilityId}/edit">Sửa</a>
                                 </td>
                             </tr>
                         </c:forEach>

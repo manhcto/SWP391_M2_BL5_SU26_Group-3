@@ -1,9 +1,9 @@
 package fpt.swp391.labtoolequip.controller.admin;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
-import fpt.swp391.labtoolequip.dao.LabUsageRequestDAO;
-import fpt.swp391.labtoolequip.model.LabUsageRequest;
-import fpt.swp391.labtoolequip.model.LabUsageRequestStudent;
+import fpt.swp391.labtoolequip.dao.InternListDAO;
+import fpt.swp391.labtoolequip.model.InternList;
+import fpt.swp391.labtoolequip.model.InternListStudent;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -20,24 +20,23 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 @WebServlet({"/admin/interns", "/admin/interns/view", "/admin/interns/edit", "/admin/interns/delete",
-		"/admin/interns/decision", "/admin/lab-requests", "/admin/lab-requests/view", "/admin/lab-requests/edit",
-		"/admin/lab-requests/delete", "/admin/lab-requests/decision"})
-public class AdminLabUsageRequestController extends HttpServlet {
-	private static final String LIST_VIEW = "/WEB-INF/views/admin/lab-requests/list.jsp";
-	private static final String DETAIL_VIEW = "/WEB-INF/views/admin/lab-requests/detail.jsp";
-	private static final String EDIT_VIEW = "/WEB-INF/views/admin/lab-requests/form.jsp";
+		"/admin/interns/decision"})
+public class AdminInternListController extends HttpServlet {
+	private static final String LIST_VIEW = "/WEB-INF/views/admin/intern-lists/list.jsp";
+	private static final String DETAIL_VIEW = "/WEB-INF/views/admin/intern-lists/detail.jsp";
+	private static final String EDIT_VIEW = "/WEB-INF/views/admin/intern-lists/form.jsp";
 	private static final Set<String> STATUSES = Set.of("PENDING", "APPROVED", "REJECTED");
 	private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
-	private final LabUsageRequestDAO requestDAO = new LabUsageRequestDAO();
+	private final InternListDAO internListDAO = new InternListDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
 			switch (canonicalPath(request)) {
-				case "/admin/lab-requests/view" -> showDetail(request, response);
-				case "/admin/lab-requests/edit" -> showEditForm(request, response);
+				case "/admin/interns/view" -> showDetail(request, response);
+				case "/admin/interns/edit" -> showEditForm(request, response);
 				default -> showList(request, response);
 			}
 		} catch (SQLException exception) {
@@ -50,8 +49,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
 		String path = canonicalPath(request);
-		if (!Set.of("/admin/lab-requests/decision", "/admin/lab-requests/edit", "/admin/lab-requests/delete")
-				.contains(path)) {
+		if (!Set.of("/admin/interns/decision", "/admin/interns/edit", "/admin/interns/delete").contains(path)) {
 			response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			return;
 		}
@@ -61,24 +59,24 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		}
 		try {
 			switch (path) {
-				case "/admin/lab-requests/decision" -> decide(request, response);
-				case "/admin/lab-requests/edit" -> update(request, response);
-				case "/admin/lab-requests/delete" -> delete(request, response);
+				case "/admin/interns/decision" -> decide(request, response);
+				case "/admin/interns/edit" -> update(request, response);
+				case "/admin/interns/delete" -> delete(request, response);
 				default -> response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			}
 		} catch (SQLException exception) {
 			getServletContext().log("Admin intern list operation failed", exception);
-			if ("/admin/lab-requests/decision".equals(path)) {
+			if ("/admin/interns/decision".equals(path)) {
 				request.setAttribute("decisionError", exception.getMessage());
 				try {
 					showDetail(request, response);
 				} catch (SQLException loadingException) {
 					handleDatabaseError(response, loadingException);
 				}
-			} else if ("/admin/lab-requests/delete".equals(path)) {
+			} else if ("/admin/interns/delete".equals(path)) {
 				response.sendRedirect(request.getContextPath() + "/admin/interns?error=delete");
 			} else {
-				LabUsageRequest internList = readForm(request);
+				InternList internList = readForm(request);
 				internList.setRequestId(optionalId(request.getParameter("id")));
 				try {
 					forwardEditForm(request, response, internList, List.of(databaseMessage(exception)));
@@ -97,8 +95,8 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			status = "";
 		}
 		Long semesterId = optionalId(request.getParameter("semesterId"));
-		request.setAttribute("requests", requestDAO.findAll(keyword, status, semesterId));
-		request.setAttribute("semesters", requestDAO.findOpenSemesters());
+		request.setAttribute("internLists", internListDAO.findAll(keyword, status, semesterId));
+		request.setAttribute("semesters", internListDAO.findOpenSemesters());
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedStatus", status);
 		request.setAttribute("selectedSemesterId", semesterId);
@@ -112,12 +110,12 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		if (response.isCommitted()) {
 			return;
 		}
-		LabUsageRequest internList = requestDAO.findById(requestId).orElse(null);
+		InternList internList = internListDAO.findById(requestId).orElse(null);
 		if (internList == null) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
 		}
-		request.setAttribute("labRequest", internList);
+		request.setAttribute("internList", internList);
 		request.setAttribute("csrfToken", csrfToken(request));
 		request.getRequestDispatcher(DETAIL_VIEW).forward(request, response);
 	}
@@ -128,7 +126,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		if (response.isCommitted()) {
 			return;
 		}
-		LabUsageRequest internList = requestDAO.findById(requestId).orElse(null);
+		InternList internList = internListDAO.findById(requestId).orElse(null);
 		if (internList == null) {
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
@@ -146,7 +144,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Quyết định phê duyệt không hợp lệ.");
 			return;
 		}
-		if (!requestDAO.decidePending(requestId, AuthSession.userId(request), decision,
+		if (!internListDAO.decidePending(requestId, AuthSession.userId(request), decision,
 				trim(request.getParameter("approvalNote")))) {
 			response.sendError(HttpServletResponse.SC_CONFLICT, "Danh sách không còn ở trạng thái chờ duyệt.");
 			return;
@@ -161,14 +159,14 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		if (response.isCommitted()) {
 			return;
 		}
-		LabUsageRequest internList = readForm(request);
+		InternList internList = readForm(request);
 		internList.setRequestId(requestId);
 		List<String> errors = validate(internList);
 		if (!errors.isEmpty()) {
 			forwardEditForm(request, response, internList, errors);
 			return;
 		}
-		if (!requestDAO.updateByAdmin(internList, AuthSession.userId(request))) {
+		if (!internListDAO.updateByAdmin(internList, AuthSession.userId(request))) {
 			response.sendError(HttpServletResponse.SC_CONFLICT,
 					"Danh sách không còn tồn tại hoặc quản trị viên không hợp lệ.");
 			return;
@@ -181,7 +179,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		if (response.isCommitted()) {
 			return;
 		}
-		if (!requestDAO.deleteByAdmin(requestId, AuthSession.userId(request))) {
+		if (!internListDAO.deleteByAdmin(requestId, AuthSession.userId(request))) {
 			response.sendError(HttpServletResponse.SC_CONFLICT,
 					"Danh sách không còn tồn tại hoặc quản trị viên không hợp lệ.");
 			return;
@@ -189,8 +187,8 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		response.sendRedirect(request.getContextPath() + "/admin/interns?deleted=1");
 	}
 
-	private LabUsageRequest readForm(HttpServletRequest request) {
-		LabUsageRequest internList = new LabUsageRequest();
+	private InternList readForm(HttpServletRequest request) {
+		InternList internList = new InternList();
 		internList.setSemesterId(optionalId(request.getParameter("semesterId")));
 		internList.setGroupName(trim(request.getParameter("groupName")));
 		internList.setRequestNote(trim(request.getParameter("requestNote")));
@@ -199,7 +197,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		String[] emails = request.getParameterValues("internEmail");
 		String[] cohorts = request.getParameterValues("cohort");
 		int size = Math.max(Math.max(length(codes), length(names)), Math.max(length(emails), length(cohorts)));
-		List<LabUsageRequestStudent> interns = new ArrayList<>();
+		List<InternListStudent> interns = new ArrayList<>();
 		for (int index = 0; index < size; index++) {
 			String code = valueAt(codes, index);
 			String name = valueAt(names, index);
@@ -208,7 +206,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 			if (code.isBlank() && name.isBlank() && email.isBlank() && cohort.isBlank()) {
 				continue;
 			}
-			LabUsageRequestStudent intern = new LabUsageRequestStudent();
+			InternListStudent intern = new InternListStudent();
 			intern.setStudentCode(code);
 			intern.setFullName(name);
 			intern.setEmail(email);
@@ -219,9 +217,9 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		return internList;
 	}
 
-	private List<String> validate(LabUsageRequest internList) throws SQLException {
+	private List<String> validate(InternList internList) throws SQLException {
 		List<String> errors = new ArrayList<>();
-		if (internList.getSemesterId() == null || requestDAO.findOpenSemesters().stream()
+		if (internList.getSemesterId() == null || internListDAO.findOpenSemesters().stream()
 				.noneMatch(semester -> semester.getSemesterId().equals(internList.getSemesterId()))) {
 			errors.add("Vui lòng chọn học kỳ đang hoạt động hoặc sắp diễn ra.");
 		}
@@ -233,7 +231,7 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		}
 		Set<String> codes = new LinkedHashSet<>();
 		Set<String> emails = new LinkedHashSet<>();
-		for (LabUsageRequestStudent intern : internList.getStudents()) {
+		for (InternListStudent intern : internList.getStudents()) {
 			String code = trim(intern.getStudentCode()).toUpperCase(Locale.ROOT);
 			String email = trim(intern.getEmail()).toLowerCase(Locale.ROOT);
 			if (code.isBlank() || trim(intern.getFullName()).isBlank() || trim(intern.getCohort()).isBlank()
@@ -253,18 +251,18 @@ public class AdminLabUsageRequestController extends HttpServlet {
 		return errors;
 	}
 
-	private void forwardEditForm(HttpServletRequest request, HttpServletResponse response, LabUsageRequest internList,
+	private void forwardEditForm(HttpServletRequest request, HttpServletResponse response, InternList internList,
 			List<String> errors) throws SQLException, ServletException, IOException {
-		request.setAttribute("labRequest", internList);
+		request.setAttribute("internList", internList);
 		request.setAttribute("formMode", "edit");
 		request.setAttribute("errors", errors);
-		request.setAttribute("semesters", requestDAO.findOpenSemesters());
+		request.setAttribute("semesters", internListDAO.findOpenSemesters());
 		request.setAttribute("csrfToken", csrfToken(request));
 		request.getRequestDispatcher(EDIT_VIEW).forward(request, response);
 	}
 
 	private String canonicalPath(HttpServletRequest request) {
-		return request.getServletPath().replace("/admin/interns", "/admin/lab-requests");
+		return request.getServletPath();
 	}
 
 	private String csrfToken(HttpServletRequest request) {

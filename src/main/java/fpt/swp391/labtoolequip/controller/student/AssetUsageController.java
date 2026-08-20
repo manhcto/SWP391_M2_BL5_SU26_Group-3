@@ -20,7 +20,7 @@ public class AssetUsageController extends HttpServlet {
 		try {
 			String path = request.getPathInfo();
 			if ("/borrow".equals(path)) {
-				request.setAttribute("assets", dao.findBorrowableAssets());
+				request.setAttribute("assetItems", dao.findBorrowableItems());
 				forward(request, response, "borrow.jsp");
 				return;
 			}
@@ -44,8 +44,8 @@ public class AssetUsageController extends HttpServlet {
 			throws ServletException, IOException {
 		try {
 			if ("borrow".equals(request.getParameter("action"))) {
-				dao.borrow(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
-						Integer.parseInt(request.getParameter("quantity")), request.getParameter("note"));
+				dao.borrow(AuthSession.userId(request), Long.parseLong(request.getParameter("assetItemId")),
+						request.getParameter("note"));
 			} else if ("return".equals(request.getParameter("action"))) {
 				dao.returnUsage(AuthSession.userId(request), Long.parseLong(request.getParameter("usageId")),
 						request.getParameter("conditionAfter"), request.getParameter("note"));
