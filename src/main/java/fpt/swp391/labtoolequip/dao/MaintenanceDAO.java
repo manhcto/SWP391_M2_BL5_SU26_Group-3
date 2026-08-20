@@ -198,8 +198,9 @@ public class MaintenanceDAO {
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
-				// Lấy asset_id và kiểm tra phiếu phải đang ở APPROVED hoặc IN_PROGRESS
-				long assetId = requireApprovedOrInProgress(connection, id);
+				// Lấy asset_id, incident_id và kiểm tra phiếu phải đang ở APPROVED hoặc
+				// IN_PROGRESS
+				MaintenanceTarget target = requireApprovedOrInProgress(connection, id);
 
 				String sql;
 				if ("COMPLETED".equals(dbStatus)) {
@@ -239,14 +240,18 @@ public class MaintenanceDAO {
 					statement.executeUpdate();
 				}
 
-				// Cập nhật trạng thái thiết bị theo kết quả sửa
+				// Cập nhật trạng thái thiết bị và sự cố theo kết quả sửa
 				if ("COMPLETED".equals(dbStatus)) {
 					if (isFailed) {
 						// Sửa thất bại -> thiết bị chuyển sang UNAVAILABLE để chờ lập hồ sơ thanh lý
-						setAssetStatus(connection, assetId, "UNAVAILABLE");
+						setAssetStatus(connection, target.assetId(), "UNAVAILABLE");
 					} else {
 						// Sửa thành công -> thiết bị phục hồi về AVAILABLE
-						setAssetStatus(connection, assetId, "AVAILABLE");
+						setAssetStatus(connection, target.assetId(), "AVAILABLE");
+						// Tự động chuyển sự cố liên quan sang RESOLVED để hoàn tất khắc phục
+						if (target.incidentId() != null) {
+							setIncidentResolved(connection, target.incidentId(), repairResult);
+						}
 					}
 				}
 
@@ -331,16 +336,36 @@ public class MaintenanceDAO {
 		}
 	}
 
-	private long requireApprovedOrInProgress(Connection connection, long id) throws SQLException {
+	private record MaintenanceTarget(long assetId, Long incidentId) {
+	}
+
+	private MaintenanceTarget requireApprovedOrInProgress(Connection connection, long id) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT asset_id FROM dbo.maintenance_records WHERE maintenance_id = ? AND status IN ('APPROVED','IN_PROGRESS')")) {
+				"SELECT asset_id, incident_id FROM dbo.maintenance_records WHERE maintenance_id = ? AND status IN ('APPROVED','IN_PROGRESS')")) {
 			statement.setLong(1, id);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
 					throw new IllegalStateException("Chỉ có thể cập nhật tiến độ phiếu đã duyệt hoặc đang sửa chữa.");
 				}
-				return result.getLong(1);
+				long assetId = result.getLong("asset_id");
+				Long incidentId = nullableLong(result, "incident_id");
+				return new MaintenanceTarget(assetId, incidentId);
 			}
+		}
+	}
+
+	private void setIncidentResolved(Connection connection, long incidentId, String repairResult) throws SQLException {
+		String sql = """
+				UPDATE dbo.incidents
+				SET status = 'RESOLVED',
+				    handling_result = COALESCE(?, handling_result, N'Đã hoàn tất bảo trì sửa chữa thiết bị.'),
+				    updated_at = SYSUTCDATETIME()
+				WHERE incident_id = ? AND status IN ('OPEN', 'INVESTIGATING')
+				""";
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, blankToNull(repairResult));
+			statement.setLong(2, incidentId);
+			statement.executeUpdate();
 		}
 	}
 
