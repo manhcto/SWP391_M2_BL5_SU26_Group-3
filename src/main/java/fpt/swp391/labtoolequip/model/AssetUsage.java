@@ -6,8 +6,9 @@ public class AssetUsage {
 	private Long assetUsageId;
 	private Long requestId;
 	private Long semesterId;
-	private Long studentId;
+	private Long internId;
 	private Long assetId;
+	private Long assetItemId;
 	private Integer quantity;
 	private LocalDateTime borrowedAt;
 	private LocalDateTime dueAt;
@@ -16,25 +17,28 @@ public class AssetUsage {
 	private String conditionAfter;
 	private String status;
 	private String note;
+	private String returnNote;
 	private Long createdBy;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 	private String assetCode;
 	private String assetName;
-	private String studentName;
+	private String assetItemTag;
+	private String internName;
 
 	public AssetUsage() {
 	}
 
-	public AssetUsage(Long assetUsageId, Long requestId, Long semesterId, Long studentId, Long assetId,
+	public AssetUsage(Long assetUsageId, Long requestId, Long semesterId, Long internId, Long assetId, Long assetItemId,
 			Integer quantity, LocalDateTime borrowedAt, LocalDateTime dueAt, LocalDateTime returnedAt,
 			String conditionBefore, String conditionAfter, String status, String note, Long createdBy,
 			LocalDateTime createdAt, LocalDateTime updatedAt) {
 		this.assetUsageId = assetUsageId;
 		this.requestId = requestId;
 		this.semesterId = semesterId;
-		this.studentId = studentId;
+		this.internId = internId;
 		this.assetId = assetId;
+		this.assetItemId = assetItemId;
 		this.quantity = quantity;
 		this.borrowedAt = borrowedAt;
 		this.dueAt = dueAt;
@@ -72,12 +76,12 @@ public class AssetUsage {
 		this.semesterId = semesterId;
 	}
 
-	public Long getStudentId() {
-		return studentId;
+	public Long getInternId() {
+		return internId;
 	}
 
-	public void setStudentId(Long studentId) {
-		this.studentId = studentId;
+	public void setInternId(Long internId) {
+		this.internId = internId;
 	}
 
 	public Long getAssetId() {
@@ -86,6 +90,14 @@ public class AssetUsage {
 
 	public void setAssetId(Long assetId) {
 		this.assetId = assetId;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
 	}
 
 	public Integer getQuantity() {
@@ -151,6 +163,12 @@ public class AssetUsage {
 	public void setNote(String note) {
 		this.note = note;
 	}
+	public String getReturnNote() {
+		return returnNote;
+	}
+	public void setReturnNote(String returnNote) {
+		this.returnNote = returnNote;
+	}
 
 	public Long getCreatedBy() {
 		return createdBy;
@@ -192,11 +210,19 @@ public class AssetUsage {
 		this.assetName = assetName;
 	}
 
-	public String getStudentName() {
-		return studentName;
+	public String getAssetItemTag() {
+		return assetItemTag;
 	}
 
-	public void setStudentName(String studentName) {
-		this.studentName = studentName;
+	public void setAssetItemTag(String assetItemTag) {
+		this.assetItemTag = assetItemTag;
+	}
+
+	public String getInternName() {
+		return internName;
+	}
+
+	public void setInternName(String internName) {
+		this.internName = internName;
 	}
 }
