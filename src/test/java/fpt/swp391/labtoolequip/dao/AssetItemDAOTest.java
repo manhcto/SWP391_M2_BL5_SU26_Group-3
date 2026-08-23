@@ -18,6 +18,7 @@ class AssetItemDAOTest {
 	@Test
 	void acceptsDamagedOrBrokenItemsOnlyWhenRemovedFromUse() {
 		assertDoesNotThrow(() -> AssetItemDAO.validateItem(item("DAMAGED", "MAINTENANCE", "SN-003")));
+		assertDoesNotThrow(() -> AssetItemDAO.validateItem(item("BROKEN", "UNAVAILABLE", "SN-003A")));
 		assertDoesNotThrow(() -> AssetItemDAO.validateItem(item("BROKEN", "DISPOSED", "SN-004")));
 	}
 
@@ -42,8 +43,7 @@ class AssetItemDAOTest {
 		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
 				() -> AssetItemDAO.validateItem(item("DAMAGED", "AVAILABLE", "SN-007")));
 
-		assertEquals("Sản phẩm hư hỏng nặng phải chuyển sang Đang bảo trì và được Mentor báo cáo Lab Manager.",
-				exception.getMessage());
+		assertEquals("Sản phẩm hư hỏng nặng phải được đưa ra khỏi trạng thái sẵn sàng.", exception.getMessage());
 	}
 
 	@Test
@@ -61,6 +61,21 @@ class AssetItemDAOTest {
 						List.of(item("GOOD", "AVAILABLE", "G102"), item("GOOD", "AVAILABLE", "g102"))));
 
 		assertEquals("Serial g102 bị trùng trong danh sách nhập.", exception.getMessage());
+	}
+
+	@Test
+	void rejectsExternalOrInjectableImagePaths() {
+		AssetItem valid = item("GOOD", "AVAILABLE", "SN-008");
+		valid.setImagePath("/uploads/assets/laptop-01.jpg");
+		assertDoesNotThrow(() -> AssetItemDAO.validateItem(valid));
+
+		AssetItem external = item("GOOD", "AVAILABLE", "SN-009");
+		external.setImagePath("https://example.com/image.jpg");
+		assertThrows(IllegalArgumentException.class, () -> AssetItemDAO.validateItem(external));
+
+		AssetItem injected = item("GOOD", "AVAILABLE", "SN-010");
+		injected.setImagePath("/uploads/x.jpg\" onerror=alert(1)");
+		assertThrows(IllegalArgumentException.class, () -> AssetItemDAO.validateItem(injected));
 	}
 
 	private AssetItem item(String condition, String status, String serialNumber) {

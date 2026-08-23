@@ -5,7 +5,9 @@ import java.time.LocalDateTime;
 public class MaintenanceRecord {
 	private Long maintenanceId;
 	private Long assetId;
+	private Long assetItemId;
 	private Long incidentId;
+	private Long assessmentId;
 	private Integer quantity;
 	private Long requestedBy;
 	private String description;
@@ -17,6 +19,7 @@ public class MaintenanceRecord {
 	private LocalDateTime repairStartedAt;
 	private LocalDateTime repairCompletedAt;
 	private String repairResult;
+	private String repairOutcome;
 	private String note;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
@@ -25,6 +28,10 @@ public class MaintenanceRecord {
 	private String assetCode;
 	private String assetName;
 	private String assetStatus;
+	private String assetItemCode;
+	private String assetItemTag;
+	private String assetItemStatus;
+	private String assetItemCondition;
 	private String storageLocation;
 	private String requesterName;
 	private String approverName;
@@ -39,6 +46,38 @@ public class MaintenanceRecord {
 
 	public void setAssetStatus(String assetStatus) {
 		this.assetStatus = assetStatus;
+	}
+
+	public String getAssetItemCode() {
+		return assetItemCode;
+	}
+
+	public void setAssetItemCode(String assetItemCode) {
+		this.assetItemCode = assetItemCode;
+	}
+
+	public String getAssetItemTag() {
+		return assetItemTag;
+	}
+
+	public void setAssetItemTag(String assetItemTag) {
+		this.assetItemTag = assetItemTag;
+	}
+
+	public String getAssetItemStatus() {
+		return assetItemStatus;
+	}
+
+	public void setAssetItemStatus(String assetItemStatus) {
+		this.assetItemStatus = assetItemStatus;
+	}
+
+	public String getAssetItemCondition() {
+		return assetItemCondition;
+	}
+
+	public void setAssetItemCondition(String assetItemCondition) {
+		this.assetItemCondition = assetItemCondition;
 	}
 
 	public Long getMaintenanceId() {
@@ -57,12 +96,28 @@ public class MaintenanceRecord {
 		this.assetId = assetId;
 	}
 
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
+	}
+
 	public Long getIncidentId() {
 		return incidentId;
 	}
 
 	public void setIncidentId(Long incidentId) {
 		this.incidentId = incidentId;
+	}
+
+	public Long getAssessmentId() {
+		return assessmentId;
+	}
+
+	public void setAssessmentId(Long assessmentId) {
+		this.assessmentId = assessmentId;
 	}
 
 	public Integer getQuantity() {
@@ -151,6 +206,14 @@ public class MaintenanceRecord {
 
 	public void setRepairResult(String repairResult) {
 		this.repairResult = repairResult;
+	}
+
+	public String getRepairOutcome() {
+		return repairOutcome;
+	}
+
+	public void setRepairOutcome(String repairOutcome) {
+		this.repairOutcome = repairOutcome;
 	}
 
 	public String getNote() {

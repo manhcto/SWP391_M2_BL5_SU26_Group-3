@@ -6,275 +6,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Chi tiết phiếu bảo trì #MNT-${record.maintenanceId} | LAB Asset</title>
+    <title>Phiếu bảo trì #MNT-${record.maintenanceId} | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
-    <style>
-        .timeline { padding: 20px 0; }
-        .timeline-item { display: flex; gap: 16px; margin-bottom: 20px; }
-        .timeline-dot { width: 14px; height: 14px; border-radius: 50%; background: #188255; flex-shrink: 0; margin-top: 3px; }
-        .timeline-dot.pending { background: #e2aa3d; }
-        .timeline-dot.rejected { background: #c62828; }
-        .timeline-dot.completed { background: #188255; }
-        .timeline-content { flex: 1; }
-        .timeline-content small { font-size: 11px; color: #5a6662; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
-        .info-item label { font-size: 11px; text-transform: uppercase; color: #5a6662; font-weight: 600; display: block; margin-bottom: 4px; }
-        .info-item p { margin: 0; font-size: 14px; }
-    </style>
+    <style>.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:18px}.info-item label{display:block;color:#5a6662;font-size:11px;font-weight:600;text-transform:uppercase}.info-item p{margin:4px 0 0;white-space:pre-line}</style>
 </head>
 <body class="mentor-page">
 <c:set var="activeMenu" value="maintenance" scope="request"/>
 <div class="app-shell">
     <%@ include file="../includes/sidebar.jspf" %>
     <main class="main-content">
-        <header class="topbar">
-            <div class="heading-wrap">
-                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng">
-                    <svg><use href="#i-menu"/></svg>
-                </button>
-                <div>
-                    <h1>Phiếu bảo trì #MNT-<c:out value="${record.maintenanceId}"/></h1>
-                    <p>Chi tiết hồ sơ sửa chữa và trạng thái xử lý</p>
-                </div>
-            </div>
-            <div class="topbar-actions">
-                <a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">‹ Quay lại danh sách</a>
-            </div>
-        </header>
-
+        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1>Phiếu bảo trì #MNT-<c:out value="${record.maintenanceId}"/></h1><p>Theo dõi yêu cầu bảo trì thiết bị theo mã riêng.</p></div></div><div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/maintenance">Quay lại</a></div></header>
         <section class="content-area">
-            <c:if test="${param.success == 'created'}">
-                <div class="success-message">Đã tạo đề xuất bảo trì thành công. Chờ Lab Manager phê duyệt.</div>
-            </c:if>
-            <c:if test="${param.success == 'updated'}">
-                <div class="success-message">Đã cập nhật thông tin đề xuất bảo trì thành công.</div>
-            </c:if>
-
-            <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;">
-
-                <%-- THÔNG TIN CHÍNH --%>
-                <div>
-                    <article class="panel" style="margin-bottom:20px;">
-                        <div style="padding:16px 20px;border-bottom:1px solid #edf0ec;display:flex;justify-content:space-between;align-items:center;">
-                            <strong>Thông tin phiếu bảo trì</strong>
-                            <c:choose>
-                                <c:when test="${record.status == 'IN_PROGRESS'}">
-                                    <span class="status maintenance">Đang sửa chữa</span>
-                                </c:when>
-                                <c:when test="${record.status == 'COMPLETED'}">
-                                    <c:choose>
-                                        <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
-                                            <span class="status overdue">Sửa thất bại</span>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <span class="status returned">Đã sửa xong</span>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </c:when>
-                                <c:otherwise>
-                                    <span class="status"><c:out value="${record.status}"/></span>
-                                </c:otherwise>
-                            </c:choose>
-                        </div>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <label>Mã phiếu</label>
-                                <p><strong>#MNT-<c:out value="${record.maintenanceId}"/></strong></p>
-                            </div>
-                            <div class="info-item">
-                                <label>Ngày tạo phiếu</label>
-                                <p><c:out value="${app:dateTime(record.requestedAt)}"/></p>
-                            </div>
-                            <div class="info-item">
-                                <label>Thiết bị</label>
-                                <p><c:out value="${record.assetName}"/> (<c:out value="${record.assetCode}"/>)</p>
-                            </div>
-                            <div class="info-item">
-                                <label>Số lượng bảo trì</label>
-                                <p><c:out value="${record.quantity}"/></p>
-                            </div>
-                            <c:if test="${not empty record.storageLocation}">
-                                <div class="info-item">
-                                    <label>Vị trí lưu trữ</label>
-                                    <p><c:out value="${record.storageLocation}"/></p>
-                                </div>
-                            </c:if>
-                            <div class="info-item">
-                                <label>Người đề xuất</label>
-                                <p><c:out value="${record.requesterName}"/></p>
-                            </div>
-                            <c:if test="${not empty record.incidentId}">
-                                <div class="info-item full-width" style="grid-column:1/-1;">
-                                    <label>Sự cố liên quan</label>
-                                    <p>#INC-<c:out value="${record.incidentId}"/>
-                                        <c:if test="${not empty record.incidentDescription}">
-                                            – <c:out value="${record.incidentDescription}"/>
-                                        </c:if>
-                                    </p>
-                                </div>
-                            </c:if>
-                            <div class="info-item full-width" style="grid-column:1/-1;">
-                                <label>Mô tả tình trạng hỏng hóc</label>
-                                <p style="white-space:pre-line"><c:out value="${record.description}"/></p>
-                            </div>
-                            <c:if test="${record.status == 'REJECTED'}">
-                                <div class="info-item full-width" style="grid-column:1/-1;background:#fdf2f2;padding:12px 14px;border-radius:6px;border:1px solid #f8b4b4;">
-                                    <label style="color:#c62828;font-weight:700;">Lý do từ chối yêu cầu bảo trì</label>
-                                    <p style="color:#c62828;margin-top:4px;">
-                                        <c:choose>
-                                            <c:when test="${not empty record.approvalNote}">
-                                                <c:out value="${record.approvalNote}"/>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <i>(Lab Manager không để lại lý do cụ thể)</i>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </p>
-                                </div>
-                            </c:if>
-                            <c:if test="${record.status != 'REJECTED' && record.status != 'PENDING' && not empty record.approvalNote}">
-                                <div class="info-item full-width" style="grid-column:1/-1;">
-                                    <label>Ghi chú phê duyệt / Kinh phí dự kiến</label>
-                                    <p><c:out value="${record.approvalNote}"/></p>
-                                </div>
-                            </c:if>
-                        </div>
-                    </article>
-
-                    <%-- KẾT QUẢ SỬA CHỮA (chỉ hiện khi đang sửa hoặc hoàn tất) --%>
-                    <c:if test="${record.status == 'IN_PROGRESS' || record.status == 'COMPLETED'}">
-                        <article class="panel">
-                            <div style="padding:16px 20px;border-bottom:1px solid #edf0ec;">
-                                <strong>Tiến độ &amp; Kết quả sửa chữa (Do Lab Manager cập nhật)</strong>
-                            </div>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <label>Trạng thái sửa chữa</label>
-                                    <p>
-                                        <c:choose>
-                                            <c:when test="${record.status == 'COMPLETED'}">
-                                                <c:choose>
-                                                    <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
-                                                        <span class="status overdue" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">❌ Sửa thất bại</span>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <span class="status returned" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">✅ Sửa thành công</span>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </c:when>
-                                            <c:when test="${record.status == 'IN_PROGRESS'}">
-                                                <span class="status maintenance" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">⏳ Đang sửa chữa</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="status in-use" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">Đã duyệt – Chờ sửa</span>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </p>
-                                </div>
-                                <div class="info-item">
-                                    <label>Đơn vị / Kỹ thuật viên</label>
-                                    <p><c:choose>
-                                        <c:when test="${not empty record.note}"><c:out value="${record.note}"/></c:when>
-                                        <c:otherwise>—</c:otherwise>
-                                    </c:choose></p>
-                                </div>
-                                <div class="info-item">
-                                    <label>Ngày bắt đầu sửa</label>
-                                    <p><c:out value="${app:dateTime(record.repairStartedAt)}"/></p>
-                                </div>
-                                <c:if test="${record.status == 'COMPLETED'}">
-                                    <div class="info-item">
-                                        <label>Ngày hoàn thành</label>
-                                        <p><c:out value="${app:dateTime(record.repairCompletedAt)}"/></p>
-                                    </div>
-                                </c:if>
-                                <c:if test="${not empty record.repairResult}">
-                                    <div class="info-item full-width" style="grid-column:1/-1;">
-                                        <label>Kết quả sửa chữa</label>
-                                        <p style="white-space:pre-line"><c:out value="${record.repairResult}"/></p>
-                                    </div>
-                                </c:if>
-                            </div>
-                        </article>
-                    </c:if>
-                </div>
-
-                <%-- DÒNG THỜI GIAN (TIMELINE) --%>
-                <div>
-                    <article class="panel">
-                        <div style="padding:16px 20px;border-bottom:1px solid #edf0ec;">
-                            <strong>Lịch sử xử lý</strong>
-                        </div>
-                        <div style="padding:20px;">
-                            <div class="timeline">
-                                <div class="timeline-item">
-                                    <div class="timeline-dot pending"></div>
-                                    <div class="timeline-content">
-                                        <b>Đề xuất bảo trì được tạo</b>
-                                        <br><small><c:out value="${app:dateTime(record.requestedAt)}"/> – <c:out value="${record.requesterName}"/></small>
-                                    </div>
-                                </div>
-
-                                <c:if test="${not empty record.approvedAt}">
-                                    <div class="timeline-item">
-                                        <div class="timeline-dot ${record.status == 'REJECTED' ? 'rejected' : 'completed'}"></div>
-                                        <div class="timeline-content">
-                                            <b>
-                                                <c:choose>
-                                                    <c:when test="${record.status == 'REJECTED'}">Yêu cầu bị từ chối</c:when>
-                                                    <c:otherwise>Lab Manager đã phê duyệt</c:otherwise>
-                                                </c:choose>
-                                            </b>
-                                            <br><small><c:out value="${app:dateTime(record.approvedAt)}"/> – <c:out value="${record.approverName}"/></small>
-                                            <c:if test="${not empty record.approvalNote}">
-                                                <br><small style="font-style:italic;color:${record.status == 'REJECTED' ? '#c62828' : '#5a6662'};">
-                                                    <c:choose>
-                                                        <c:when test="${record.status == 'REJECTED'}">Lý do: <c:out value="${record.approvalNote}"/></c:when>
-                                                        <c:otherwise><c:out value="${record.approvalNote}"/></c:otherwise>
-                                                    </c:choose>
-                                                </small>
-                                            </c:if>
-                                        </div>
-                                    </div>
-                                </c:if>
-
-                                <c:if test="${not empty record.repairStartedAt}">
-                                    <div class="timeline-item">
-                                        <div class="timeline-dot pending"></div>
-                                        <div class="timeline-content">
-                                            <b>Bắt đầu sửa chữa</b>
-                                            <br><small><c:out value="${app:dateTime(record.repairStartedAt)}"/></small>
-                                            <c:if test="${not empty record.note}">
-                                                <br><small><c:out value="${record.note}"/></small>
-                                            </c:if>
-                                        </div>
-                                    </div>
-                                </c:if>
-
-                                <c:if test="${not empty record.repairCompletedAt}">
-                                    <div class="timeline-item">
-                                        <div class="timeline-dot ${record.assetStatus == 'UNAVAILABLE' ? 'rejected' : 'completed'}"></div>
-                                        <div class="timeline-content">
-                                            <c:choose>
-                                                <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
-                                                    <b style="color:#c62828;">Hoàn tất – Sửa thất bại (Thiết bị chuyển UNAVAILABLE)</b>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <b>Hoàn tất sửa chữa – Thiết bị về AVAILABLE</b>
-                                                </c:otherwise>
-                                            </c:choose>
-                                            <br><small><c:out value="${app:dateTime(record.repairCompletedAt)}"/></small>
-                                            <c:if test="${not empty record.repairResult}">
-                                                <br><small style="font-style:italic"><c:out value="${record.repairResult}"/></small>
-                                            </c:if>
-                                        </div>
-                                    </div>
-                                </c:if>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            </div>
+            <c:if test="${param.success == 'created'}"><div class="success-message">Đã gửi yêu cầu bảo trì.</div></c:if>
+            <article class="panel"><div class="info-grid">
+                <div class="info-item"><label>Trạng thái</label><p><c:choose><c:when test="${record.status == 'COMPLETED' && record.repairOutcome == 'SUCCESS'}"><span class="status returned">Sửa thành công</span></c:when><c:when test="${record.status == 'COMPLETED' && record.repairOutcome == 'FAILED'}"><span class="status overdue">Sửa thất bại</span></c:when><c:otherwise><span class="status"><c:out value="${app:label(record.status)}"/></span></c:otherwise></c:choose></p></div>
+                <div class="info-item"><label>Ngày gửi</label><p><c:out value="${app:dateTime(record.requestedAt)}"/></p></div>
+                <div class="info-item"><label>Thiết bị chính xác</label><p><c:choose><c:when test="${not empty record.assetItemId}"><strong><c:out value="${record.assetItemTag}"/></strong><br><small><c:out value="${app:label(record.assetItemCondition)}"/> · <c:out value="${app:label(record.assetItemStatus)}"/></small></c:when><c:otherwise>Hồ sơ lịch sử không có mã Item</c:otherwise></c:choose></p></div>
+                <div class="info-item"><label>Thiết bị cha</label><p><c:out value="${record.assetName}"/> (<c:out value="${record.assetCode}"/>)</p></div>
+                <c:if test="${not empty record.incidentId}"><div class="info-item"><label>Sự cố liên quan</label><p>#INC-<c:out value="${record.incidentId}"/><c:if test="${not empty record.incidentDescription}"> · <c:out value="${record.incidentDescription}"/></c:if></p></div></c:if>
+                <c:if test="${not empty record.assessmentId}"><div class="info-item"><label>Đánh giá kỹ thuật</label><p>#ASM-<c:out value="${record.assessmentId}"/></p></div></c:if>
+                <div class="info-item" style="grid-column:1/-1"><label>Mô tả yêu cầu</label><p><c:out value="${record.description}"/></p></div>
+                <c:if test="${not empty record.approvalNote}"><div class="info-item" style="grid-column:1/-1"><label>Ghi chú Lab Manager</label><p><c:out value="${record.approvalNote}"/></p></div></c:if>
+            </div></article>
+            <c:if test="${record.status == 'IN_PROGRESS' || record.status == 'COMPLETED'}"><article class="panel"><div class="info-grid">
+                <div class="info-item"><label>Bắt đầu sửa</label><p><c:out value="${app:dateTime(record.repairStartedAt)}"/></p></div>
+                <div class="info-item"><label>Hoàn tất</label><p><c:out value="${app:dateTime(record.repairCompletedAt)}"/></p></div>
+                <div class="info-item"><label>Kết quả</label><p><c:out value="${empty record.repairOutcome ? 'PENDING' : record.repairOutcome}"/></p></div>
+                <div class="info-item"><label>Kỹ thuật viên / ghi chú</label><p><c:out value="${empty record.note ? 'Không có' : record.note}"/></p></div>
+                <c:if test="${not empty record.repairResult}"><div class="info-item" style="grid-column:1/-1"><label>Chi tiết kết quả sửa chữa</label><p><c:out value="${record.repairResult}"/></p></div></c:if>
+            </div></article></c:if>
         </section>
     </main>
 </div>
