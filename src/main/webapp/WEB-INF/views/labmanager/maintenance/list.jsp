@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -53,6 +54,30 @@
                 <div class="success-message">Đã xóa phiếu bảo trì thành công. Thiết bị đã được hoàn trả về trạng thái Sẵn sàng (AVAILABLE).</div>
             </c:if>
 
+            <%-- THỐNG KÊ TÀI CHÍNH BẢO TRÌ --%>
+            <c:if test="${not empty summary}">
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px;">
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">🔧 Tổng phiếu</div>
+                    <div style="font-size:28px; font-weight:700; color:#1e293b; margin-top:4px;">${summary.totalRecords()}</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">⏳ Đang sửa chữa</div>
+                    <div style="font-size:28px; font-weight:700; color:#f59e0b; margin-top:4px;">${summary.inProgressCount()}</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">✅ Đã hoàn thành</div>
+                    <div style="font-size:28px; font-weight:700; color:#10b981; margin-top:4px;">${summary.completedCount()}</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">💰 Tổng chi phí thực tế đã chi trả</div>
+                    <div style="font-size:28px; font-weight:700; color:#2563eb; margin-top:4px;">
+                        <fmt:formatNumber value="${summary.totalActualCost()}" type="number" groupingUsed="true"/> <span style="font-size:14px; font-weight:500;">VNĐ</span>
+                    </div>
+                </div>
+            </div>
+            </c:if>
+
             <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/lab-manager/maintenance">
                 <div class="filter-group">
                     <input class="form-control" type="search" name="keyword"
@@ -87,6 +112,7 @@
                                     <th>Thiết bị</th>
                                     <th>SL</th>
                                     <th>Mô tả yêu cầu sửa chữa</th>
+                                    <th>Kinh phí</th>
                                     <th>Ngày tạo</th>
                                     <th>Trạng thái</th>
                                     <th>Thao tác</th>
@@ -98,11 +124,24 @@
                                         <td><strong>#MNT-<c:out value="${r.maintenanceId}"/></strong></td>
                                         <td>
                                             <c:out value="${r.assetName}"/>
-                                            <small style="display:block;color:#5a6662"><c:out value="${r.assetCode}"/></small>
+                                            <small style="display:block;color:#5a6662"><c:out value="${not empty r.assetItemCode ? r.assetItemCode : r.assetCode}"/></small>
                                         </td>
                                         <td><c:out value="${r.quantity}"/></td>
                                         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                                             <c:out value="${r.description}"/>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty r.actualCost}">
+                                                    <strong style="color:#2563eb;"><fmt:formatNumber value="${r.actualCost}" type="number" groupingUsed="true"/> VNĐ</strong>
+                                                </c:when>
+                                                <c:when test="${not empty r.estimatedCost}">
+                                                    <small style="color:#6b7280;">Dự toán:<br><strong><fmt:formatNumber value="${r.estimatedCost}" type="number" groupingUsed="true"/> VNĐ</strong></small>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span style="color:#9ca3af;">—</span>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                         <td><c:out value="${app:dateTime(r.requestedAt)}"/></td>
                                         <td>
@@ -143,6 +182,12 @@
                                                         Xóa
                                                     </button>
                                                 </form>
+                                            </c:if>
+                                            <c:if test="${r.status == 'COMPLETED'}">
+                                                <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#f3f4f6;color:#374151;border-color:#d1d5db;font-weight:500;"
+                                                   href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
+                                                    ✏️ Sửa
+                                                </a>
                                             </c:if>
                                         </td>
                                     </tr>

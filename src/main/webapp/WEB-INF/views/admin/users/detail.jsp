@@ -30,9 +30,10 @@
                     <div class="form-group"><label>Họ và tên</label><input class="form-control" type="text" value="<c:out value='${user.fullName}'/>" readonly style="background:#f4f6f4;"></div>
                     <div class="form-group"><label>Địa chỉ email</label><input class="form-control" type="text" value="<c:out value='${user.email}'/>" readonly style="background:#f4f6f4;"></div>
                     <div class="form-group"><label>Vai trò được cấp</label><input class="form-control" type="text" value="<c:out value='${app:label(user.role)}'/>" readonly style="background:#f4f6f4; font-weight:700;"></div>
-                    <c:if test="${not empty user.studentCode}">
-                        <div class="form-group"><label>Mã sinh viên</label><input class="form-control" type="text" value="<c:out value='${user.studentCode}'/>" readonly style="background:#f4f6f4;"></div>
-                        <div class="form-group"><label>Chuyên ngành và khóa</label><input class="form-control" type="text" value="<c:out value='${user.major}' default='Software Engineering'/> (<c:out value='${user.cohort}' default='K16'/>)" readonly style="background:#f4f6f4;"></div>
+                    <c:if test="${user.role == 'INTERN' || not empty user.studentCode}">
+                        <div class="form-group"><label>Mã sinh viên</label><input class="form-control" type="text" value="<c:out value='${user.studentCode}' default='-'/>" readonly style="background:#f4f6f4; font-weight:600;"></div>
+                        <div class="form-group"><label>Chuyên ngành</label><input class="form-control" type="text" value="<c:out value='${user.major}' default='Chưa phân chuyên ngành'/>" readonly style="background:#f4f6f4;"></div>
+                        <div class="form-group"><label>Khóa</label><input class="form-control" type="text" value="<c:out value='${user.cohort}' default='-'/>" readonly style="background:#f4f6f4; font-weight:600;"></div>
                     </c:if>
                     <div class="form-group"><label>Trạng thái tài khoản</label><input class="form-control" type="text" value="<c:out value='${app:label(user.status)}'/>" readonly style="background:#f4f6f4; color:${user.status == 'ACTIVE' ? '#188255' : '#c63d3d'}; font-weight:700;"></div>
                     <div class="form-group"><label>Ngày tạo</label><input class="form-control" type="text" value="<c:out value='${app:dateTime(user.createdAt)}'/>" readonly style="background:#f4f6f4;"></div>

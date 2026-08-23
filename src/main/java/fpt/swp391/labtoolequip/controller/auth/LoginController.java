@@ -47,7 +47,7 @@ public class LoginController extends HttpServlet {
 			Optional<User> found = userDAO.findByEmail(email);
 			if (found.isPresent() && "INTERN".equals(found.get().getRole())) {
 				request.setAttribute("message",
-						"Thực tập sinh (Sinh viên) vui lòng đăng nhập bằng tài khoản Google trường FPT (@fpt.edu.vn).");
+						"Thực tập sinh (Sinh viên) vui lòng đăng nhập bằng nút 'Đăng nhập với Google'.");
 				doGet(request, response);
 				return;
 			}

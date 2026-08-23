@@ -434,6 +434,8 @@ BEGIN TRY
         repair_started_at datetime2(0) NULL,
         repair_completed_at datetime2(0) NULL,
         repair_result nvarchar(max) NULL,
+        estimated_cost decimal(15,0) NULL,
+        actual_cost decimal(15,0) NULL,
         note nvarchar(max) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_records_created_at DEFAULT (SYSUTCDATETIME()),
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_records_updated_at DEFAULT (SYSUTCDATETIME()),
@@ -980,7 +982,7 @@ BEGIN TRY
     BEGIN TRANSACTION;
     IF NOT EXISTS (SELECT 1 FROM dbo.users WHERE email = 'labmanager@gmail.com')
         INSERT dbo.users (full_name, email, password_hash, role, status)
-        VALUES (N'Demo Lab Manager Test', 'labmanager@gmail.com', '$2a$10$c4PNSNs0bJn0drrJzAxThu4TBztls3COfVZA.W33b0BL6cquNIS.C', 'LAB_MANAGER', 'ACTIVE');
+        VALUES (N'Demo Mentor Test', 'labmanager@gmail.com', '$2a$10$c4PNSNs0bJn0drrJzAxThu4TBztls3COfVZA.W33b0BL6cquNIS.C', 'MENTOR', 'ACTIVE');
 
     IF NOT EXISTS (SELECT 1 FROM dbo.incidents WHERE description = N'[TEST] Incident awaiting responsibility determination.')
     BEGIN

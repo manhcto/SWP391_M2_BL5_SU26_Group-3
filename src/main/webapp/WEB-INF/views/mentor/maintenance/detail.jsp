@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -132,9 +133,15 @@
                                     </p>
                                 </div>
                             </c:if>
+                            <c:if test="${not empty record.estimatedCost}">
+                                <div class="info-item">
+                                    <label>Dự toán kinh phí</label>
+                                    <p><strong><fmt:formatNumber value="${record.estimatedCost}" type="number" groupingUsed="true"/> VNĐ</strong></p>
+                                </div>
+                            </c:if>
                             <c:if test="${record.status != 'REJECTED' && record.status != 'PENDING' && not empty record.approvalNote}">
                                 <div class="info-item full-width" style="grid-column:1/-1;">
-                                    <label>Ghi chú phê duyệt / Kinh phí dự kiến</label>
+                                    <label>Ghi chú phê duyệt</label>
                                     <p><c:out value="${record.approvalNote}"/></p>
                                 </div>
                             </c:if>
@@ -186,6 +193,14 @@
                                     <div class="info-item">
                                         <label>Ngày hoàn thành</label>
                                         <p><c:out value="${app:dateTime(record.repairCompletedAt)}"/></p>
+                                    </div>
+                                </c:if>
+                                <c:if test="${not empty record.actualCost}">
+                                    <div class="info-item">
+                                        <label>Chi phí thực tế</label>
+                                        <p style="color:#2563eb;font-weight:700;font-size:15px;">
+                                            <fmt:formatNumber value="${record.actualCost}" type="number" groupingUsed="true"/> VNĐ
+                                        </p>
                                     </div>
                                 </c:if>
                                 <c:if test="${not empty record.repairResult}">

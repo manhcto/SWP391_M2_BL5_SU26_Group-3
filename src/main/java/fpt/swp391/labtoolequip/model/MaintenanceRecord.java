@@ -17,7 +17,11 @@ public class MaintenanceRecord {
 	private LocalDateTime repairStartedAt;
 	private LocalDateTime repairCompletedAt;
 	private String repairResult;
+	private Long estimatedCost;
+	private Long actualCost;
 	private String note;
+	private String providerPhone;
+	private String providerAddress;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
@@ -29,6 +33,7 @@ public class MaintenanceRecord {
 	private String requesterName;
 	private String approverName;
 	private String incidentDescription;
+	private String assetItemCode;
 
 	public MaintenanceRecord() {
 	}
@@ -153,12 +158,44 @@ public class MaintenanceRecord {
 		this.repairResult = repairResult;
 	}
 
+	public Long getEstimatedCost() {
+		return estimatedCost;
+	}
+
+	public void setEstimatedCost(Long estimatedCost) {
+		this.estimatedCost = estimatedCost;
+	}
+
+	public Long getActualCost() {
+		return actualCost;
+	}
+
+	public void setActualCost(Long actualCost) {
+		this.actualCost = actualCost;
+	}
+
 	public String getNote() {
 		return note;
 	}
 
 	public void setNote(String note) {
 		this.note = note;
+	}
+
+	public String getProviderPhone() {
+		return providerPhone;
+	}
+
+	public void setProviderPhone(String providerPhone) {
+		this.providerPhone = providerPhone;
+	}
+
+	public String getProviderAddress() {
+		return providerAddress;
+	}
+
+	public void setProviderAddress(String providerAddress) {
+		this.providerAddress = providerAddress;
 	}
 
 	public LocalDateTime getCreatedAt() {
@@ -223,5 +260,13 @@ public class MaintenanceRecord {
 
 	public void setIncidentDescription(String incidentDescription) {
 		this.incidentDescription = incidentDescription;
+	}
+
+	public String getAssetItemCode() {
+		return assetItemCode;
+	}
+
+	public void setAssetItemCode(String assetItemCode) {
+		this.assetItemCode = assetItemCode;
 	}
 }

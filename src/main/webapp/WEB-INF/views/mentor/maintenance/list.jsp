@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -77,6 +78,7 @@
                                     <th>Thiết bị</th>
                                     <th>SL</th>
                                     <th>Mô tả yêu cầu sửa chữa</th>
+                                    <th>Kinh phí</th>
                                     <th>Ngày tạo</th>
                                     <th>Người duyệt</th>
                                     <th>Trạng thái</th>
@@ -94,6 +96,19 @@
                                         <td><c:out value="${r.quantity}"/></td>
                                         <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                                             <c:out value="${r.description}"/>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty r.actualCost}">
+                                                    <strong style="color:#2563eb;"><fmt:formatNumber value="${r.actualCost}" type="number" groupingUsed="true"/> VNĐ</strong>
+                                                </c:when>
+                                                <c:when test="${not empty r.estimatedCost}">
+                                                    <small style="color:#6b7280;">Dự toán:<br><strong><fmt:formatNumber value="${r.estimatedCost}" type="number" groupingUsed="true"/> VNĐ</strong></small>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span style="color:#9ca3af;">—</span>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </td>
                                         <td><c:out value="${app:dateTime(r.requestedAt)}"/></td>
                                         <td>

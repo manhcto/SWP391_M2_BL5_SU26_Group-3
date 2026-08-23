@@ -61,12 +61,6 @@ public class GoogleCallbackController extends HttpServlet {
 						"Đăng nhập Google chỉ dành riêng cho Thực tập sinh (Sinh viên). Cán bộ/Quản lý vui lòng đăng nhập bằng Email và Mật khẩu.");
 				return;
 			}
-			String domain = required("FPT_EMAIL_DOMAIN");
-			if (!payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
-				deny(request, response,
-						"Access denied: an FPT Google account (@" + domain + ") is required for students.");
-				return;
-			}
 			if (user.getGoogleSubject() == null) {
 				userDAO.bindGoogleSubject(user.getUserId(), payload.getSubject());
 				user = userDAO.findById(user.getUserId()).orElseThrow();

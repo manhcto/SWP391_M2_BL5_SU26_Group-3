@@ -45,6 +45,7 @@ public class LabManagerMaintenanceController extends HttpServlet {
 			// /lab-manager/maintenance -> Danh sách toàn bộ phiếu bảo trì
 			request.setAttribute("records",
 					dao.findAll(request.getParameter("keyword"), request.getParameter("status")));
+			request.setAttribute("summary", dao.findSummary());
 			request.setAttribute("keyword", request.getParameter("keyword"));
 			request.setAttribute("selectedStatus", request.getParameter("status"));
 			forward(request, response, "list.jsp");
@@ -72,13 +73,16 @@ public class LabManagerMaintenanceController extends HttpServlet {
 							: Long.parseLong(incidentParam);
 					id = dao.create(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
 							incidentId, request.getParameter("approvalNote"), request.getParameter("note"),
-							request.getParameter("description"));
+							request.getParameter("providerPhone"), request.getParameter("providerAddress"),
+							request.getParameter("description"), parseCost(request.getParameter("estimatedCost")));
 				}
 				// Lab Manager cập nhật tiến độ sửa chữa
 				case "updateProgress" -> {
 					id = Long.parseLong(request.getParameter("id"));
 					dao.updateProgress(id, request.getParameter("status"), request.getParameter("approvalNote"),
-							request.getParameter("note"), request.getParameter("repairResult"));
+							request.getParameter("note"), request.getParameter("providerPhone"),
+							request.getParameter("providerAddress"), request.getParameter("repairResult"),
+							parseCost(request.getParameter("actualCost")));
 				}
 				// Lab Manager xóa phiếu bảo trì (trả thiết bị về AVAILABLE)
 				case "delete" -> {
@@ -121,5 +125,17 @@ public class LabManagerMaintenanceController extends HttpServlet {
 	private void forward(HttpServletRequest request, HttpServletResponse response, String view)
 			throws ServletException, IOException {
 		request.getRequestDispatcher("/WEB-INF/views/labmanager/maintenance/" + view).forward(request, response);
+	}
+
+	private Long parseCost(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		try {
+			long cost = Long.parseLong(value.trim());
+			return cost >= 0 ? cost : null;
+		} catch (NumberFormatException exception) {
+			return null;
+		}
 	}
 }

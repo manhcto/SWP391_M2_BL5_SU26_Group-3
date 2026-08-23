@@ -2,7 +2,7 @@ package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
 import fpt.swp391.labtoolequip.common.ViewFormat;
-import fpt.swp391.labtoolequip.model.Asset;
+import fpt.swp391.labtoolequip.model.AssetItem;
 import fpt.swp391.labtoolequip.model.Incident;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
 import java.sql.Connection;
@@ -18,13 +18,20 @@ public class MaintenanceDAO {
 			SELECT m.*, a.asset_code, a.asset_name, a.storage_location, a.status AS asset_status,
 			       requester.full_name AS requester_name,
 			       approver.full_name AS approver_name,
-			       i.description AS incident_description
+			       i.description AS incident_description,
+			       ai.item_code AS asset_item_code
 			FROM dbo.maintenance_records m
 			JOIN dbo.assets a ON a.asset_id = m.asset_id
 			JOIN dbo.users requester ON requester.user_id = m.requested_by
 			LEFT JOIN dbo.users approver ON approver.user_id = m.approved_by
 			LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
+			LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = i.asset_item_id
 			""";
+
+	/** Tổng hợp thống kê tài chính bảo trì cho trang danh sách. */
+	public record MaintenanceSummary(int totalRecords, int inProgressCount, int completedCount, long totalEstimatedCost,
+			long totalActualCost) {
+	}
 
 	private final DBConnection db = new DBConnection();
 
@@ -62,44 +69,73 @@ public class MaintenanceDAO {
 		}
 	}
 
-	/** Tài sản không có sự cố mở, dùng cho bảo dưỡng định kỳ hoặc trực tiếp. */
-	public List<Asset> findRoutineMaintenanceAssets() throws SQLException {
+	/** Thống kê tổng hợp tài chính bảo trì. */
+	public MaintenanceSummary findSummary() throws SQLException {
 		String sql = """
-				SELECT a.asset_id, a.asset_code, a.asset_name, a.storage_location
+				SELECT COUNT(*) AS total_records,
+				       SUM(CASE WHEN status = 'IN_PROGRESS' THEN 1 ELSE 0 END) AS in_progress_count,
+				       SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_count,
+				       COALESCE(SUM(estimated_cost), 0) AS total_estimated_cost,
+				       COALESCE(SUM(actual_cost), 0) AS total_actual_cost
+				FROM dbo.maintenance_records
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			result.next();
+			return new MaintenanceSummary(result.getInt("total_records"), result.getInt("in_progress_count"),
+					result.getInt("completed_count"), result.getLong("total_estimated_cost"),
+					result.getLong("total_actual_cost"));
+		}
+	}
+
+	/** Tài sản không có sự cố mở, dùng cho bảo dưỡng định kỳ hoặc trực tiếp. */
+	public List<AssetItem> findRoutineMaintenanceAssets() throws SQLException {
+		String sql = """
+				SELECT ai.asset_item_id, a.asset_id,
+				       COALESCE(ai.item_code, a.asset_code) AS item_code,
+				       a.asset_code, a.asset_name,
+				       COALESCE(ai.storage_location, a.storage_location) AS storage_location
 				FROM dbo.assets a
+				LEFT JOIN dbo.asset_items ai ON ai.asset_id = a.asset_id AND ai.status = 'AVAILABLE'
 				WHERE a.status <> 'DISPOSED'
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.incidents i
-					WHERE i.asset_id = a.asset_id AND i.status IN ('OPEN', 'INVESTIGATING')
+					WHERE (i.asset_item_id = ai.asset_item_id OR (i.asset_item_id IS NULL AND i.asset_id = a.asset_id))
+					  AND i.status IN ('OPEN', 'INVESTIGATING')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
 					WHERE m.asset_id = a.asset_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
 				  )
-				ORDER BY asset_name
+				ORDER BY a.asset_name, COALESCE(ai.item_code, a.asset_code)
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql);
 				ResultSet result = statement.executeQuery()) {
-			List<Asset> assets = new ArrayList<>();
+			List<AssetItem> items = new ArrayList<>();
 			while (result.next()) {
-				Asset asset = new Asset();
-				asset.setAssetId(result.getLong("asset_id"));
-				asset.setAssetCode(result.getString("asset_code"));
-				asset.setAssetName(result.getString("asset_name"));
-				asset.setStorageLocation(result.getString("storage_location"));
-				assets.add(asset);
+				AssetItem item = new AssetItem();
+				item.setAssetItemId(nullableLong(result, "asset_item_id"));
+				item.setAssetId(result.getLong("asset_id"));
+				item.setItemCode(result.getString("item_code"));
+				item.setAssetCode(result.getString("asset_code"));
+				item.setAssetName(result.getString("asset_name"));
+				item.setStorageLocation(result.getString("storage_location"));
+				items.add(item);
 			}
-			return assets;
+			return items;
 		}
 	}
 
 	/** Danh sách sự cố đang xử lý nhưng chưa có phiếu bảo trì đang chạy. */
 	public List<Incident> findOpenIncidents() throws SQLException {
 		String sql = """
-				SELECT i.incident_id, i.asset_id, i.description, a.asset_name, a.asset_code
+				SELECT i.incident_id, i.asset_id, i.asset_item_id, i.description, a.asset_name, a.asset_code,
+				       ai.item_code AS asset_item_code
 				FROM dbo.incidents i
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
+				LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = i.asset_item_id
 				WHERE i.status IN ('OPEN', 'INVESTIGATING')
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
@@ -115,9 +151,11 @@ public class MaintenanceDAO {
 				Incident incident = new Incident();
 				incident.setIncidentId(result.getLong("incident_id"));
 				incident.setAssetId(result.getLong("asset_id"));
+				incident.setAssetItemId(nullableLong(result, "asset_item_id"));
 				incident.setDescription(result.getString("description"));
 				incident.setAssetName(result.getString("asset_name"));
 				incident.setAssetCode(result.getString("asset_code"));
+				incident.setAssetItemCode(result.getString("asset_item_code"));
 				incidents.add(incident);
 			}
 			return incidents;
@@ -130,8 +168,8 @@ public class MaintenanceDAO {
 	 * Lab Manager tạo phiếu bảo trì mới (trực tiếp IN_PROGRESS). Cập nhật trạng
 	 * thái tài sản sang MAINTENANCE trong cùng giao dịch.
 	 */
-	public long create(long userId, long assetId, Long incidentId, String approvalNote, String note, String description)
-			throws SQLException {
+	public long create(long userId, long assetId, Long incidentId, String approvalNote, String note,
+			String providerPhone, String providerAddress, String description, Long estimatedCost) throws SQLException {
 		if (description == null || description.isBlank()) {
 			throw new IllegalArgumentException("Vui lòng mô tả chi tiết tình trạng hỏng hóc & yêu cầu sửa chữa.");
 		}
@@ -139,9 +177,9 @@ public class MaintenanceDAO {
 			connection.setAutoCommit(false);
 			try {
 				// Kiểm tra thiết bị đã có phiếu bảo trì đang xử lý chưa
-				if (hasActiveMaintenance(connection, assetId)) {
+				if (hasActiveMaintenance(connection, assetId, incidentId)) {
 					throw new IllegalStateException(
-							"Thiết bị này đã có phiếu bảo trì đang được sửa chữa. Không thể tạo thêm phiếu mới.");
+							"Mục này đã có phiếu bảo trì đang được xử lý. Không thể tạo thêm phiếu mới.");
 				}
 
 				// Kiểm tra sự cố theo Phương án B: nếu thiết bị có sự cố mở -> bắt buộc phải
@@ -159,9 +197,9 @@ public class MaintenanceDAO {
 
 				String sql = """
 						INSERT INTO dbo.maintenance_records
-						    (asset_id, incident_id, quantity, requested_by, approved_by, approved_at, repair_started_at, approval_note, note, description, status)
+						    (asset_id, incident_id, quantity, requested_by, approved_by, approved_at, repair_started_at, approval_note, note, provider_phone, provider_address, description, estimated_cost, status)
 						OUTPUT INSERTED.maintenance_id
-						VALUES (?, ?, 1, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?, 'IN_PROGRESS')
+						VALUES (?, ?, 1, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?, ?, ?, ?, 'IN_PROGRESS')
 						""";
 				long id;
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -171,15 +209,32 @@ public class MaintenanceDAO {
 					statement.setLong(4, userId);
 					statement.setString(5, blankToNull(approvalNote));
 					statement.setString(6, blankToNull(note));
-					statement.setString(7, description.trim());
+					statement.setString(7, blankToNull(providerPhone));
+					statement.setString(8, blankToNull(providerAddress));
+					statement.setString(9, description.trim());
+					setNullableLong(statement, 10, estimatedCost);
 					try (ResultSet result = statement.executeQuery()) {
 						result.next();
 						id = result.getLong(1);
 					}
 				}
 
-				// Tự động chuyển trạng thái thiết bị sang MAINTENANCE
-				setAssetStatus(connection, assetId, "MAINTENANCE");
+				// Tự động chuyển trạng thái cá thể thiết bị sang MAINTENANCE
+				if (incidentId != null) {
+					try (PreparedStatement itemStmt = connection.prepareStatement("""
+							UPDATE ai
+							SET ai.status = 'MAINTENANCE', ai.updated_at = SYSUTCDATETIME()
+							FROM dbo.asset_items ai
+							JOIN dbo.incidents i ON i.asset_item_id = ai.asset_item_id
+							WHERE i.incident_id = ? AND ai.status <> 'DISPOSED'
+							""")) {
+						itemStmt.setLong(1, incidentId);
+						itemStmt.executeUpdate();
+					}
+					syncParentAssetStatus(connection, assetId);
+				} else {
+					setAssetStatus(connection, assetId, "MAINTENANCE");
+				}
 
 				connection.commit();
 				return id;
@@ -194,8 +249,8 @@ public class MaintenanceDAO {
 	 * Lab Manager cập nhật tiến độ sửa chữa (chỉ khi APPROVED / IN_PROGRESS). Khi
 	 * COMPLETED: đổi trạng thái thiết bị về AVAILABLE hoặc UNAVAILABLE.
 	 */
-	public void updateProgress(long id, String newStatus, String approvalNote, String note, String repairResult)
-			throws SQLException {
+	public void updateProgress(long id, String newStatus, String approvalNote, String note, String providerPhone,
+			String providerAddress, String repairResult, Long actualCost) throws SQLException {
 		boolean isFailed = "COMPLETED_FAILED".equals(newStatus) || "FAILED".equals(newStatus);
 		String dbStatus = (isFailed || "COMPLETED".equals(newStatus) || "COMPLETED_SUCCESS".equals(newStatus))
 				? "COMPLETED"
@@ -203,6 +258,9 @@ public class MaintenanceDAO {
 
 		if (!"APPROVED".equals(dbStatus) && !"IN_PROGRESS".equals(dbStatus) && !"COMPLETED".equals(dbStatus)) {
 			throw new IllegalArgumentException("Trạng thái tiến độ không hợp lệ.");
+		}
+		if ("COMPLETED".equals(dbStatus) && actualCost == null) {
+			throw new IllegalArgumentException("Vui lòng nhập chi phí thực tế.");
 		}
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
@@ -218,7 +276,8 @@ public class MaintenanceDAO {
 							SET status = 'COMPLETED',
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
 							    repair_completed_at = SYSUTCDATETIME(),
-							    approval_note = ?, note = ?, repair_result = ?,
+							    approval_note = COALESCE(?, approval_note), note = ?, provider_phone = ?, provider_address = ?,
+							    repair_result = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
@@ -227,7 +286,8 @@ public class MaintenanceDAO {
 							UPDATE dbo.maintenance_records
 							SET status = 'IN_PROGRESS',
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
-							    approval_note = ?, note = ?, repair_result = ?,
+							    approval_note = COALESCE(?, approval_note), note = ?, provider_phone = ?, provider_address = ?,
+							    repair_result = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
@@ -235,7 +295,8 @@ public class MaintenanceDAO {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'APPROVED',
-							    approval_note = ?, note = ?, repair_result = ?,
+							    approval_note = COALESCE(?, approval_note), note = ?, provider_phone = ?, provider_address = ?,
+							    repair_result = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
@@ -244,17 +305,51 @@ public class MaintenanceDAO {
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
 					statement.setString(1, blankToNull(approvalNote));
 					statement.setString(2, blankToNull(note));
-					statement.setString(3, blankToNull(repairResult));
-					statement.setLong(4, id);
+					statement.setString(3, blankToNull(providerPhone));
+					statement.setString(4, blankToNull(providerAddress));
+					statement.setString(5, blankToNull(repairResult));
+					setNullableLong(statement, 6, actualCost);
+					statement.setLong(7, id);
 					statement.executeUpdate();
 				}
 
 				// Cập nhật trạng thái thiết bị và sự cố theo kết quả sửa
 				if ("COMPLETED".equals(dbStatus)) {
+					String itemStatus = isFailed ? "UNAVAILABLE" : "AVAILABLE";
+					if (target.assetItemId() != null) {
+						// CHỈ cập nhật đúng cá thể thiết bị con đang bảo trì này!
+						try (PreparedStatement itemStmt = connection.prepareStatement(
+								"UPDATE dbo.asset_items SET status = ?, updated_at = SYSUTCDATETIME() WHERE asset_item_id = ?")) {
+							itemStmt.setString(1, itemStatus);
+							itemStmt.setLong(2, target.assetItemId());
+							itemStmt.executeUpdate();
+						}
+						syncParentAssetStatus(connection, target.assetId());
+					} else {
+						// Bảo trì cấp Asset (toàn bộ thiết bị định kỳ)
+						try (PreparedStatement assetStmt = connection.prepareStatement(
+								"UPDATE dbo.assets SET status = ?, updated_at = SYSUTCDATETIME() WHERE asset_id = ?")) {
+							assetStmt.setString(1, itemStatus);
+							assetStmt.setLong(2, target.assetId());
+							assetStmt.executeUpdate();
+						}
+						try (PreparedStatement itemStmt = connection.prepareStatement("""
+								UPDATE ai
+								SET ai.status = ?, ai.updated_at = SYSUTCDATETIME()
+								FROM dbo.asset_items ai
+								WHERE ai.asset_id = ? AND ai.status <> 'DISPOSED'
+								  AND NOT EXISTS (
+								    SELECT 1 FROM dbo.incidents i
+								    WHERE i.asset_item_id = ai.asset_item_id AND i.status IN ('OPEN', 'INVESTIGATING')
+								  )
+								""")) {
+							itemStmt.setString(1, itemStatus);
+							itemStmt.setLong(2, target.assetId());
+							itemStmt.executeUpdate();
+						}
+					}
+
 					if (isFailed) {
-						// Sửa thất bại -> thiết bị chuyển sang UNAVAILABLE để chờ lập hồ sơ thanh lý
-						setAssetStatus(connection, target.assetId(), "UNAVAILABLE");
-						// Tự động chuyển sự cố sang RESOLVED (kết luận không thể sửa, chuyển thanh lý)
 						if (target.incidentId() != null) {
 							String failNote = blankToNull(repairResult) != null
 									? repairResult
@@ -262,9 +357,6 @@ public class MaintenanceDAO {
 							setIncidentResolved(connection, target.incidentId(), failNote);
 						}
 					} else {
-						// Sửa thành công -> thiết bị phục hồi về AVAILABLE
-						setAssetStatus(connection, target.assetId(), "AVAILABLE");
-						// Tự động chuyển sự cố liên quan sang RESOLVED để hoàn tất khắc phục
 						if (target.incidentId() != null) {
 							setIncidentResolved(connection, target.incidentId(), repairResult);
 						}
@@ -287,14 +379,20 @@ public class MaintenanceDAO {
 			connection.setAutoCommit(false);
 			try {
 				long assetId = -1;
-				try (PreparedStatement checkStmt = connection
-						.prepareStatement("SELECT asset_id FROM dbo.maintenance_records WHERE maintenance_id = ?")) {
+				Long assetItemId = null;
+				try (PreparedStatement checkStmt = connection.prepareStatement("""
+						SELECT m.asset_id, i.asset_item_id
+						FROM dbo.maintenance_records m
+						LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
+						WHERE m.maintenance_id = ?
+						""")) {
 					checkStmt.setLong(1, maintenanceId);
 					try (ResultSet rs = checkStmt.executeQuery()) {
 						if (!rs.next()) {
 							throw new IllegalStateException("Không tìm thấy phiếu bảo trì cần xóa.");
 						}
-						assetId = rs.getLong(1);
+						assetId = rs.getLong("asset_id");
+						assetItemId = nullableLong(rs, "asset_item_id");
 					}
 				}
 
@@ -304,11 +402,39 @@ public class MaintenanceDAO {
 					delStmt.executeUpdate();
 				}
 
-				// Hoàn trả trạng thái thiết bị về AVAILABLE nếu thiết bị đang ở MAINTENANCE
-				try (PreparedStatement assetStmt = connection.prepareStatement(
-						"UPDATE dbo.assets SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME() WHERE asset_id = ? AND status = 'MAINTENANCE'")) {
-					assetStmt.setLong(1, assetId);
-					assetStmt.executeUpdate();
+				if (assetItemId != null) {
+					// Chỉ hoàn trả cá thể này về AVAILABLE nếu không còn sự cố mở
+					try (PreparedStatement itemStmt = connection.prepareStatement(
+							"""
+									UPDATE dbo.asset_items
+									SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME()
+									WHERE asset_item_id = ? AND status = 'MAINTENANCE'
+									  AND NOT EXISTS (SELECT 1 FROM dbo.incidents WHERE asset_item_id = ? AND status IN ('OPEN', 'INVESTIGATING'))
+									""")) {
+						itemStmt.setLong(1, assetItemId);
+						itemStmt.setLong(2, assetItemId);
+						itemStmt.executeUpdate();
+					}
+					syncParentAssetStatus(connection, assetId);
+				} else {
+					if (!hasOpenIncidentForAsset(connection, assetId)) {
+						try (PreparedStatement assetStmt = connection.prepareStatement(
+								"UPDATE dbo.assets SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME() WHERE asset_id = ? AND status = 'MAINTENANCE'")) {
+							assetStmt.setLong(1, assetId);
+							assetStmt.executeUpdate();
+						}
+						try (PreparedStatement itemStmt = connection.prepareStatement(
+								"""
+										UPDATE ai
+										SET ai.status = 'AVAILABLE', ai.updated_at = SYSUTCDATETIME()
+										FROM dbo.asset_items ai
+										WHERE ai.asset_id = ? AND ai.status = 'MAINTENANCE'
+										  AND NOT EXISTS (SELECT 1 FROM dbo.incidents i WHERE i.asset_item_id = ai.asset_item_id AND i.status IN ('OPEN', 'INVESTIGATING'))
+										""")) {
+							itemStmt.setLong(1, assetId);
+							itemStmt.executeUpdate();
+						}
+					}
 				}
 
 				connection.commit();
@@ -342,9 +468,18 @@ public class MaintenanceDAO {
 		}
 	}
 
-	private boolean hasActiveMaintenance(Connection connection, long assetId) throws SQLException {
+	private boolean hasActiveMaintenance(Connection connection, long assetId, Long incidentId) throws SQLException {
+		if (incidentId != null) {
+			try (PreparedStatement statement = connection.prepareStatement(
+					"SELECT 1 FROM dbo.maintenance_records WHERE incident_id = ? AND status IN ('PENDING','APPROVED','IN_PROGRESS')")) {
+				statement.setLong(1, incidentId);
+				try (ResultSet result = statement.executeQuery()) {
+					return result.next();
+				}
+			}
+		}
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.maintenance_records WHERE asset_id = ? AND status IN ('PENDING','APPROVED','IN_PROGRESS')")) {
+				"SELECT 1 FROM dbo.maintenance_records WHERE asset_id = ? AND incident_id IS NULL AND status IN ('PENDING','APPROVED','IN_PROGRESS')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -352,21 +487,46 @@ public class MaintenanceDAO {
 		}
 	}
 
-	private record MaintenanceTarget(long assetId, Long incidentId) {
+	private record MaintenanceTarget(long assetId, Long incidentId, Long assetItemId) {
 	}
 
 	private MaintenanceTarget requireApprovedOrInProgress(Connection connection, long id) throws SQLException {
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT asset_id, incident_id FROM dbo.maintenance_records WHERE maintenance_id = ? AND status IN ('APPROVED','IN_PROGRESS')")) {
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT m.asset_id, m.incident_id, i.asset_item_id
+				FROM dbo.maintenance_records m
+				LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
+				WHERE m.maintenance_id = ? AND m.status IN ('APPROVED','IN_PROGRESS','COMPLETED')
+				""")) {
 			statement.setLong(1, id);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
-					throw new IllegalStateException("Chỉ có thể cập nhật tiến độ phiếu đã duyệt hoặc đang sửa chữa.");
+					throw new IllegalStateException(
+							"Không tìm thấy phiếu bảo trì hoặc phiếu không hợp lệ để chỉnh sửa.");
 				}
 				long assetId = result.getLong("asset_id");
 				Long incidentId = nullableLong(result, "incident_id");
-				return new MaintenanceTarget(assetId, incidentId);
+				Long assetItemId = nullableLong(result, "asset_item_id");
+				return new MaintenanceTarget(assetId, incidentId, assetItemId);
 			}
+		}
+	}
+
+	private void syncParentAssetStatus(Connection connection, long assetId) throws SQLException {
+		String sql = """
+				UPDATE dbo.assets
+				SET status = CASE
+				    WHEN EXISTS (SELECT 1 FROM dbo.asset_items WHERE asset_id = ? AND status = 'AVAILABLE') THEN 'AVAILABLE'
+				    WHEN EXISTS (SELECT 1 FROM dbo.asset_items WHERE asset_id = ? AND status = 'MAINTENANCE') THEN 'MAINTENANCE'
+				    ELSE 'UNAVAILABLE'
+				END,
+				updated_at = SYSUTCDATETIME()
+				WHERE asset_id = ? AND status <> 'DISPOSED'
+				""";
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, assetId);
+			statement.setLong(2, assetId);
+			statement.setLong(3, assetId);
+			statement.executeUpdate();
 		}
 	}
 
@@ -392,6 +552,12 @@ public class MaintenanceDAO {
 			statement.setLong(2, assetId);
 			statement.executeUpdate();
 		}
+		try (PreparedStatement statement = connection.prepareStatement(
+				"UPDATE dbo.asset_items SET status = ?, updated_at = SYSUTCDATETIME() WHERE asset_id = ? AND status <> 'DISPOSED'")) {
+			statement.setString(1, status);
+			statement.setLong(2, assetId);
+			statement.executeUpdate();
+		}
 	}
 
 	private List<MaintenanceRecord> read(PreparedStatement statement) throws SQLException {
@@ -413,7 +579,11 @@ public class MaintenanceDAO {
 				record.setRepairStartedAt(ViewFormat.fromUtc(result.getTimestamp("repair_started_at")));
 				record.setRepairCompletedAt(ViewFormat.fromUtc(result.getTimestamp("repair_completed_at")));
 				record.setRepairResult(result.getString("repair_result"));
+				record.setEstimatedCost(nullableLong(result, "estimated_cost"));
+				record.setActualCost(nullableLong(result, "actual_cost"));
 				record.setNote(result.getString("note"));
+				record.setProviderPhone(result.getString("provider_phone"));
+				record.setProviderAddress(result.getString("provider_address"));
 				record.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
 				record.setUpdatedAt(ViewFormat.fromUtc(result.getTimestamp("updated_at")));
 				// Joined fields
@@ -424,6 +594,7 @@ public class MaintenanceDAO {
 				record.setRequesterName(result.getString("requester_name"));
 				record.setApproverName(result.getString("approver_name"));
 				record.setIncidentDescription(result.getString("incident_description"));
+				record.setAssetItemCode(result.getString("asset_item_code"));
 				records.add(record);
 			}
 			return records;

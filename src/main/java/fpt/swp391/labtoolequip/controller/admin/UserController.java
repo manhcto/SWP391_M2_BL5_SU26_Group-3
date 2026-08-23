@@ -68,6 +68,7 @@ public class UserController extends HttpServlet {
 		String status = normalize(request.getParameter("status"));
 
 		request.setAttribute("users", userDAO.findAll(keyword, role, status));
+		request.setAttribute("summary", userDAO.findSummary());
 
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedRole", role);
@@ -98,6 +99,9 @@ public class UserController extends HttpServlet {
 		request.setAttribute("user", user);
 		request.setAttribute("formMode", "add");
 		request.setAttribute("majors", majorDAO.findActive());
+		Optional<User> activeLM = userDAO.findActiveLabManager();
+		request.setAttribute("hasLabManager", activeLM.isPresent());
+		request.setAttribute("currentLmName", activeLM.map(User::getFullName).orElse(""));
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
@@ -144,8 +148,20 @@ public class UserController extends HttpServlet {
 			user.setPasswordHash(BCrypt.hashpw("123", BCrypt.gensalt()));
 		}
 
+		// Kiểm tra nếu tạo LAB_MANAGER mới khi đã có LAB_MANAGER cũ đang ACTIVE
+		Optional<User> activeLM = ("LAB_MANAGER".equals(user.getRole()) && "ACTIVE".equals(user.getStatus()))
+				? userDAO.findActiveLabManager()
+				: Optional.empty();
+
 		userDAO.create(user);
-		response.sendRedirect(request.getContextPath() + "/admin/users?success=created");
+
+		if (activeLM.isPresent()) {
+			String encodedName = java.net.URLEncoder.encode(activeLM.get().getFullName(),
+					java.nio.charset.StandardCharsets.UTF_8);
+			response.sendRedirect(request.getContextPath() + "/admin/users?success=lm_replaced&old_lm=" + encodedName);
+		} else {
+			response.sendRedirect(request.getContextPath() + "/admin/users?success=created");
+		}
 	}
 
 	private void updateUser(HttpServletRequest request, HttpServletResponse response)
@@ -161,6 +177,7 @@ public class UserController extends HttpServlet {
 		}
 
 		String fullName = trim(request.getParameter("fullName"));
+		String email = trim(request.getParameter("email"));
 		String role = normalize(request.getParameter("role"));
 		String status = normalize(request.getParameter("status"));
 		String studentCode = trim(request.getParameter("studentCode"));
@@ -177,6 +194,9 @@ public class UserController extends HttpServlet {
 		}
 
 		user.setFullName(fullName);
+		if (!email.isEmpty()) {
+			user.setEmail(email);
+		}
 		user.setRole(role);
 		user.setStatus(status);
 		if ("INTERN".equals(user.getRole())) {
@@ -202,7 +222,10 @@ public class UserController extends HttpServlet {
 		}
 
 		String newRole = normalize(request.getParameter("role"));
-		if ("MENTOR".equals(newRole) || "LAB_MANAGER".equals(newRole)) {
+		if ("LAB_MANAGER".equals(newRole)) {
+			userDAO.appointLabManager(userId);
+			response.sendRedirect(request.getContextPath() + "/admin/users?success=role_updated");
+		} else if ("MENTOR".equals(newRole)) {
 			userDAO.updateRole(userId, newRole);
 			response.sendRedirect(request.getContextPath() + "/admin/users?success=role_updated");
 		} else {
@@ -237,21 +260,15 @@ public class UserController extends HttpServlet {
 		// Validate Email
 		if (user.getEmail().isEmpty()) {
 			errors.add("Email không được để trống.");
+		} else if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
+			errors.add("Email không đúng định dạng hợp lệ.");
 		} else {
-			if ("INTERN".equals(user.getRole())) {
-				if (!user.getEmail().toLowerCase().endsWith("@fpt.edu.vn")) {
-					errors.add("Email của thực tập sinh bắt buộc phải có đuôi @fpt.edu.vn.");
-				}
-			} else {
-				// MENTOR / LAB_MANAGER / ADMIN: chấp nhận email thường (@gmail.com, v.v.)
-				if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {
-					errors.add("Email không đúng định dạng hợp lệ.");
+			Optional<User> existingByEmail = userDAO.findByEmail(user.getEmail());
+			if (existingByEmail.isPresent()) {
+				if (isAdd || existingByEmail.get().getUserId() != user.getUserId()) {
+					errors.add("Email này đã được sử dụng bởi người dùng khác.");
 				}
 			}
-		}
-
-		if (isAdd && userDAO.findByEmail(user.getEmail()).isPresent()) {
-			errors.add("Email này đã tồn tại trong hệ thống.");
 		}
 
 		if ("INTERN".equals(user.getRole())) {
@@ -279,6 +296,9 @@ public class UserController extends HttpServlet {
 		request.setAttribute("errors", errors);
 		request.setAttribute("formMode", formMode);
 		request.setAttribute("majors", majorDAO.findActive());
+		Optional<User> activeLM = userDAO.findActiveLabManager();
+		request.setAttribute("hasLabManager", activeLM.isPresent());
+		request.setAttribute("currentLmName", activeLM.map(User::getFullName).orElse(""));
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
