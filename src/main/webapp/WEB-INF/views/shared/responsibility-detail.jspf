@@ -1,51 +1,78 @@
 <%@ page pageEncoding="UTF-8" %>
 <article class="panel">
     <div class="form-grid">
-        <div class="form-group"><label>Mã trách nhiệm</label><input class="form-control readonly-field" value="#<c:out value='${responsibility.responsibilityCode}'/>" readonly></div>
-        <div class="form-group"><label>Trạng thái</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.status)}'/>" readonly></div>
-        <div class="form-group"><label>Thực tập sinh</label><input class="form-control readonly-field" value="<c:out value='${responsibility.internName}'/> (<c:out value='${responsibility.internCode}'/>)" readonly></div>
-        <div class="form-group"><label>Email thực tập sinh</label><input class="form-control readonly-field" value="<c:out value='${responsibility.internEmail}'/>" readonly></div>
-        <div class="form-group"><label>Người xác định</label><input class="form-control readonly-field" value="<c:out value='${responsibility.mentorName}'/>" readonly></div>
-        <div class="form-group"><label>Xác định lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.determinedAt)}'/>" readonly></div>
+        <div class="form-group"><label>Mã hồ sơ</label><input class="form-control readonly-field" value="#<c:out value='${responsibility.responsibilityCode}'/>" readonly></div>
+        <div class="form-group"><label>Mức trách nhiệm</label><input class="form-control readonly-field" value="<c:out value='${empty responsibility.responsibilityLevel ? "Hồ sơ cũ" : app:label(responsibility.responsibilityLevel)}'/>" readonly></div>
+        <div class="form-group"><label>Trạng thái lưu vết</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.status)}'/>" readonly></div>
+        <div class="form-group">
+            <label>Intern liên quan</label>
+            <c:choose>
+                <c:when test="${not empty responsibility.internId}"><input class="form-control readonly-field" value="<c:out value='${responsibility.internName}'/> (<c:out value='${responsibility.internCode}'/>)" readonly></c:when>
+                <c:otherwise><input class="form-control readonly-field" value="Không gán Intern" readonly></c:otherwise>
+            </c:choose>
+        </div>
+        <div class="form-group"><label>Người đánh giá</label><input class="form-control readonly-field" value="<c:out value='${empty responsibility.responsibilityAssessorName ? "Chưa ghi nhận" : responsibility.responsibilityAssessorName}'/>" readonly></div>
+        <div class="form-group"><label>Đánh giá lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.responsibilityAssessedAt)}'/>" readonly></div>
     </div>
 </article>
 
 <div class="detail-columns">
     <article class="panel">
-        <div class="panel-header"><div><h3>Sự cố và bằng chứng liên quan</h3><p>Thông tin sự cố được sử dụng trong quá trình điều tra</p></div></div>
+        <div class="panel-header"><div><h3>Sự cố và kết luận kỹ thuật</h3><p>Thông tin do Lab Manager điều tra và xác định.</p></div></div>
         <div class="form-grid">
             <div class="form-group"><label>Mã sự cố</label><input class="form-control readonly-field" value="<c:out value='${responsibility.incidentCode}'/>" readonly></div>
             <div class="form-group"><label>Loại / Mức độ</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.incidentType)}'/> / <c:out value='${app:label(responsibility.incidentSeverity)}'/>" readonly></div>
             <div class="form-group"><label>Trạng thái sự cố</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.incidentStatus)}'/>" readonly></div>
-            <div class="form-group"><label>Xảy ra / Báo cáo</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.occurredAt)}'/> / <c:out value='${app:dateTime(responsibility.reportedAt)}'/>" readonly></div>
-            <div class="form-group full-width"><label>Bằng chứng / Mô tả sự cố</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.incidentDescription}"/></textarea></div>
-            <div class="form-group full-width"><label>Ghi chú điều tra</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.investigationNote}" default="Không có ghi chú điều tra."/></textarea></div>
-            <div class="form-group full-width"><label>Kết quả xử lý sự cố</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.handlingResult}" default="Không có kết quả xử lý."/></textarea></div>
+            <div class="form-group"><label>Nguyên nhân kỹ thuật</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.technicalCause)}'/>" readonly></div>
+            <div class="form-group"><label>Mức độ kỹ thuật</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.technicalSeverity)}'/>" readonly></div>
+            <div class="form-group"><label>Khả năng sửa chữa</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.repairability)}'/>" readonly></div>
+            <div class="form-group"><label>Hướng xử lý kỹ thuật</label><input class="form-control readonly-field" value="<c:out value='${app:label(responsibility.recommendedAction)}'/>" readonly></div>
+            <div class="form-group"><label>Người đánh giá kỹ thuật</label><input class="form-control readonly-field" value="<c:out value='${empty responsibility.technicalAssessorName ? "Chưa ghi nhận" : responsibility.technicalAssessorName}'/>" readonly></div>
+            <div class="form-group"><label>Đánh giá kỹ thuật lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.technicalAssessedAt)}'/>" readonly></div>
+            <div class="form-group full-width"><label>Mô tả sự cố</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.incidentDescription}"/></textarea></div>
+            <div class="form-group full-width"><label>Ghi chú kỹ thuật</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.technicalNote ? 'Không có ghi chú kỹ thuật.' : responsibility.technicalNote}"/></textarea></div>
+            <div class="form-group full-width"><label>Kết quả xử lý sự cố</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.handlingResult ? 'Không có kết quả xử lý.' : responsibility.handlingResult}"/></textarea></div>
         </div>
     </article>
 
     <article class="panel">
-        <div class="panel-header"><div><h3>Lượt sử dụng thiết bị liên quan</h3><p>Lịch sử thiết bị và mượn có thể truy vết</p></div></div>
-        <div class="form-grid">
-            <div class="form-group"><label>Thiết bị</label><input class="form-control readonly-field" value="<c:out value='${responsibility.assetName}'/> (<c:out value='${responsibility.assetCode}'/>)" readonly></div>
-            <div class="form-group"><label>Mã lượt sử dụng / Trạng thái</label><input class="form-control readonly-field" value="#AU-${responsibility.assetUsageId} / <c:out value='${app:label(responsibility.usageStatus)}'/>" readonly></div>
-            <div class="form-group"><label>Mượn lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.borrowedAt)}'/>" readonly></div>
-            <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.dueAt)}'/>" readonly></div>
-            <div class="form-group full-width"><label>Trả lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.returnedAt)}'/>" readonly></div>
-        </div>
+        <div class="panel-header"><div><h3>Lượt sử dụng thiết bị liên quan</h3><p>Lịch sử chỉ hiển thị khi sự cố có liên kết lượt sử dụng.</p></div></div>
+        <c:choose>
+            <c:when test="${not empty responsibility.assetUsageId}">
+                <div class="form-grid">
+                    <div class="form-group"><label>Thiết bị</label><input class="form-control readonly-field" value="<c:out value='${responsibility.assetName}'/> (<c:out value='${responsibility.assetCode}'/>)" readonly></div>
+                    <div class="form-group"><label>Mã lượt / Trạng thái</label><input class="form-control readonly-field" value="#AU-<c:out value='${responsibility.assetUsageId}'/> / <c:out value='${app:label(responsibility.usageStatus)}'/>" readonly></div>
+                    <div class="form-group"><label>Mượn lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.borrowedAt)}'/>" readonly></div>
+                    <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.dueAt)}'/>" readonly></div>
+                    <div class="form-group full-width"><label>Trả lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.returnedAt)}'/>" readonly></div>
+                </div>
+            </c:when>
+            <c:otherwise><p>Không có lượt sử dụng thiết bị liên kết với sự cố này.</p></c:otherwise>
+        </c:choose>
     </article>
 </div>
 
 <article class="panel">
-    <div class="panel-header"><div><h3>Kết quả trách nhiệm và quyết định xử lý</h3><p>Kết luận, bồi thường hoặc hướng giải quyết của người hướng dẫn</p></div></div>
+    <div class="panel-header"><div><h3>Đánh giá trách nhiệm của Mentor</h3><p>Đánh giá độc lập với kết luận kỹ thuật; khuyến nghị không tự thực hiện bồi thường, thay thế hoặc sửa chữa.</p></div></div>
     <div class="form-grid">
-        <div class="form-group full-width"><label>Kết luận của người hướng dẫn</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.conclusion}"/></textarea></div>
-        <div class="form-group full-width"><label>Đề xuất xử lý / Bồi thường</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.decision}" default="Không có yêu cầu bồi thường hoặc xử lý."/></textarea></div>
-        <div class="form-group full-width"><label>Ghi chú giải quyết</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.resolutionNote}" default="Không có ghi chú giải quyết."/></textarea></div>
+        <div class="form-group full-width"><label>Tóm tắt bằng chứng</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.evidenceSummary ? 'Không có tóm tắt bằng chứng.' : responsibility.evidenceSummary}"/></textarea></div>
+        <div class="form-group full-width"><label>Lý do đánh giá trách nhiệm</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.responsibilityNote ? 'Không có lý do đánh giá.' : responsibility.responsibilityNote}"/></textarea></div>
+        <div class="form-group full-width"><label>Khuyến nghị xử lý</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.handlingRecommendation ? 'Không có khuyến nghị xử lý.' : responsibility.handlingRecommendation}"/></textarea></div>
+    </div>
+</article>
+
+<article class="panel">
+    <div class="panel-header"><div><h3>Thông tin lưu vết tương thích</h3><p>Các trường kết luận, quyết định và trạng thái cũ chỉ được giữ để đọc lịch sử.</p></div></div>
+    <div class="form-grid">
+        <div class="form-group"><label>Người xác định cũ</label><input class="form-control readonly-field" value="<c:out value='${empty responsibility.mentorName ? "Chưa ghi nhận" : responsibility.mentorName}'/>" readonly></div>
+        <div class="form-group"><label>Xác định lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.determinedAt)}'/>" readonly></div>
+        <div class="form-group full-width"><label>Kết luận cũ</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.conclusion ? 'Không có kết luận cũ.' : responsibility.conclusion}"/></textarea></div>
+        <div class="form-group full-width"><label>Quyết định cũ</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.decision ? 'Không có quyết định cũ.' : responsibility.decision}"/></textarea></div>
+        <div class="form-group full-width"><label>Ghi chú giải quyết cũ</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.resolutionNote ? 'Không có ghi chú giải quyết.' : responsibility.resolutionNote}"/></textarea></div>
         <c:if test="${not empty responsibility.reviewerName}">
-            <div class="form-group"><label>Người duyệt</label><input class="form-control readonly-field" value="<c:out value='${responsibility.reviewerName}'/>" readonly></div>
+            <div class="form-group"><label>Người duyệt cũ</label><input class="form-control readonly-field" value="<c:out value='${responsibility.reviewerName}'/>" readonly></div>
             <div class="form-group"><label>Duyệt lúc</label><input class="form-control readonly-field" value="<c:out value='${app:dateTime(responsibility.reviewedAt)}'/>" readonly></div>
-            <div class="form-group full-width"><label>Quyết định của quản lý</label><textarea class="form-control readonly-field" readonly><c:out value="${responsibility.reviewNote}" default="Không có ghi chú của quản lý."/></textarea></div>
+            <div class="form-group full-width"><label>Ghi chú duyệt cũ</label><textarea class="form-control readonly-field" readonly><c:out value="${empty responsibility.reviewNote ? 'Không có ghi chú duyệt.' : responsibility.reviewNote}"/></textarea></div>
         </c:if>
     </div>
 </article>
