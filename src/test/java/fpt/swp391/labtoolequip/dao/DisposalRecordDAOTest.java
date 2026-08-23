@@ -8,6 +8,11 @@ import org.junit.jupiter.api.Test;
 
 class DisposalRecordDAOTest {
 	@Test
+	void validatesStructuredReasonCode() {
+		assertDoesNotThrow(() -> DisposalRecordDAO.validateReasonCode("UNSAFE"));
+		assertThrows(IllegalArgumentException.class, () -> DisposalRecordDAO.validateReasonCode("REPLACE"));
+	}
+	@Test
 	void serializedDisposalRequiresTheExactItem() {
 		assertDoesNotThrow(() -> DisposalRecordDAO.validateDisposalTarget("SERIALIZED", 1L, 2L, 1));
 		assertThrows(IllegalArgumentException.class,

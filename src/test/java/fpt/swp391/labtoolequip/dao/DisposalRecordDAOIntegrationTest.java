@@ -46,7 +46,7 @@ class DisposalRecordDAOIntegrationTest {
 		createItem(assetId, "GOOD", "AVAILABLE", true);
 		long disposalId = requestAndApprove(null, itemId);
 
-		dao.complete(disposalId, "Disposed item test");
+		dao.complete(disposalId, userId("manager@gmail.com"), "E_WASTE", "Disposed item test");
 
 		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement("""
 				SELECT d.status AS disposal_status, d.asset_item_id, d.quantity,
@@ -65,7 +65,7 @@ class DisposalRecordDAOIntegrationTest {
 				assertEquals(1, result.getInt("quantity"));
 				assertEquals("AVAILABLE", result.getString("asset_status"));
 				assertTrue(result.getBoolean("asset_borrowable"));
-				assertEquals(1, result.getInt("total_quantity"));
+				assertEquals(2, result.getInt("total_quantity"));
 				assertEquals("DISPOSED", result.getString("item_status"));
 				assertFalse(result.getBoolean("item_borrowable"));
 			}
@@ -77,7 +77,7 @@ class DisposalRecordDAOIntegrationTest {
 		long assetId = createAsset("QUANTITY", 2);
 		long disposalId = requestAndApprove(assetId, null);
 
-		dao.complete(disposalId, "Disposed aggregate test");
+		dao.complete(disposalId, userId("manager@gmail.com"), "SCRAP", "Disposed aggregate test");
 
 		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement("""
 				SELECT d.status AS disposal_status, d.asset_item_id, d.quantity,
@@ -105,7 +105,8 @@ class DisposalRecordDAOIntegrationTest {
 		long disposalId = requestAndApprove(null, itemId);
 		createActiveUsage(assetId, itemId);
 
-		assertThrows(IllegalStateException.class, () -> dao.complete(disposalId, "Must not complete"));
+		assertThrows(IllegalStateException.class,
+				() -> dao.complete(disposalId, userId("manager@gmail.com"), "SCRAP", "Must not complete"));
 
 		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement("""
 				SELECT d.status AS disposal_status, ai.status AS item_status, ai.is_borrowable AS item_borrowable
@@ -124,7 +125,8 @@ class DisposalRecordDAOIntegrationTest {
 	}
 
 	private long requestAndApprove(Long assetId, Long itemId) throws SQLException {
-		long disposalId = dao.create(userId("mentor@gmail.com"), assetId, itemId, "JUnit disposal request");
+		long disposalId = dao.create(userId("mentor@gmail.com"), assetId, itemId, "NOT_REPAIRABLE",
+				"JUnit disposal request");
 		disposalIds.add(disposalId);
 		dao.review(disposalId, userId("manager@gmail.com"), true, "JUnit approved");
 		return disposalId;
@@ -177,10 +179,10 @@ class DisposalRecordDAOIntegrationTest {
 
 	private void createActiveUsage(long assetId, long itemId) throws SQLException {
 		try (Connection connection = db.getConnection()) {
-			Membership membership = membership(connection, userId("intern@gmail.com"));
+			Membership membership = membership(connection);
 			try (PreparedStatement statement = connection.prepareStatement(
 					"""
-							INSERT dbo.asset_usages(request_id, semester_id, intern_id, asset_id, asset_item_id, quantity,
+							INSERT dbo.asset_usages(request_id, semester_id, student_id, asset_id, asset_item_id, quantity,
 							 borrowed_at, due_at, condition_before, status, created_by)
 							OUTPUT INSERTED.asset_usage_id
 							VALUES (?, ?, ?, ?, ?, 1, SYSUTCDATETIME(), DATEADD(day, 1, SYSUTCDATETIME()), 'BROKEN', 'IN_USE', ?)
@@ -204,22 +206,21 @@ class DisposalRecordDAOIntegrationTest {
 		}
 	}
 
-	private Membership membership(Connection connection, long userId) throws SQLException {
+	private Membership membership(Connection connection) throws SQLException {
 		String sql = """
-				SELECT TOP 1 luri.request_id, luri.semester_id, luri.intern_id
+				SELECT TOP 1 luri.request_id, luri.semester_id, luri.intern_id, ip.user_id
 				FROM dbo.intern_profiles ip
 				JOIN dbo.lab_usage_request_interns luri ON luri.intern_id = ip.intern_id
 				JOIN dbo.lab_usage_requests lur
 				  ON lur.request_id = luri.request_id AND lur.semester_id = luri.semester_id
 				JOIN dbo.semesters s ON s.semester_id = lur.semester_id
-				WHERE ip.user_id = ? AND lur.status = 'APPROVED' AND s.status = 'ACTIVE'
+				WHERE lur.status = 'APPROVED' AND s.status = 'ACTIVE'
 				ORDER BY s.end_date
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
-			statement.setLong(1, userId);
 			try (ResultSet result = statement.executeQuery()) {
-				assertTrue(result.next(), "Missing approved demo membership for intern@gmail.com");
-				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3), userId);
+				assertTrue(result.next(), "Missing approved demo membership");
+				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3), result.getLong(4));
 			}
 		}
 	}
