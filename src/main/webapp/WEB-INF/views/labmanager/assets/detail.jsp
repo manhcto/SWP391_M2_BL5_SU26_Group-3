@@ -26,7 +26,7 @@
                     <div class="asset-info">
                         <h3><c:out value="${item.assetName}"/></h3>
                         <p><c:out value="${item.assetCode}"/> · <c:out value="${item.categoryName}"/></p>
-                        <c:choose><c:when test="${editMode}"><form method="post" action="${assetBasePath}/${item.assetItemId}" style="margin-top:16px">
+                        <c:choose><c:when test="${editMode}"><form method="post" action="${assetBasePath}/${item.assetItemId}" style="margin-top:16px"><input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                             <div class="form-grid">
                                 <div class="form-group"><label for="serialNumber">Serial</label><input class="form-control" id="serialNumber" name="serialNumber" maxlength="100" value="<c:out value='${item.serialNumber}'/>" placeholder="Serial sản phẩm"></div>
                                 <div class="form-group"><label for="imagePath">Đường dẫn ảnh</label><input class="form-control" id="imagePath" name="imagePath" maxlength="500" value="<c:out value='${item.imagePath}'/>" placeholder="/uploads/assets/...jpg"></div>
