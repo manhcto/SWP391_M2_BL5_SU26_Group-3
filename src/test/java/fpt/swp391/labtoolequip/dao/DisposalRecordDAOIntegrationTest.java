@@ -41,7 +41,7 @@ class DisposalRecordDAOIntegrationTest {
 
 	@Test
 	void serializedCompletionDisposesOnlyTheSelectedItem() throws Exception {
-		long assetId = createAsset("SERIALIZED", 2);
+		long assetId = createAsset("SERIALIZED", 1);
 		long itemId = createItem(assetId, "BROKEN", "UNAVAILABLE", false);
 		createItem(assetId, "GOOD", "AVAILABLE", true);
 		long disposalId = requestAndApprove(null, itemId);
@@ -65,7 +65,7 @@ class DisposalRecordDAOIntegrationTest {
 				assertEquals(1, result.getInt("quantity"));
 				assertEquals("AVAILABLE", result.getString("asset_status"));
 				assertTrue(result.getBoolean("asset_borrowable"));
-				assertEquals(2, result.getInt("total_quantity"));
+				assertEquals(1, result.getInt("total_quantity"));
 				assertEquals("DISPOSED", result.getString("item_status"));
 				assertFalse(result.getBoolean("item_borrowable"));
 			}
