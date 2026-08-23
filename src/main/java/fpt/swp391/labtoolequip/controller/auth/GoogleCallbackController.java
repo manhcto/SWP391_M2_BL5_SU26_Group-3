@@ -118,7 +118,6 @@ public class GoogleCallbackController extends HttpServlet {
 	private void deny(HttpServletRequest request, HttpServletResponse response, String message)
 			throws ServletException, IOException {
 		request.setAttribute("message", message);
-		request.setAttribute("devAuthEnabled", Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false")));
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
 	}
 

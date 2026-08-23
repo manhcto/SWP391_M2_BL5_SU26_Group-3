@@ -10,6 +10,8 @@ import java.sql.SQLException;
 
 @WebServlet("/forgot-password")
 public class ForgotPasswordController extends HttpServlet {
+	private static final String REQUEST_ACCEPTED = "Nếu tài khoản hợp lệ và chưa có yêu cầu đang xử lý, yêu cầu đã được gửi đến quản trị viên.";
+	private static final AuthenticationThrottle THROTTLE = new AuthenticationThrottle();
 	private final PasswordResetRequestDAO dao = new PasswordResetRequestDAO();
 
 	@Override
@@ -34,10 +36,14 @@ public class ForgotPasswordController extends HttpServlet {
 			doGet(request, response);
 			return;
 		}
+		if (!THROTTLE.tryAcquire(request.getRemoteAddr())) {
+			request.setAttribute("success", REQUEST_ACCEPTED);
+			doGet(request, response);
+			return;
+		}
 		try {
 			dao.create(email.trim(), note);
-			request.setAttribute("success",
-					"Nếu tài khoản hợp lệ và chưa có yêu cầu đang xử lý, yêu cầu đã được gửi đến quản trị viên.");
+			request.setAttribute("success", REQUEST_ACCEPTED);
 		} catch (SQLException e) {
 			getServletContext().log("Could not create password reset request", e);
 			request.setAttribute("message", "Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.");

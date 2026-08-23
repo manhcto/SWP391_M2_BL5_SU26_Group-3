@@ -38,15 +38,13 @@
                         <td>${r.createdAt()}</td>
                         <td>${r.status()}</td>
                         <td>
-                            <c:if test="${r.status() == 'PENDING'}">
-                                <form method="post">
-                                    <input type="hidden" name="csrfToken" value="${csrfToken}">
-                                    <input type="hidden" name="requestId" value="${r.id()}">
-                                     <input class="form-control" type="password" name="temporaryPassword" minlength="8" maxlength="72" placeholder="Mật khẩu tạm tùy chọn">
-                                     <button class="primary-button" name="action" value="resetCustom">Dùng mật khẩu đã nhập</button>
-                                     <button class="btn-secondary" name="action" value="resetAutomatic">Tạo mật khẩu tự động</button>
-                                     <button class="btn-secondary" name="action" value="reject">Từ chối</button>
-                                </form>
+                             <c:if test="${r.status() == 'PENDING'}">
+                                 <form method="post">
+                                     <input type="hidden" name="csrfToken" value="${csrfToken}">
+                                     <input type="hidden" name="requestId" value="${r.id()}">
+                                      <button class="primary-button" name="action" value="approve">Duyệt</button>
+                                      <button class="btn-secondary" name="action" value="reject">Từ chối</button>
+                                 </form>
                             </c:if>
                             <c:if test="${r.status() == 'APPROVED'}">
                                 <form method="post">

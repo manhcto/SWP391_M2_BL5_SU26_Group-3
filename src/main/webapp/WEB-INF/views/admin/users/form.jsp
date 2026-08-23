@@ -48,7 +48,8 @@
                 <c:choose>
                     <%-- CHẾ ĐỘ CHỈNH SỬA (EDIT USER) --%>
                     <c:when test="${formMode == 'edit'}">
-                        <form method="post" action="${pageContext.request.contextPath}/admin/users/edit" class="form-grid">
+						<form method="post" action="${pageContext.request.contextPath}/admin/users/edit" class="form-grid">
+							<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                             <input type="hidden" name="id" value="${user.userId}">
 
                             <div class="form-group full-width" style="padding: 10px 14px; background: #fafbf9; border: 1px dashed #d5dbd7; border-radius: 6px;">
@@ -124,7 +125,8 @@
 
                     <%-- CHẾ ĐỘ THÊM MỚI (ADD SINGLE USER) --%>
                     <c:otherwise>
-                        <form method="post" action="${pageContext.request.contextPath}/admin/users/add" class="form-grid">
+						<form method="post" action="${pageContext.request.contextPath}/admin/users/add" class="form-grid">
+							<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                             <div class="form-group">
                                 <label>Họ và tên *</label>
                                 <input class="form-control" type="text" name="fullName" value="<c:out value='${user.fullName}'/>" required placeholder="Ví dụ: Nguyễn Minh Anh">

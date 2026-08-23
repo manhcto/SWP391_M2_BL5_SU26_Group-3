@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.controller.auth;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.auth.Csrf;
 import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.User;
@@ -15,10 +16,10 @@ import java.sql.SQLException;
 import java.util.Base64;
 import java.util.Optional;
 import org.mindrot.jbcrypt.BCrypt;
-import util.AppConfig;
 
 @WebServlet("/login")
 public class LoginController extends HttpServlet {
+	private static final AuthenticationThrottle THROTTLE = new AuthenticationThrottle();
 	private final UserDAO userDAO = new UserDAO();
 	private final SecureRandom random = new SecureRandom();
 
@@ -34,21 +35,22 @@ public class LoginController extends HttpServlet {
 			response.sendRedirect(AuthSession.dashboard(request.getContextPath(), role));
 			return;
 		}
-		request.setAttribute("devAuthEnabled", Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false")));
+		request.setAttribute("csrfToken", Csrf.token(request));
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		if (!Boolean.parseBoolean(AppConfig.get("DEV_AUTH_ENABLED", "false"))) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-			return;
-		}
 		request.setCharacterEncoding("UTF-8");
 		String email = request.getParameter("email");
 		String password = request.getParameter("password");
 		request.setAttribute("email", email);
+		if (!THROTTLE.tryAcquire(request.getRemoteAddr())) {
+			request.setAttribute("message", "Email hoặc mật khẩu không chính xác.");
+			doGet(request, response);
+			return;
+		}
 		try {
 			Optional<User> found = userDAO.findByEmail(email);
 			if (found.isEmpty() || !validInternalPassword(found.get(), password)) {
@@ -56,6 +58,7 @@ public class LoginController extends HttpServlet {
 				doGet(request, response);
 				return;
 			}
+			THROTTLE.reset(request.getRemoteAddr());
 			AuthSession.login(request, found.get());
 			response.sendRedirect(AuthSession.mustChangePassword(request)
 					? request.getContextPath() + "/change-password"

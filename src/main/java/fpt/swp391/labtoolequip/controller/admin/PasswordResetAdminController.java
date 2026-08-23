@@ -43,22 +43,11 @@ public class PasswordResetAdminController extends HttpServlet {
 		try {
 			long id = Long.parseLong(request.getParameter("requestId"));
 			String action = request.getParameter("action");
-			if ("reject".equals(action))
+			if ("approve".equals(action))
+				dao.review(id, AuthSession.userId(request), true, request.getParameter("note"));
+			else if ("reject".equals(action))
 				dao.review(id, AuthSession.userId(request), false, request.getParameter("note"));
-			else if ("resetAutomatic".equals(action) || "resetCustom".equals(action)) {
-				String temporary;
-				if ("resetCustom".equals(action)) {
-					temporary = request.getParameter("temporaryPassword");
-					if (temporary == null || temporary.length() < 8 || temporary.length() > 72)
-						throw new IllegalArgumentException("Mật khẩu tạm thời phải có từ 8 đến 72 ký tự.");
-				} else {
-					byte[] bytes = new byte[12];
-					random.nextBytes(bytes);
-					temporary = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-				}
-				dao.resetPassword(id, AuthSession.userId(request), BCrypt.hashpw(temporary, BCrypt.gensalt()));
-				request.setAttribute("temporaryPassword", temporary);
-			} else if ("issue".equals(action)) {
+			else if ("issue".equals(action)) {
 				byte[] bytes = new byte[12];
 				random.nextBytes(bytes);
 				String temporary = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);

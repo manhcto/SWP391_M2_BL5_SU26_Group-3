@@ -12,8 +12,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 
-@WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit", "/admin/users/toggle-status",
-		"/admin/users/change-role"})
+@WebServlet({"/admin/users", "/admin/users/view", "/admin/users/add", "/admin/users/edit"})
 public class UserController extends HttpServlet {
 	private static final Set<String> ROLES = Set.of("ADMIN", "LAB_MANAGER", "MENTOR", "INTERN");
 	private static final Set<String> STATUSES = Set.of("ACTIVE", "INACTIVE");
@@ -32,8 +31,6 @@ public class UserController extends HttpServlet {
 				case "/admin/users/view" -> showDetail(request, response);
 				case "/admin/users/add" -> showAddForm(request, response);
 				case "/admin/users/edit" -> showEditForm(request, response);
-				case "/admin/users/toggle-status" -> toggleStatus(request, response);
-				case "/admin/users/change-role" -> changeRole(request, response);
 				default -> showList(request, response);
 			}
 		} catch (SQLException exception) {
@@ -49,7 +46,6 @@ public class UserController extends HttpServlet {
 			switch (request.getServletPath()) {
 				case "/admin/users/add" -> createUser(request, response);
 				case "/admin/users/edit" -> updateUser(request, response);
-				case "/admin/users/toggle-status" -> toggleStatus(request, response);
 				default -> response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 			}
 		} catch (SQLException exception) {
@@ -117,16 +113,6 @@ public class UserController extends HttpServlet {
 		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
 	}
 
-	private void toggleStatus(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, IOException {
-		long userId = requireId(request, response);
-		if (response.isCommitted()) {
-			return;
-		}
-		userDAO.toggleStatus(userId);
-		response.sendRedirect(request.getContextPath() + "/admin/users?success=status_updated");
-	}
-
 	private void createUser(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		User user = extractUser(request);
@@ -186,21 +172,6 @@ public class UserController extends HttpServlet {
 
 		userDAO.update(user);
 		response.sendRedirect(request.getContextPath() + "/admin/users?success=updated");
-	}
-
-	private void changeRole(HttpServletRequest request, HttpServletResponse response) throws SQLException, IOException {
-		long userId = requireId(request, response);
-		if (response.isCommitted()) {
-			return;
-		}
-
-		String newRole = normalize(request.getParameter("role"));
-		if ("MENTOR".equals(newRole) || "LAB_MANAGER".equals(newRole)) {
-			userDAO.updateRole(userId, newRole);
-			response.sendRedirect(request.getContextPath() + "/admin/users?success=role_updated");
-		} else {
-			response.sendRedirect(request.getContextPath() + "/admin/users");
-		}
 	}
 
 	private User extractUser(HttpServletRequest request) {
@@ -287,7 +258,7 @@ public class UserController extends HttpServlet {
 	private void handleDatabaseError(HttpServletRequest request, HttpServletResponse response, SQLException exception)
 			throws ServletException, IOException {
 		getServletContext().log("Database error in UserController", exception);
-		request.setAttribute("databaseError", "Lỗi truy vấn cơ sở dữ liệu: " + exception.getMessage());
+		request.setAttribute("databaseError", "Không thể tải dữ liệu người dùng.");
 		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
 	}
 
