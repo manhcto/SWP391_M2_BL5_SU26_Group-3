@@ -21,15 +21,40 @@
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">CỔNG QUẢN LÝ PHÒNG LAB</p><h2>Tổng quan vận hành</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/lab-manager/assets"><svg><use href="#i-box"/></svg>Quản lý thiết bị</a></div>
             <div class="stats-grid">
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/assets"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong><c:out value="${assetCount}"/></strong><span>Tài sản phòng LAB</span><small><c:out value="${availableAssetCount}"/> thiết bị đang sẵn sàng</small></div></a>
+                <div class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong><c:out value="${assetCount}"/></strong><span>Tài sản phòng LAB</span><small><c:out value="${availableAssetCount}"/> thiết bị đang sẵn sàng</small></div></div>
                 <div class="stat-card stat-gold"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong><c:out value="${maintenanceAssetCount}"/></strong><span>Thiết bị đang bảo trì</span><small>Theo tình trạng tài sản hiện tại</small></div></div>
-                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/lab-manager/usages"><div class="stat-icon"><svg><use href="#i-calendar"/></svg></div><div><strong><c:out value="${activeUsageCount}"/></strong><span>Lượt sử dụng đang mở</span><small>Thiết bị chưa được trả</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/inspections"><div class="stat-icon"><svg><use href="#i-inspect"/></svg></div><div><strong><c:out value="${inspectionCount}"/></strong><span>Kiểm tra và kiểm kê</span><small>Tất cả đợt kiểm tra đã ghi nhận</small></div></a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/lab-manager/incidents"><div class="stat-icon"><svg><use href="#i-alert"/></svg></div><div><strong><c:out value="${incidentCount}"/></strong><span>Sự cố lớn</span><small>Cần Lab Manager theo dõi xử lý</small></div></a>
-                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/labmanager/maintenance"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong><c:out value="${openMaintenanceCount}"/></strong><span>Phiếu bảo trì đang mở</span><small>Chưa hoàn tất hoặc từ chối</small></div></a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/lab-manager/disposals"><div class="stat-icon"><svg><use href="#i-trash"/></svg></div><div><strong><c:out value="${pendingDisposalCount}"/></strong><span>Yêu cầu thanh lý chờ xử lý</span><small>Cần xác nhận trước khi hoàn tất</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><div class="stat-icon"><svg><use href="#i-list"/></svg></div><div><strong>Trách nhiệm</strong><span>Xem kết luận và quyết định xử lý của người hướng dẫn</span><small>Mở hồ sơ trách nhiệm</small></div></a>
+                <div class="stat-card stat-green"><div class="stat-icon"><svg><use href="#i-calendar"/></svg></div><div><strong><c:out value="${activeUsageCount}"/></strong><span>Lượt sử dụng đang mở</span><small>Thiết bị chưa được trả</small></div></div>
+                <div class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-inspect"/></svg></div><div><strong><c:out value="${inspectionCount}"/></strong><span>Kiểm tra và kiểm kê</span><small>Tất cả đợt kiểm tra đã ghi nhận</small></div></div>
+                <div class="stat-card stat-purple"><div class="stat-icon"><svg><use href="#i-alert"/></svg></div><div><strong><c:out value="${incidentCount}"/></strong><span>Sự cố lớn</span><small>Cần Lab Manager theo dõi xử lý</small></div></div>
+                <div class="stat-card stat-gold"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong><c:out value="${openMaintenanceCount}"/></strong><span>Phiếu bảo trì đang mở</span><small>Chưa hoàn tất hoặc từ chối</small></div></div>
+                <div class="stat-card stat-purple"><div class="stat-icon"><svg><use href="#i-trash"/></svg></div><div><strong><c:out value="${pendingDisposalCount}"/></strong><span>Yêu cầu thanh lý chờ xử lý</span><small>Cần xác nhận trước khi hoàn tất</small></div></div>
+                <div class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-list"/></svg></div><div><strong><c:out value="${responsibilityCount}"/></strong><span>Trách nhiệm</span><small>Hồ sơ cần xác nhận hoặc cập nhật quyết định</small></div></div>
             </div>
+            <section class="analytics-grid lab-analytics" aria-label="Báo cáo vận hành phòng LAB">
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Tỷ lệ tài sản sẵn sàng</h3></div><strong class="report-value"><c:out value="${availableAssetPercent}"/>%</strong></header>
+                    <div class="ring-report">
+                        <div class="percentage-ring green" style="--value: ${availableAssetPercent}%"><strong><c:out value="${availableAssetPercent}"/>%</strong><span>sẵn sàng</span></div>
+                        <p><c:out value="${availableAssetCount}"/> trên <c:out value="${assetCount}"/> tài sản chưa thanh lý đang sẵn sàng.</p>
+                    </div>
+                </article>
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-grid"/></svg></span><h3>Cơ cấu tình trạng tài sản</h3></div></header>
+                    <div class="bar-report">
+                        <div><span>Sẵn sàng</span><b><i class="bar-fill green" style="--bar: ${availableAssetPercent}%"></i></b><strong><c:out value="${availableAssetCount}"/></strong></div>
+                        <div><span>Đang bảo trì</span><b><i class="bar-fill gold" style="--bar: ${assetCount == 0 ? 0 : maintenanceAssetCount * 100 / assetCount}%"></i></b><strong><c:out value="${maintenanceAssetCount}"/></strong></div>
+                        <div><span>Không sẵn sàng</span><b><i class="bar-fill red" style="--bar: ${assetCount == 0 ? 0 : unavailableAssetCount * 100 / assetCount}%"></i></b><strong><c:out value="${unavailableAssetCount}"/></strong></div>
+                    </div>
+                </article>
+                <article class="panel analytics-panel report-alerts">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-alert"/></svg></span><h3>Việc cần xử lý</h3></div></header>
+                    <div class="report-alert-list">
+                        <div><span>Quá hạn trả thiết bị</span><strong><c:out value="${overdueUsageCount}"/></strong></div>
+                        <div><span>Sự cố nghiêm trọng đang mở</span><strong><c:out value="${criticalIncidentCount}"/></strong></div>
+                        <div><span>Trách nhiệm chờ duyệt</span><strong><c:out value="${pendingResponsibilityCount}"/></strong></div>
+                    </div>
+                </article>
+            </section>
             <section class="dashboard-grid">
                 <article class="panel">
                     <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-alert"/></svg></span><h3>Sự cố lớn gần đây</h3></div><a href="${pageContext.request.contextPath}/lab-manager/incidents">Xem tất cả</a></header>

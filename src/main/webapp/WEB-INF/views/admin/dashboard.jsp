@@ -21,14 +21,31 @@
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">CỔNG QUẢN TRỊ</p><h2>Quản lý người dùng và danh sách thực tập sinh</h2></div><a class="primary-button" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg>Duyệt danh sách thực tập sinh</a></div>
             <div class="stats-grid">
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${accountCount}"/></strong><span>Tổng tài khoản</span><small>Tất cả tài khoản có quyền truy cập hệ thống</small></div></a>
-                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/admin/users?status=ACTIVE"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${activeAccountCount}"/></strong><span>Tài khoản hoạt động</span><small>Đang có thể đăng nhập hệ thống</small></div></a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/admin/users?status=INACTIVE"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${inactiveAccountCount}"/></strong><span>Tài khoản tạm khóa</span><small>Cần quản trị viên kiểm tra trạng thái</small></div></a>
-                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/admin/users?role=INTERN"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${internCount}"/></strong><span>Thực tập sinh</span><small>Tài khoản được tạo từ danh sách đã duyệt</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users?role=MENTOR"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${mentorCount}"/></strong><span>Người hướng dẫn</span><small>Quản lý tài khoản người hướng dẫn</small></div></a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/admin/users?role=LAB_MANAGER"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${labManagerCount}"/></strong><span>Quản lý phòng LAB</span><small>Quản lý tài khoản quản lý phòng LAB</small></div></a>
-                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingInternListCount}"/></strong><span>Danh sách chờ duyệt</span><small>Phê duyệt hoặc từ chối danh sách do người hướng dẫn gửi</small></div></a>
+                <div class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${accountCount}"/></strong><span>Tổng tài khoản</span><small>Tất cả tài khoản có quyền truy cập hệ thống</small></div></div>
+                <div class="stat-card stat-green"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${activeAccountCount}"/></strong><span>Tài khoản hoạt động</span><small>Đang có thể đăng nhập hệ thống</small></div></div>
+                <div class="stat-card stat-purple"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${inactiveAccountCount}"/></strong><span>Tài khoản tạm khóa</span><small>Cần quản trị viên kiểm tra trạng thái</small></div></div>
+                <div class="stat-card stat-green"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${internCount}"/></strong><span>Thực tập sinh</span><small>Tài khoản được tạo từ danh sách đã duyệt</small></div></div>
+                <div class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${mentorCount}"/></strong><span>Người hướng dẫn</span><small>Quản lý tài khoản người hướng dẫn</small></div></div>
+                <div class="stat-card stat-purple"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${labManagerCount}"/></strong><span>Quản lý phòng LAB</span><small>Quản lý tài khoản quản lý phòng LAB</small></div></div>
+                <div class="stat-card stat-gold"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingInternListCount}"/></strong><span>Danh sách chờ duyệt</span><small>Phê duyệt hoặc từ chối danh sách do người hướng dẫn gửi</small></div></div>
             </div>
+            <section class="analytics-grid" aria-label="Báo cáo thống kê tài khoản">
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-users"/></svg></span><h3>Tỷ lệ tài khoản hoạt động</h3></div><strong class="report-value"><c:out value="${activeAccountPercent}"/>%</strong></header>
+                    <div class="ring-report">
+                        <div class="percentage-ring green" style="--value: ${activeAccountPercent}%"><strong><c:out value="${activeAccountPercent}"/>%</strong><span>hoạt động</span></div>
+                        <p><c:out value="${activeAccountCount}"/> trong <c:out value="${accountCount}"/> tài khoản có thể truy cập hệ thống.</p>
+                    </div>
+                </article>
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-grid"/></svg></span><h3>Phân bổ theo vai trò</h3></div></header>
+                    <div class="bar-report">
+                        <div><span>Thực tập sinh</span><b><i class="bar-fill blue" style="--bar: ${internPercent}%"></i></b><strong><c:out value="${internCount}"/></strong></div>
+                        <div><span>Người hướng dẫn</span><b><i class="bar-fill green" style="--bar: ${mentorPercent}%"></i></b><strong><c:out value="${mentorCount}"/></strong></div>
+                        <div><span>Quản lý phòng LAB</span><b><i class="bar-fill purple" style="--bar: ${labManagerPercent}%"></i></b><strong><c:out value="${labManagerCount}"/></strong></div>
+                    </div>
+                </article>
+            </section>
             <section class="dashboard-grid">
                 <article class="panel">
                     <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-clipboard"/></svg></span><h3>Danh sách thực tập sinh chờ duyệt</h3></div><a href="${pageContext.request.contextPath}/admin/interns?status=PENDING">Xem tất cả</a></header>

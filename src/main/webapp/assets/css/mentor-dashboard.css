@@ -98,6 +98,51 @@ a { color: inherit; text-decoration: none; }
 .stat-card small { display: flex; align-items: center; gap: 4px; margin-top: 5px; color: #78817d; font-size: 8.5px; }
 .stat-card small svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .stat-card small i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* Dashboard reports use the same live counts as the summary cards. */
+.analytics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+.analytics-panel { min-height: 164px; }
+.analytics-panel .panel-header { min-height: 48px; }
+.report-value { color: var(--ink); font-size: 23px; line-height: 1; }
+.progress-report { padding: 18px 16px; }
+.progress-track { height: 9px; overflow: hidden; border-radius: 99px; background: #edf1ee; }
+.progress-fill { display: block; width: var(--bar); height: 100%; border-radius: inherit; }
+.progress-fill.green, .bar-fill.green { background: #269765; }
+.progress-fill.blue, .bar-fill.blue { background: #347bd1; }
+.progress-fill.gold, .bar-fill.gold { background: #ce911e; }
+.progress-fill.red, .bar-fill.red { background: #d45a5a; }
+.progress-fill.purple, .bar-fill.purple { background: #8054c7; }
+.progress-report p { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.ring-report { display: flex; align-items: center; gap: 18px; min-height: 112px; padding: 13px 16px; }
+.percentage-ring { position: relative; display: grid; width: 94px; height: 94px; flex: 0 0 auto; place-content: center; border-radius: 50%; background: conic-gradient(#269765 0 var(--value), #eaf0ed var(--value) 100%); text-align: center; }
+.percentage-ring::before { position: absolute; inset: 12px; border-radius: 50%; background: #fff; content: ""; }
+.percentage-ring strong, .percentage-ring span { position: relative; z-index: 1; }
+.percentage-ring strong { color: var(--ink); font-size: 17px; line-height: 1; }
+.percentage-ring span { margin-top: 4px; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+.ring-report p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.bar-report { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; min-height: 124px; gap: 14px; padding: 13px 16px 14px; }
+.bar-report > div { display: grid; grid-template-rows: 1fr auto auto; min-width: 0; align-items: end; gap: 5px; }
+.bar-report span { min-height: 24px; align-self: end; color: #58635e; font-size: 9px; line-height: 1.3; text-align: center; }
+.bar-report b { display: flex; width: 100%; height: 72px; align-items: end; overflow: hidden; border-radius: 5px 5px 2px 2px; background: repeating-linear-gradient(to top, #edf1ee 0 1px, transparent 1px 24px); }
+.bar-fill { display: block; width: 100%; height: var(--bar); min-height: 2px; border-radius: 5px 5px 0 0; }
+.bar-report strong { color: var(--ink); font-size: 10px; text-align: center; }
+.report-alert-list { display: grid; padding: 8px 16px; }
+.report-alert-list div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf0ec; }
+.report-alert-list div:last-child { border-bottom: 0; }
+.report-alert-list span { color: #5e6965; font-size: 10px; }
+.report-alert-list strong { display: grid; min-width: 25px; height: 25px; place-items: center; border-radius: 7px; color: #a54a33; background: #fcece5; font-size: 11px; }
+
+/* Role breakdowns replace duplicate role-count cards. */
+.admin-page .stats-grid .stat-card:nth-child(4),
+.admin-page .stats-grid .stat-card:nth-child(5),
+.admin-page .stats-grid .stat-card:nth-child(6),
+.lab-manager-page .stats-grid .stat-card:nth-child(4),
+.lab-manager-page .stats-grid .stat-card:nth-child(5),
+.lab-manager-page .stats-grid .stat-card:nth-child(8),
+.intern-dashboard-page .stats-grid .stat-card:nth-child(4),
+.intern-dashboard-page .stats-grid .stat-card:nth-child(5) { display: none; }
+
+.mentor-page .content-heading + .stats-grid { display: none; }
 .stat-green .stat-icon { color: #188255; background: #e9f5ee; } .stat-green small { color: #398a65; }
 .stat-gold .stat-icon { color: #b27b16; background: #faf2df; } .stat-gold small { color: #a6741d; }
 .stat-blue .stat-icon { color: #2869b5; background: #eaf1fa; } .stat-blue small { color: #398a65; }
@@ -130,7 +175,6 @@ a { color: inherit; text-decoration: none; }
 .admin-page .filter-bar select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, .13); }
 .admin-page .page-btn.active { border-color: #6366f1; background: #6366f1; }
 .admin-page .stat-card { border-color: #dbe7f5; border-radius: 12px; transition: transform .15s ease, box-shadow .15s ease; }
-.admin-page .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(37, 99, 235, .13); }
 
 /* Lab Manager portal */
 .lab-manager-page {
@@ -162,7 +206,6 @@ a { color: inherit; text-decoration: none; }
 .lab-manager-page .filter-bar select:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, .13); }
 .lab-manager-page .page-btn.active { border-color: #0284c7; background: #0284c7; }
 .lab-manager-page .stat-card { border-color: #d9e8f5; border-radius: 12px; transition: transform .15s ease, box-shadow .15s ease; }
-.lab-manager-page .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(2, 132, 199, .13); }
 
 /* Mentor portal */
 .mentor-page {
@@ -209,7 +252,6 @@ a { color: inherit; text-decoration: none; }
 .mentor-page .filter-bar select:focus { border-color: #9566df; box-shadow: 0 0 0 3px rgba(139, 92, 246, .13); }
 .mentor-page .page-btn.active { border-color: #8b5cf6; background: #8b5cf6; }
 .mentor-page .stat-card { border-color: #e8def4; border-radius: 12px; transition: transform .15s ease, box-shadow .15s ease; }
-.mentor-page .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(102, 73, 150, .14); }
 .mentor-dashboard-grid { grid-template-columns: minmax(0, 1.55fr) minmax(250px, .72fr); }
 .mentor-actions { display: grid; gap: 9px; padding: 14px; }
 .mentor-action { display: flex; align-items: center; gap: 11px; padding: 11px; border: 1px solid #e8def4; border-radius: 10px; background: #fdfbff; transition: border-color .15s ease, transform .15s ease; }
@@ -238,7 +280,6 @@ a { color: inherit; text-decoration: none; }
 .intern-dashboard-page .topbar { border-color: #d7eaf0; background: rgba(255, 255, 255, .94); }
 .intern-dashboard-page .primary-button { background: linear-gradient(135deg, #0891b2, #14b8a6); box-shadow: 0 7px 18px rgba(8, 145, 178, .2); }
 .intern-dashboard-page .stat-card { border-color: #d7eaf0; border-radius: 12px; transition: transform .15s ease, box-shadow .15s ease; }
-.intern-dashboard-page .stat-card:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(8, 145, 178, .13); }
 .intern-dashboard-grid { grid-template-columns: minmax(0, 1.55fr) minmax(250px, .72fr); }
 .intern-actions { display: grid; gap: 9px; padding: 14px; }
 .intern-action { display: flex; align-items: center; gap: 11px; padding: 11px; border: 1px solid #dcecf1; border-radius: 10px; background: #f8fcfd; transition: border-color .15s ease, transform .15s ease; }
@@ -526,7 +567,11 @@ textarea.form-control { height: 75px; padding: 8px 10px; resize: vertical; }
 .sidebar-overlay { display: none; }
 @media (max-width: 1220px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .bottom-grid { grid-template-columns: 1fr; }
+}
+@media (min-width: 981px) {
+    .mentor-page .dashboard-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 980px) {
     .sidebar { transform: translateX(-100%); transition: transform .25s ease; }
@@ -543,6 +588,7 @@ textarea.form-control { height: 75px; padding: 8px 10px; resize: vertical; }
     .content-area { padding-right: 14px; padding-left: 14px; }
     .search-box, .top-profile span { display: none; }
     .dashboard-grid { grid-template-columns: 1fr; }
+    .analytics-grid { grid-template-columns: 1fr; }
     .rules-grid, .role-rules { grid-template-columns: 1fr; }
     .attention-item { grid-template-columns: 40px minmax(0, 1fr) 15px; }
     .asset-detail { grid-template-columns: 1fr; }
