@@ -25,6 +25,10 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 
 	protected abstract String roleName();
 
+	protected boolean canMutate() {
+		return true;
+	}
+
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
@@ -35,10 +39,18 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 				return;
 			}
 			if ("/new".equals(path)) {
+				if (!canMutate()) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
 				showForm(request, response, new InspectionRecord(), List.of());
 				return;
 			}
 			if (path.matches("/\\d+/edit")) {
+				if (!canMutate()) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
 				long id = idFrom(path);
 				InspectionRecord inspection = dao.findById(id).orElseThrow();
 				if (!"DRAFT".equals(inspection.getStatus())) {
@@ -66,6 +78,10 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		if (!canMutate()) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		request.setCharacterEncoding("UTF-8");
 		String action = request.getParameter("action");
 		boolean complete = "complete".equals(action);

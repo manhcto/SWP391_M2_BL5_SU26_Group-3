@@ -15,6 +15,11 @@ public class AssetUsage {
 	private LocalDateTime returnedAt;
 	private String conditionBefore;
 	private String conditionAfter;
+	private String reportedConditionAfter;
+	private LocalDateTime returnRequestedAt;
+	private String verifiedConditionAfter;
+	private LocalDateTime returnVerifiedAt;
+	private Long returnVerifiedBy;
 	private String status;
 	private String note;
 	private String returnNote;
@@ -146,6 +151,36 @@ public class AssetUsage {
 
 	public void setConditionAfter(String conditionAfter) {
 		this.conditionAfter = conditionAfter;
+	}
+	public String getReportedConditionAfter() {
+		return reportedConditionAfter;
+	}
+	public void setReportedConditionAfter(String value) {
+		reportedConditionAfter = value;
+	}
+	public LocalDateTime getReturnRequestedAt() {
+		return returnRequestedAt;
+	}
+	public void setReturnRequestedAt(LocalDateTime value) {
+		returnRequestedAt = value;
+	}
+	public String getVerifiedConditionAfter() {
+		return verifiedConditionAfter;
+	}
+	public void setVerifiedConditionAfter(String value) {
+		verifiedConditionAfter = value;
+	}
+	public LocalDateTime getReturnVerifiedAt() {
+		return returnVerifiedAt;
+	}
+	public void setReturnVerifiedAt(LocalDateTime value) {
+		returnVerifiedAt = value;
+	}
+	public Long getReturnVerifiedBy() {
+		return returnVerifiedBy;
+	}
+	public void setReturnVerifiedBy(Long value) {
+		returnVerifiedBy = value;
 	}
 
 	public String getStatus() {

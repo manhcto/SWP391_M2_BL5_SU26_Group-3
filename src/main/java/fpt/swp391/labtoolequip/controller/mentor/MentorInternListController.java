@@ -72,7 +72,8 @@ public class MentorInternListController extends HttpServlet {
 			}
 		} catch (SQLException exception) {
 			getServletContext().log("Manage intern list failed", exception);
-			request.setAttribute("databaseError", databaseMessage(exception));
+			request.setAttribute("databaseError",
+					"Không thể lưu danh sách. Học kỳ có thể đã có danh sách hoặc dữ liệu bị trùng.");
 			if ("/mentor/interns/delete".equals(path)) {
 				response.sendRedirect(request.getContextPath() + "/mentor/interns?error=delete");
 			} else {
@@ -378,15 +379,6 @@ public class MentorInternListController extends HttpServlet {
 		} catch (NumberFormatException exception) {
 			return null;
 		}
-	}
-
-	private String databaseMessage(SQLException exception) {
-		String message = exception.getMessage();
-		if (message != null
-				&& (message.contains("Email ") || message.contains("Gmail ") || message.contains("Mã intern"))) {
-			return message;
-		}
-		return "Không thể lưu danh sách. Học kỳ có thể đã có danh sách hoặc dữ liệu bị trùng.";
 	}
 
 	private void handleDatabaseError(HttpServletResponse response, SQLException exception) throws IOException {

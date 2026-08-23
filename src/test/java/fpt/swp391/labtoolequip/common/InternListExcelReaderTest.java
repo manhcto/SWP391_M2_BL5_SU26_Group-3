@@ -24,6 +24,8 @@ class InternListExcelReaderTest {
 		assertEquals(1, students.size());
 		assertEquals("SE180001", students.get(0).getStudentCode());
 		assertEquals("Nguyễn An", students.get(0).getFullName());
+		assertEquals("an@fpt.edu.vn", students.get(0).getEmail());
+		assertEquals("K18", students.get(0).getCohort());
 	}
 
 	@Test

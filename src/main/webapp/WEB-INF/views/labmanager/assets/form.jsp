@@ -21,7 +21,7 @@
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">QUẢN LÝ THIẾT BỊ</p><h2>Thông tin nhóm sản phẩm</h2></div></div>
             <c:if test="${not empty message}"><div class="${not empty importedItems ? 'success-message' : 'error-message'}"><c:out value="${message}"/></div></c:if>
-            <form method="post" action="${assetBasePath}/new" enctype="multipart/form-data">
+            <form method="post" action="${assetBasePath}/new" enctype="multipart/form-data"><input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                 <article class="panel form-section"><header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Thông tin chung</h3></div></header>
                     <div class="form-grid">
                         <div class="form-group"><label for="assetCode">Mã thiết bị gốc</label><input class="form-control" id="assetCode" name="assetCode" value="<c:out value='${param.assetCode}'/>" placeholder="VD: LAPTOP-DELL" required><small>Mã sản phẩm riêng sẽ được sinh dạng LAPTOP-DELL-0001.</small></div>

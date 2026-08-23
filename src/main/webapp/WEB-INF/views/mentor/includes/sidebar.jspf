@@ -36,7 +36,6 @@
         <a class="nav-link${activeMenu == 'maintenance' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/maintenance"><svg><use href="#i-wrench"/></svg><span>Bảo trì</span></a>
         <a class="nav-link${activeMenu == 'disposals' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/disposals"><svg><use href="#i-trash"/></svg><span>Thanh lý</span></a>
         <a class="nav-link${activeMenu == 'labRules' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/lab-rules"><svg><use href="#i-clipboard"/></svg><span>Nội quy phòng lab</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/change-password"><svg><use href="#i-users"/></svg><span>Đổi mật khẩu</span></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">ME</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${app:label(currentUser.role)}"/></span></div></div>

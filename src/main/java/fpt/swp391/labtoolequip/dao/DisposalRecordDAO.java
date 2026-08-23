@@ -118,7 +118,7 @@ public class DisposalRecordDAO {
 				  AND (ai.status = 'UNAVAILABLE' OR ai.condition IN ('DAMAGED', 'BROKEN'))
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.asset_usages au
-					WHERE au.asset_item_id = ai.asset_item_id AND au.status IN ('IN_USE', 'MAINTENANCE')
+					WHERE au.asset_item_id = ai.asset_item_id AND au.status IN ('IN_USE', 'RETURN_PENDING')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
@@ -147,13 +147,15 @@ public class DisposalRecordDAO {
 		}
 	}
 
-	public long create(long userId, long assetId, String reason) throws SQLException {
-		return create(userId, assetId, null, reason);
+	public long create(long userId, long assetId, String reasonCode, String reason) throws SQLException {
+		return create(userId, assetId, null, reasonCode, reason);
 	}
 
-	public long create(long userId, Long assetId, Long assetItemId, String reason) throws SQLException {
+	public long create(long userId, Long assetId, Long assetItemId, String reasonCode, String reason)
+			throws SQLException {
 		if (reason == null || reason.isBlank())
 			throw new IllegalArgumentException("Vui lòng nhập lý do thanh lý.");
+		validateReasonCode(reasonCode);
 		if (assetId == null && assetItemId == null)
 			throw new IllegalArgumentException("Vui lòng chọn thiết bị cần thanh lý.");
 		if (assetId != null && assetItemId != null)
@@ -163,8 +165,8 @@ public class DisposalRecordDAO {
 			connection.setAutoCommit(false);
 			try {
 				long disposalId = assetItemId == null
-						? createQuantityDisposal(connection, userId, assetId, reason)
-						: createSerializedDisposal(connection, userId, assetItemId, reason);
+						? createQuantityDisposal(connection, userId, assetId, reasonCode, reason)
+						: createSerializedDisposal(connection, userId, assetItemId, reasonCode, reason);
 				connection.commit();
 				return disposalId;
 			} catch (SQLException | RuntimeException exception) {
@@ -175,28 +177,35 @@ public class DisposalRecordDAO {
 	}
 
 	public void review(long id, long managerId, boolean approve, String note) throws SQLException {
+		if (approve && (note == null || note.isBlank()))
+			throw new IllegalArgumentException("Ghi chú đánh giá kỹ thuật là bắt buộc khi duyệt.");
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(
-						"UPDATE dbo.disposal_records SET status=?,approved_by=?,approved_at=SYSUTCDATETIME(),approval_note=?,updated_at=SYSUTCDATETIME() WHERE disposal_id=? AND status='PENDING'")) {
+						"UPDATE d SET status=?,approved_by=?,approved_at=SYSUTCDATETIME(),approval_note=?,technical_review_note=?,updated_at=SYSUTCDATETIME() FROM dbo.disposal_records d LEFT JOIN dbo.asset_items ai ON ai.asset_item_id=d.asset_item_id WHERE d.disposal_id=? AND d.status='PENDING' AND (d.asset_item_id IS NULL OR ai.status<>'DISPOSED') AND EXISTS(SELECT 1 FROM dbo.users WHERE user_id=? AND role='LAB_MANAGER' AND status='ACTIVE')")) {
 			statement.setString(1, approve ? "APPROVED" : "REJECTED");
 			statement.setLong(2, managerId);
 			statement.setString(3, blankToNull(note));
-			statement.setLong(4, id);
+			statement.setString(4, approve ? note.trim() : null);
+			statement.setLong(5, id);
+			statement.setLong(6, managerId);
 			if (statement.executeUpdate() != 1) {
 				throw new IllegalStateException("Chỉ có thể duyệt hoặc từ chối yêu cầu thanh lý đang chờ xử lý.");
 			}
 		}
 	}
 
-	public void complete(long id, String note) throws SQLException {
+	public void complete(long id, long managerId, String method, String note) throws SQLException {
+		if (!List.of("E_WASTE", "SCRAP", "RETURN_TO_VENDOR", "OTHER").contains(method))
+			throw new IllegalArgumentException("Vui lòng chọn phương thức thanh lý hợp lệ.");
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				DisposalTarget target = approvedDisposalTarget(connection, id, false);
 				if (target.assetItemId() == null) {
-					completeQuantityDisposal(connection, id, target.assetId(), note);
+					completeQuantityDisposal(connection, id, target.assetId(), managerId, method, note);
 				} else {
-					completeSerializedDisposal(connection, id, target.assetId(), target.assetItemId(), note);
+					completeSerializedDisposal(connection, id, target.assetId(), target.assetItemId(), managerId,
+							method, note);
 				}
 				connection.commit();
 			} catch (SQLException | RuntimeException exception) {
@@ -206,8 +215,8 @@ public class DisposalRecordDAO {
 		}
 	}
 
-	private long createQuantityDisposal(Connection connection, long userId, long assetId, String reason)
-			throws SQLException {
+	private long createQuantityDisposal(Connection connection, long userId, long assetId, String reasonCode,
+			String reason) throws SQLException {
 		Asset asset = lockAsset(connection, assetId);
 		validateDisposalTarget(asset.getTrackingMode(), asset.getAssetId(), null, asset.getTotalQuantity());
 		if ("DISPOSED".equals(asset.getStatus())) {
@@ -216,11 +225,11 @@ public class DisposalRecordDAO {
 		if (hasOpenQuantityDisposal(connection, assetId)) {
 			throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
 		}
-		return insertDisposal(connection, userId, assetId, null, asset.getTotalQuantity(), reason);
+		return insertDisposal(connection, userId, assetId, null, asset.getTotalQuantity(), reasonCode, reason);
 	}
 
-	private long createSerializedDisposal(Connection connection, long userId, long assetItemId, String reason)
-			throws SQLException {
+	private long createSerializedDisposal(Connection connection, long userId, long assetItemId, String reasonCode,
+			String reason) throws SQLException {
 		AssetItem item = lockAssetItem(connection, assetItemId);
 		Asset asset = lockAsset(connection, item.getAssetId());
 		validateDisposalTarget(asset.getTrackingMode(), asset.getAssetId(), assetItemId, 1);
@@ -235,14 +244,14 @@ public class DisposalRecordDAO {
 		if (hasOpenItemDisposal(connection, assetItemId)) {
 			throw new IllegalStateException("Thiết bị theo mã riêng đang có yêu cầu thanh lý chờ xử lý.");
 		}
-		return insertDisposal(connection, userId, asset.getAssetId(), assetItemId, 1, reason);
+		return insertDisposal(connection, userId, asset.getAssetId(), assetItemId, 1, reasonCode, reason);
 	}
 
 	private long insertDisposal(Connection connection, long userId, long assetId, Long assetItemId, int quantity,
-			String reason) throws SQLException {
+			String reasonCode, String reason) throws SQLException {
 		String sql = """
-				INSERT dbo.disposal_records (asset_id, asset_item_id, quantity, requested_by, reason, status)
-				OUTPUT INSERTED.disposal_id SELECT ?, ?, ?, ?, ?, 'PENDING'
+				INSERT dbo.disposal_records (asset_id, asset_item_id, quantity, requested_by, reason_code, reason, status)
+				OUTPUT INSERTED.disposal_id SELECT ?, ?, ?, ?, ?, ?, 'PENDING'
 				WHERE EXISTS(SELECT 1 FROM dbo.users WHERE user_id=? AND role='MENTOR' AND status='ACTIVE')
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -254,8 +263,9 @@ public class DisposalRecordDAO {
 			}
 			statement.setInt(3, quantity);
 			statement.setLong(4, userId);
-			statement.setString(5, reason.trim());
-			statement.setLong(6, userId);
+			statement.setString(5, reasonCode);
+			statement.setString(6, reason.trim());
+			statement.setLong(7, userId);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
 					throw new IllegalStateException("Only an active Mentor can request disposal.");
@@ -264,8 +274,8 @@ public class DisposalRecordDAO {
 		}
 	}
 
-	private void completeQuantityDisposal(Connection connection, long disposalId, long assetId, String note)
-			throws SQLException {
+	private void completeQuantityDisposal(Connection connection, long disposalId, long assetId, long managerId,
+			String method, String note) throws SQLException {
 		Asset asset = lockAsset(connection, assetId);
 		DisposalTarget target = approvedDisposalTarget(connection, disposalId, true);
 		if (target.assetItemId() != null || target.assetId() != assetId) {
@@ -275,7 +285,9 @@ public class DisposalRecordDAO {
 			throw new IllegalStateException("Thiết bị đã được thanh lý.");
 		if (hasActiveUsage(connection, assetId))
 			throw new IllegalStateException("Phải hoàn trả tất cả lượt mượn đang hoạt động trước khi thanh lý.");
-		markDisposalCompleted(connection, disposalId, note);
+		if (hasActiveMaintenanceForAsset(connection, assetId))
+			throw new IllegalStateException("Phải hoàn tất các phiếu bảo trì đang hoạt động trước khi thanh lý.");
+		markDisposalCompleted(connection, disposalId, managerId, method, note);
 		try (PreparedStatement statement = connection.prepareStatement(
 				"UPDATE dbo.assets SET status = 'DISPOSED', is_borrowable = 0, updated_at = SYSUTCDATETIME() WHERE asset_id = ?")) {
 			statement.setLong(1, assetId);
@@ -286,7 +298,7 @@ public class DisposalRecordDAO {
 	}
 
 	private void completeSerializedDisposal(Connection connection, long disposalId, long assetId, long assetItemId,
-			String note) throws SQLException {
+			long managerId, String method, String note) throws SQLException {
 		AssetItem item = lockAssetItem(connection, assetItemId);
 		DisposalTarget target = approvedDisposalTarget(connection, disposalId, true);
 		if (target.assetItemId() == null || target.assetItemId() != assetItemId || target.assetId() != assetId
@@ -296,10 +308,11 @@ public class DisposalRecordDAO {
 		if ("DISPOSED".equals(item.getStatus()))
 			throw new IllegalStateException("Thiết bị theo mã riêng đã được thanh lý.");
 		if ("IN_USE".equals(item.getStatus()) || "MAINTENANCE".equals(item.getStatus())
-				|| hasActiveUsageForItem(connection, assetItemId))
+				|| hasActiveUsageForItem(connection, assetItemId)
+				|| hasActiveMaintenanceForItem(connection, assetItemId))
 			throw new IllegalStateException(
-					"Phải hoàn trả lượt mượn đang hoạt động của thiết bị theo mã riêng trước khi thanh lý.");
-		markDisposalCompleted(connection, disposalId, note);
+					"Thiết bị theo mã riêng phải không còn lượt mượn hoặc phiếu bảo trì đang hoạt động trước khi thanh lý.");
+		markDisposalCompleted(connection, disposalId, managerId, method, note);
 		try (PreparedStatement statement = connection.prepareStatement(
 				"UPDATE dbo.asset_items SET status = 'DISPOSED', is_borrowable = 0, updated_at = SYSUTCDATETIME() "
 						+ "WHERE asset_item_id = ? AND status <> 'DISPOSED'")) {
@@ -310,14 +323,18 @@ public class DisposalRecordDAO {
 		}
 	}
 
-	private void markDisposalCompleted(Connection connection, long disposalId, String note) throws SQLException {
+	private void markDisposalCompleted(Connection connection, long disposalId, long managerId, String method,
+			String note) throws SQLException {
 		if (note == null || note.isBlank()) {
 			throw new IllegalArgumentException("Kết quả thanh lý là bắt buộc.");
 		}
 		try (PreparedStatement statement = connection.prepareStatement(
-				"UPDATE dbo.disposal_records SET status = 'COMPLETED', completed_at = SYSUTCDATETIME(), completion_note = ?, updated_at = SYSUTCDATETIME() WHERE disposal_id = ? AND status = 'APPROVED'")) {
-			statement.setString(1, blankToNull(note));
-			statement.setLong(2, disposalId);
+				"UPDATE dbo.disposal_records SET status='COMPLETED',completed_at=SYSUTCDATETIME(),disposal_method=?,completion_note=?,completed_by=?,updated_at=SYSUTCDATETIME() WHERE disposal_id=? AND status='APPROVED' AND technical_review_note IS NOT NULL AND EXISTS(SELECT 1 FROM dbo.users WHERE user_id=? AND role='LAB_MANAGER' AND status='ACTIVE')")) {
+			statement.setString(1, method);
+			statement.setString(2, blankToNull(note));
+			statement.setLong(3, managerId);
+			statement.setLong(4, disposalId);
+			statement.setLong(5, managerId);
 			if (statement.executeUpdate() != 1) {
 				throw new IllegalStateException("Chỉ có thể hoàn tất yêu cầu thanh lý đã được duyệt.");
 			}
@@ -358,7 +375,7 @@ public class DisposalRecordDAO {
 
 	private boolean hasActiveUsage(Connection connection, long assetId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'RETURN_PENDING')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -368,7 +385,7 @@ public class DisposalRecordDAO {
 
 	private boolean hasActiveUsageForItem(Connection connection, long assetItemId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'RETURN_PENDING')")) {
 			statement.setLong(1, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
@@ -429,13 +446,17 @@ public class DisposalRecordDAO {
 				record.setQuantity(result.getInt("quantity"));
 				record.setRequestedBy(result.getLong("requested_by"));
 				record.setReason(result.getString("reason"));
+				record.setReasonCode(result.getString("reason_code"));
 				record.setRequestedAt(ViewFormat.fromUtc(result.getTimestamp("requested_at")));
 				record.setStatus(result.getString("status"));
 				record.setApprovedBy(nullableLong(result, "approved_by"));
 				record.setApprovedAt(ViewFormat.fromUtc(result.getTimestamp("approved_at")));
 				record.setApprovalNote(result.getString("approval_note"));
+				record.setTechnicalReviewNote(result.getString("technical_review_note"));
 				record.setCompletedAt(ViewFormat.fromUtc(result.getTimestamp("completed_at")));
+				record.setDisposalMethod(result.getString("disposal_method"));
 				record.setCompletionNote(result.getString("completion_note"));
+				record.setCompletedBy(nullableLong(result, "completed_by"));
 				record.setAssetCode(result.getString("asset_code"));
 				record.setAssetName(result.getString("asset_name"));
 				record.setAssetItemTag(result.getString("asset_item_tag"));
@@ -484,6 +505,31 @@ public class DisposalRecordDAO {
 		}
 		// ponytail: maintenance has no structured failed result; use one here when
 		// FE-08 exposes it.
+	}
+
+	private boolean hasActiveMaintenanceForItem(Connection connection, long assetItemId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.maintenance_records WITH (UPDLOCK, HOLDLOCK) WHERE asset_item_id = ? AND status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')")) {
+			statement.setLong(1, assetItemId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
+	private boolean hasActiveMaintenanceForAsset(Connection connection, long assetId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement(
+				"SELECT 1 FROM dbo.maintenance_records WITH (UPDLOCK, HOLDLOCK) WHERE asset_id = ? AND status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')")) {
+			statement.setLong(1, assetId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
+	static void validateReasonCode(String reasonCode) {
+		if (!List.of("NOT_REPAIRABLE", "UNSAFE", "OBSOLETE", "REPAIR_NOT_ECONOMICAL", "OTHER").contains(reasonCode))
+			throw new IllegalArgumentException("Vui lòng chọn mã lý do thanh lý hợp lệ.");
 	}
 
 	private record DisposalTarget(long assetId, Long assetItemId) {

@@ -10,13 +10,17 @@ public class DisposalRecord {
 	private Integer quantity;
 	private Long requestedBy;
 	private String reason;
+	private String reasonCode;
 	private LocalDateTime requestedAt;
 	private String status;
 	private Long approvedBy;
 	private LocalDateTime approvedAt;
 	private String approvalNote;
+	private String technicalReviewNote;
 	private LocalDateTime completedAt;
+	private String disposalMethod;
 	private String completionNote;
+	private Long completedBy;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 	private String assetCode;
@@ -106,6 +110,12 @@ public class DisposalRecord {
 	public void setReason(String reason) {
 		this.reason = reason;
 	}
+	public String getReasonCode() {
+		return reasonCode;
+	}
+	public void setReasonCode(String value) {
+		reasonCode = value;
+	}
 
 	public LocalDateTime getRequestedAt() {
 		return requestedAt;
@@ -146,6 +156,12 @@ public class DisposalRecord {
 	public void setApprovalNote(String approvalNote) {
 		this.approvalNote = approvalNote;
 	}
+	public String getTechnicalReviewNote() {
+		return technicalReviewNote;
+	}
+	public void setTechnicalReviewNote(String value) {
+		technicalReviewNote = value;
+	}
 
 	public LocalDateTime getCompletedAt() {
 		return completedAt;
@@ -154,6 +170,12 @@ public class DisposalRecord {
 	public void setCompletedAt(LocalDateTime completedAt) {
 		this.completedAt = completedAt;
 	}
+	public String getDisposalMethod() {
+		return disposalMethod;
+	}
+	public void setDisposalMethod(String value) {
+		disposalMethod = value;
+	}
 
 	public String getCompletionNote() {
 		return completionNote;
@@ -161,6 +183,12 @@ public class DisposalRecord {
 
 	public void setCompletionNote(String completionNote) {
 		this.completionNote = completionNote;
+	}
+	public Long getCompletedBy() {
+		return completedBy;
+	}
+	public void setCompletedBy(Long value) {
+		completedBy = value;
 	}
 
 	public LocalDateTime getCreatedAt() {

@@ -14,4 +14,9 @@ public class InspectionController extends InspectionControllerSupport {
 	protected String roleName() {
 		return "Người hướng dẫn";
 	}
+
+	@Override
+	protected boolean canMutate() {
+		return false;
+	}
 }

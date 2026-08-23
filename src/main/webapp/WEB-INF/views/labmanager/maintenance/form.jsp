@@ -1,208 +1,34 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ taglib prefix="c" uri="jakarta.tags.core"%>
-<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
+<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>
-        <c:choose>
-            <c:when test="${formMode == 'edit'}">Cập nhật tiến độ bảo trì #MNT-${record.maintenanceId}</c:when>
-            <c:otherwise>Tạo phiếu bảo trì</c:otherwise>
-        </c:choose> | LAB Asset
-    </title>
+    <title>Xử lý bảo trì #MNT-${record.maintenanceId} | LAB Asset</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
 <body class="lab-manager-page">
 <c:set var="activeMenu" value="maintenance" scope="request"/>
 <div class="app-shell">
-    <%@ include file="../includes/sidebar.jspf"%>
-
+    <%@ include file="../includes/sidebar.jspf" %>
     <main class="main-content">
-        <header class="topbar">
-            <div class="heading-wrap">
-                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button>
-                <div>
-                    <h1>
-                        <c:choose>
-                            <c:when test="${formMode == 'edit'}">Cập nhật tiến độ sửa chữa #MNT-${record.maintenanceId}</c:when>
-                            <c:otherwise>Tạo phiếu bảo trì thiết bị</c:otherwise>
-                        </c:choose>
-                    </h1>
-                    <p>
-                        <c:choose>
-                            <c:when test="${formMode == 'edit'}">Cập nhật tiến độ sửa chữa, điều chỉnh kinh phí và ghi nhận kết quả nghiệm thu</c:when>
-                            <c:otherwise>Lập phiếu bảo trì, dự toán kinh phí và đưa thiết bị đi sửa chữa</c:otherwise>
-                        </c:choose>
-                    </p>
-                </div>
-            </div>
-            <div class="topbar-actions">
-                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">‹ Quay lại danh sách</a>
-            </div>
-        </header>
-
+        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button><div><h1>Xử lý phiếu #MNT-<c:out value="${record.maintenanceId}"/></h1><p>Chỉ thay đổi đúng thiết bị theo mã riêng của phiếu.</p></div></div><div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance/${record.maintenanceId}">Quay lại</a></div></header>
         <section class="content-area">
-            <c:if test="${not empty message}">
-                <div class="error-message"><c:out value="${message}"/></div>
-            </c:if>
-
+            <c:if test="${not empty message}"><div class="error-message"><c:out value="${message}"/></div></c:if>
             <article class="panel">
+                <div class="form-grid" style="padding:18px">
+                    <div class="form-group"><label>Thiết bị chính xác</label><input class="form-control" readonly value="<c:out value='${record.assetItemTag}'/> (${record.assetItemId})"></div>
+                    <div class="form-group"><label>Trạng thái Item</label><input class="form-control" readonly value="<c:out value='${app:label(record.assetItemStatus)}'/> · <c:out value='${app:label(record.assetItemCondition)}'/>"></div>
+                    <div class="form-group full-width"><label>Mô tả yêu cầu</label><textarea class="form-control" readonly rows="4"><c:out value="${record.description}"/></textarea></div>
+                </div>
+
                 <c:choose>
-                    <%-- CHẾ ĐỘ 1: CẬP NHẬT TIẾN ĐỘ & KẾT QUẢ SỬA CHỮA --%>
-                    <c:when test="${formMode == 'edit'}">
-                        <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid">
-                            <input type="hidden" name="action" value="updateProgress">
-                            <input type="hidden" name="id" value="${record.maintenanceId}">
-
-                            <div class="form-group">
-                                <label>Thiết bị cần bảo trì</label>
-                                <input class="form-control" type="text"
-                                       value="<c:out value='${record.assetName}'/> (<c:out value='${record.assetCode}'/>)"
-                                       readonly style="background:#f8fafc; color:#334155; font-weight:550; cursor:not-allowed; border-color:#d1d5db;">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Sự cố liên quan</label>
-                                <input class="form-control" type="text"
-                                       value="<c:choose><c:when test='${not empty record.incidentId}'>#INC-${record.incidentId}: <c:out value='${record.incidentDescription}'/></c:when><c:otherwise>Không có (Bảo dưỡng định kỳ / Trực tiếp)</c:otherwise></c:choose>"
-                                       readonly style="background:#f8fafc; color:#334155; font-weight:550; cursor:not-allowed; border-color:#d1d5db;">
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>Trạng thái tiến độ *</label>
-                                <select class="form-control" name="status" id="progressStatusSelect" required>
-                                    <option value="IN_PROGRESS" ${record.status == 'IN_PROGRESS' ? 'selected' : ''}>⏳ Đang sửa chữa (Đang tiến hành sửa chữa, thay linh kiện)</option>
-                                    <option value="COMPLETED_SUCCESS" ${record.status == 'COMPLETED' && record.assetStatus != 'UNAVAILABLE' ? 'selected' : ''}>✅ Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)</option>
-                                    <option value="COMPLETED_FAILED" ${record.status == 'COMPLETED' && record.assetStatus == 'UNAVAILABLE' ? 'selected' : ''}>❌ Sửa thất bại – Không thể phục hồi (Thiết bị chuyển UNAVAILABLE chờ thanh lý)</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Ghi chú phê duyệt / Kinh phí sửa chữa</label>
-                                <input class="form-control" type="text" name="approvalNote"
-                                       value="<c:out value='${record.approvalNote}'/>"
-                                       placeholder="Ví dụ: Chi phí thực tế 650.000 VNĐ">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Đơn vị / Kỹ thuật viên sửa chữa</label>
-                                <input class="form-control" type="text" name="note"
-                                       value="<c:out value='${record.note}'/>"
-                                       placeholder="Ví dụ: Kỹ thuật viên Tektronix VN / FPT Services">
-                            </div>
-
-                            <div class="form-group full-width" id="repairResultField" style="display: none; grid-column: span 2;">
-                                <label style="font-weight: 650; margin-bottom: 4px;">Kết quả sửa chữa / Linh kiện thay thế</label>
-                                <textarea class="form-control" name="repairResult" rows="4" style="width: 100%; min-height: 90px; box-sizing: border-box;"
-                                          placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
-                            </div>
-
-                            <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 10px; grid-column: span 2;">
-                                <button class="primary-button" type="submit" style="width: auto; padding: 8px 24px;">Lưu tiến độ bảo trì</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance" style="width: auto; padding: 8px 20px;">Hủy</a>
-                            </div>
-                        </form>
-
-                        <script>
-                            document.addEventListener('DOMContentLoaded', function() {
-                                const progressStatusSelect = document.getElementById('progressStatusSelect');
-                                const repairResultField = document.getElementById('repairResultField');
-                                if (progressStatusSelect && repairResultField) {
-                                    function toggleRepairResult() {
-                                        const val = progressStatusSelect.value;
-                                        if (val === 'COMPLETED_SUCCESS' || val === 'COMPLETED_FAILED') {
-                                            repairResultField.style.display = 'flex';
-                                        } else {
-                                            repairResultField.style.display = 'none';
-                                        }
-                                    }
-                                    progressStatusSelect.addEventListener('change', toggleRepairResult);
-                                    toggleRepairResult();
-                                }
-                            });
-                        </script>
-                    </c:when>
-
-                    <%-- CHẾ ĐỘ 2: TẠO MỚI PHIẾU BẢO TRÌ (TRỰC TIẾP APPROVED) --%>
-                    <c:otherwise>
-                        <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" class="form-grid">
-                            <input type="hidden" name="action" value="create">
-
-                            <div class="form-group full-width">
-                                <label>Thiết bị cần bảo trì *</label>
-                                <select class="form-control" name="assetId" id="assetSelect" required>
-                                    <option value="">-- Chọn thiết bị --</option>
-                                    <c:if test="${not empty incidents}"><optgroup label="Sự cố đang xử lý">
-                                        <c:forEach var="inc" items="${incidents}">
-                                            <option value="${inc.assetId}" data-incident-id="${inc.incidentId}">
-                                                #INC-<c:out value="${inc.incidentId}"/> · <c:out value="${inc.assetName}"/> (<c:out value="${inc.assetCode}"/>) — <c:out value="${inc.description}"/>
-                                            </option>
-                                        </c:forEach>
-                                    </optgroup></c:if>
-                                    <c:if test="${not empty routineAssets}"><optgroup label="Bảo trì định kỳ / tài sản còn lại">
-                                        <c:forEach var="a" items="${routineAssets}">
-                                            <option value="${a.assetId}" data-incident-id="">
-                                                <c:out value="${a.assetName}"/> (<c:out value="${a.assetCode}"/>)
-                                                <c:if test="${not empty a.storageLocation}"> – <c:out value="${a.storageLocation}"/></c:if>
-                                            </option>
-                                        </c:forEach>
-                                    </optgroup></c:if>
-                                </select>
-                                <small id="maintenanceTargetNotice" style="display:block;margin-top:4px;font-size:12px;color:#5a6662;">Chọn sự cố để sửa chữa, hoặc chọn tài sản còn lại cho bảo trì định kỳ.</small>
-                            </div>
-                            <input type="hidden" name="incidentId" id="incidentId">
-
-                            <div class="form-group">
-                                <label>Dự toán kinh phí sửa chữa</label>
-                                <input class="form-control" type="text" name="approvalNote"
-                                       placeholder="Ví dụ: Dự toán 650.000 VNĐ">
-                            </div>
-
-                            <div class="form-group">
-                                <label>Đơn vị / Kỹ thuật viên sửa chữa</label>
-                                <input class="form-control" type="text" name="note"
-                                       placeholder="Ví dụ: FPT Tech Services / Kỹ thuật viên Tektronix">
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>Mô tả chi tiết tình trạng hỏng hóc &amp; Yêu cầu sửa chữa *</label>
-                                <textarea class="form-control" name="description" rows="4" required
-                                          placeholder="Mô tả cụ thể hiện tượng lỗi, bộ phận hỏng, nguyên nhân nghi ngờ, yêu cầu thay thế..."></textarea>
-                            </div>
-
-                            <div style="display: flex; flex-direction: row; gap: 10px; margin-top: 10px; grid-column: span 2;">
-                                <button class="primary-button" type="submit" style="width: auto; padding: 8px 24px;">Tạo phiếu bảo trì</button>
-                                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance" style="width: auto; padding: 8px 20px;">Hủy</a>
-                            </div>
-                        </form>
-
-                        <script>
-                            document.addEventListener('DOMContentLoaded', function() {
-                                const assetSelect = document.getElementById('assetSelect');
-                                const incidentId = document.getElementById('incidentId');
-                                const targetNotice = document.getElementById('maintenanceTargetNotice');
-
-                                if (assetSelect && incidentId) {
-                                    function syncTarget() {
-                                        const option = assetSelect.options[assetSelect.selectedIndex];
-                                        const linkedIncident = option ? option.getAttribute('data-incident-id') : '';
-                                        incidentId.value = linkedIncident || '';
-                                        if (targetNotice) {
-                                            targetNotice.textContent = linkedIncident
-                                                ? 'Sự cố được liên kết tự động với phiếu bảo trì này.'
-                                                : 'Bảo trì định kỳ: không liên kết sự cố.';
-                                            targetNotice.style.color = linkedIncident ? '#c62828' : '#137a4d';
-                                        }
-                                    }
-
-                                    assetSelect.addEventListener('change', syncTarget);
-                                    syncTarget();
-                                }
-                            });
-                        </script>
-                    </c:otherwise>
+                    <c:when test="${record.status == 'PENDING'}"><form class="form-grid" method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="padding:18px;border-top:1px solid #edf0ec"><input type="hidden" name="csrfToken" value="${csrfToken}"><input type="hidden" name="id" value="${record.maintenanceId}"><div class="form-group full-width"><label for="approvalNote">Ghi chú duyệt hoặc từ chối</label><textarea class="form-control" id="approvalNote" name="approvalNote" maxlength="2000" rows="4"><c:out value="${record.approvalNote}"/></textarea></div><div class="form-actions"><button class="danger-button" type="submit" name="action" value="reject">Từ chối</button><button class="primary-button" type="submit" name="action" value="approve">Duyệt yêu cầu</button></div></form></c:when>
+                    <c:when test="${record.status == 'APPROVED'}"><form class="form-grid" method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="padding:18px;border-top:1px solid #edf0ec"><input type="hidden" name="csrfToken" value="${csrfToken}"><input type="hidden" name="id" value="${record.maintenanceId}"><div class="form-group full-width"><label for="note">Kỹ thuật viên hoặc ghi chú bắt đầu</label><textarea class="form-control" id="note" name="note" maxlength="2000" rows="4"><c:out value="${record.note}"/></textarea></div><div class="form-actions"><button class="primary-button" type="submit" name="action" value="start">Bắt đầu sửa chữa</button></div></form></c:when>
+                    <c:when test="${record.status == 'IN_PROGRESS'}"><form class="form-grid" method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="padding:18px;border-top:1px solid #edf0ec"><input type="hidden" name="csrfToken" value="${csrfToken}"><input type="hidden" name="id" value="${record.maintenanceId}"><div class="form-group"><label for="repairOutcome">Kết quả sửa chữa *</label><select class="form-control" id="repairOutcome" name="repairOutcome" required><option value="SUCCESS">Thành công, Item về AVAILABLE</option><option value="FAILED">Thất bại, Item về UNAVAILABLE</option></select></div><div class="form-group"><label for="note">Kỹ thuật viên hoặc ghi chú</label><input class="form-control" id="note" name="note" maxlength="2000" value="<c:out value='${record.note}'/>"></div><div class="form-group full-width"><label for="repairResult">Chi tiết kết quả sửa chữa *</label><textarea class="form-control" id="repairResult" name="repairResult" maxlength="2000" rows="5" required><c:out value="${record.repairResult}"/></textarea><small>Sửa thất bại không tự đóng sự cố liên quan.</small></div><div class="form-actions"><button class="primary-button" type="submit" name="action" value="complete">Hoàn tất sửa chữa</button></div></form></c:when>
+                    <c:otherwise><div class="empty-box"><h3>Phiếu không còn cần xử lý</h3><p><c:out value="${app:label(record.status)}"/></p></div></c:otherwise>
                 </c:choose>
             </article>
         </section>

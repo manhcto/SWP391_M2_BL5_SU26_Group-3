@@ -67,7 +67,7 @@ public class AdminInternListController extends HttpServlet {
 		} catch (SQLException exception) {
 			getServletContext().log("Admin intern list operation failed", exception);
 			if ("/admin/interns/decision".equals(path)) {
-				request.setAttribute("decisionError", exception.getMessage());
+				request.setAttribute("decisionError", "Không thể cập nhật quyết định danh sách thực tập sinh.");
 				try {
 					showDetail(request, response);
 				} catch (SQLException loadingException) {
@@ -79,7 +79,7 @@ public class AdminInternListController extends HttpServlet {
 				InternList internList = readForm(request);
 				internList.setRequestId(optionalId(request.getParameter("id")));
 				try {
-					forwardEditForm(request, response, internList, List.of(databaseMessage(exception)));
+					forwardEditForm(request, response, internList, List.of("Không thể lưu danh sách thực tập sinh."));
 				} catch (SQLException loadingException) {
 					handleDatabaseError(response, loadingException);
 				}
@@ -299,13 +299,6 @@ public class AdminInternListController extends HttpServlet {
 		} catch (NumberFormatException exception) {
 			return null;
 		}
-	}
-
-	private String databaseMessage(SQLException exception) {
-		String message = exception.getMessage();
-		return message == null || message.isBlank()
-				? "Không thể lưu danh sách thực tập sinh."
-				: "Không thể lưu danh sách thực tập sinh: " + message;
 	}
 
 	private void handleDatabaseError(HttpServletResponse response, SQLException exception) throws IOException {

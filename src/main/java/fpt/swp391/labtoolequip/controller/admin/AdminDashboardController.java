@@ -2,6 +2,7 @@ package fpt.swp391.labtoolequip.controller.admin;
 
 import fpt.swp391.labtoolequip.dao.InternListDAO;
 import fpt.swp391.labtoolequip.dao.UserDAO;
+import fpt.swp391.labtoolequip.dao.PasswordResetRequestDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -13,10 +14,17 @@ import java.io.IOException;
 public class AdminDashboardController extends HttpServlet {
 	private final InternListDAO internListDAO = new InternListDAO();
 	private final UserDAO userDAO = new UserDAO();
+	private final PasswordResetRequestDAO passwordResetDAO = new PasswordResetRequestDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		try {
+			request.setAttribute("pendingPasswordResetCount", passwordResetDAO.countPending());
+		} catch (Exception exception) {
+			getServletContext().log("Could not load pending password reset count", exception);
+			request.setAttribute("pendingPasswordResetCount", 0);
+		}
 		try {
 			var users = userDAO.findAll("", "", "");
 			request.setAttribute("accountCount", users.size());

@@ -15,7 +15,8 @@ public class PasswordResetRequestDAO {
 	public void create(String email, String note) throws SQLException {
 		String sql = """
 				INSERT dbo.password_reset_requests(target_user_id, request_note)
-				SELECT u.user_id, ? FROM dbo.users u WHERE LOWER(u.email)=LOWER(?)
+				SELECT u.user_id, ? FROM dbo.users u
+				WHERE LOWER(u.email)=LOWER(?)
 				AND u.role IN ('MENTOR','LAB_MANAGER') AND u.status='ACTIVE'
 				AND NOT EXISTS (
 					SELECT 1 FROM dbo.password_reset_requests r WITH (UPDLOCK,HOLDLOCK)
@@ -24,9 +25,23 @@ public class PasswordResetRequestDAO {
 				""";
 		try (Connection c = db.getConnection(); PreparedStatement s = c.prepareStatement(sql)) {
 			s.setString(1, blank(note));
-			s.setString(2, email == null ? "" : email.trim());
-			if (s.executeUpdate() != 1)
-				throw new IllegalArgumentException("Eligible account not found or request already open.");
+			s.setString(2, email);
+			try {
+				s.executeUpdate();
+			} catch (SQLException exception) {
+				if (exception.getErrorCode() != 2601 && exception.getErrorCode() != 2627)
+					throw exception;
+			}
+		}
+	}
+
+	public int countPending() throws SQLException {
+		try (Connection c = db.getConnection();
+				PreparedStatement s = c
+						.prepareStatement("SELECT COUNT(*) FROM dbo.password_reset_requests WHERE status='PENDING'");
+				ResultSet r = s.executeQuery()) {
+			r.next();
+			return r.getInt(1);
 		}
 	}
 

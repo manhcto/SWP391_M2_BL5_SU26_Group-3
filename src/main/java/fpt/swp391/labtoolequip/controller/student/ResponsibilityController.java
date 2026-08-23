@@ -1,6 +1,8 @@
 package fpt.swp391.labtoolequip.controller.student;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.auth.Authorization;
+import fpt.swp391.labtoolequip.auth.Permission;
 import fpt.swp391.labtoolequip.dao.ResponsibilityDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,6 +19,10 @@ public class ResponsibilityController extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		if (!Authorization.has(request, Permission.RESPONSIBILITY_VIEW)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		try {
 			String path = request.getPathInfo();
 			if (path == null || "/".equals(path)) {

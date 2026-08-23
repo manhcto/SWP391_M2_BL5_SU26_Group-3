@@ -28,6 +28,7 @@
                 <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/admin/users?role=MENTOR"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${mentorCount}"/></strong><span>Người hướng dẫn</span><small>Quản lý tài khoản người hướng dẫn</small></div></a>
                 <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/admin/users?role=LAB_MANAGER"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${labManagerCount}"/></strong><span>Quản lý phòng LAB</span><small>Quản lý tài khoản quản lý phòng LAB</small></div></a>
                 <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingInternListCount}"/></strong><span>Danh sách chờ duyệt</span><small>Phê duyệt hoặc từ chối danh sách do người hướng dẫn gửi</small></div></a>
+                <a class="stat-card stat-red" href="${pageContext.request.contextPath}/password-reset"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${pendingPasswordResetCount}"/></strong><span>Yêu cầu đặt lại mật khẩu</span><small>Người dùng đang chờ cấp mật khẩu tạm thời</small></div></a>
             </div>
             <section class="dashboard-grid">
                 <article class="panel">
@@ -40,6 +41,7 @@
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users"><span class="mentor-action-icon"><svg><use href="#i-users"/></svg></span><span><strong>Quản lý người dùng</strong><small>Xem tài khoản và trạng thái truy cập</small></span></a>
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users/add"><span class="mentor-action-icon"><svg><use href="#i-plus"/></svg></span><span><strong>Thêm người dùng</strong><small>Tạo tài khoản cho vai trò hệ thống</small></span></a>
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><span class="mentor-action-icon gold"><svg><use href="#i-clipboard"/></svg></span><span><strong>Duyệt danh sách thực tập sinh</strong><small>Xem các danh sách đang chờ quyết định</small></span></a>
+                        <a class="mentor-action" href="${pageContext.request.contextPath}/password-reset"><span class="mentor-action-icon"><svg><use href="#i-users"/></svg></span><span><strong>Đặt lại mật khẩu</strong><small><c:out value="${pendingPasswordResetCount}"/> yêu cầu đang chờ xử lý</small></span></a>
                     </div>
                 </article>
             </section>

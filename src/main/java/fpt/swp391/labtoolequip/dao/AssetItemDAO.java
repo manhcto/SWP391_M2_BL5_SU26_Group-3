@@ -109,7 +109,7 @@ public class AssetItemDAO {
 				WHERE i.status <> 'DISPOSED' AND a.status <> 'DISPOSED'
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.asset_usages usage
-					WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'MAINTENANCE')
+					WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'RETURN_PENDING')
 				  )
 				ORDER BY a.asset_name, i.item_code
 				""";
@@ -192,7 +192,7 @@ public class AssetItemDAO {
 				UPDATE dbo.asset_items
 				SET serial_number = ?, image_path = ?, condition = ?, status = ?,
 				    purchase_date = ?, warranty_until = ?, note = ?, updated_at = SYSUTCDATETIME()
-				WHERE asset_item_id = ?
+				WHERE asset_item_id = ? AND status <> 'DISPOSED'
 				""";
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
@@ -208,7 +208,7 @@ public class AssetItemDAO {
 					setNullableString(statement, 7, item.getNote());
 					statement.setLong(8, item.getAssetItemId());
 					if (statement.executeUpdate() == 0)
-						throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
+						throw new IllegalArgumentException("Sản phẩm không tồn tại hoặc đã thanh lý.");
 				}
 				refreshAssetCondition(connection, assetIdOf(connection, item.getAssetItemId()));
 				connection.commit();
@@ -453,11 +453,14 @@ public class AssetItemDAO {
 		if (!List.of("AVAILABLE", "MAINTENANCE", "UNAVAILABLE", "DISPOSED").contains(item.getStatus()))
 			throw new IllegalArgumentException("Trạng thái sản phẩm không hợp lệ.");
 		if (("DAMAGED".equals(item.getCondition()) || "BROKEN".equals(item.getCondition()))
-				&& !List.of("MAINTENANCE", "DISPOSED").contains(item.getStatus()))
-			throw new IllegalArgumentException(
-					"Sản phẩm hư hỏng nặng phải chuyển sang Đang bảo trì và được Mentor báo cáo Lab Manager.");
+				&& !List.of("MAINTENANCE", "UNAVAILABLE", "DISPOSED").contains(item.getStatus()))
+			throw new IllegalArgumentException("Sản phẩm hư hỏng nặng phải được đưa ra khỏi trạng thái sẵn sàng.");
 		if (item.getSerialNumber() != null && item.getSerialNumber().length() > 100)
 			throw new IllegalArgumentException("Serial không được dài quá 100 ký tự.");
+		String imagePath = item.getImagePath();
+		if (imagePath != null && !imagePath.isBlank()
+				&& (!imagePath.matches("/(uploads|assets)/[A-Za-z0-9_./-]+") || imagePath.contains("..")))
+			throw new IllegalArgumentException("Đường dẫn ảnh phải là đường dẫn nội bộ hợp lệ.");
 	}
 
 	private void setNullableString(PreparedStatement statement, int index, String value) throws SQLException {

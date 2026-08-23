@@ -65,6 +65,8 @@ public final class ViewFormat {
 			case "CONFIRMED" -> "Đã xác nhận";
 			case "RESOLVED" -> "Đã giải quyết";
 			case "IN_PROGRESS", "INVESTIGATING" -> "Đang xử lý";
+			case "REPORTED" -> "Chờ Mentor duyệt";
+			case "FORWARDED" -> "Đã chuyển Lab Manager";
 			case "COMPLETED" -> "Hoàn tất";
 			case "CANCELLED" -> "Đã hủy";
 			case "AVAILABLE" -> "Sẵn sàng";
@@ -94,6 +96,25 @@ public final class ViewFormat {
 			case "HIGH" -> "Cao";
 			case "CRITICAL" -> "Nghiêm trọng";
 			case "OPEN" -> "Đang mở";
+			case "MINOR" -> "Nhẹ";
+			case "MODERATE" -> "Trung bình";
+			case "MAJOR" -> "Nghiêm trọng";
+			case "NATURAL_WEAR" -> "Hao mòn tự nhiên";
+			case "EQUIPMENT_FAILURE" -> "Lỗi thiết bị";
+			case "ACCIDENTAL_DAMAGE" -> "Hư hỏng ngoài ý muốn";
+			case "MISUSE" -> "Sử dụng sai cách";
+			case "PROCEDURE_VIOLATION" -> "Vi phạm quy trình";
+			case "REPAIRABLE" -> "Có thể sửa chữa";
+			case "NOT_REPAIRABLE" -> "Không thể sửa chữa";
+			case "NOT_APPLICABLE" -> "Không áp dụng";
+			case "CONTINUE_USE" -> "Tiếp tục sử dụng";
+			case "MONITOR" -> "Theo dõi";
+			case "REMOVE_FROM_USE" -> "Ngừng sử dụng";
+			case "DISPOSAL_REVIEW" -> "Xem xét thanh lý";
+			case "UNDETERMINED" -> "Chưa xác định";
+			case "NONE" -> "Không có trách nhiệm";
+			case "PARTIAL" -> "Trách nhiệm một phần";
+			case "FULL" -> "Hoàn toàn chịu trách nhiệm";
 			default -> value.replace('_', ' ');
 		};
 	}

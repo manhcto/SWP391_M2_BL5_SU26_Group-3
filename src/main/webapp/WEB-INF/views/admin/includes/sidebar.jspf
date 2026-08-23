@@ -23,8 +23,7 @@
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
         <a class="nav-link${activeMenu == 'users' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/users"><svg><use href="#i-users"/></svg><span>Quản lý người dùng</span></a>
 <a class="nav-link${activeMenu == 'internLists' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg><span>Danh sách thực tập sinh</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/admin/password-resets"><svg><use href="#i-users"/></svg><span>Yêu cầu đặt lại mật khẩu</span></a>
-        <a class="nav-link" href="${pageContext.request.contextPath}/change-password"><svg><use href="#i-users"/></svg><span>Đổi mật khẩu</span></a>
+        <a class="nav-link${activeMenu == 'passwordResets' ? ' active' : ''}" href="${pageContext.request.contextPath}/password-reset"><svg><use href="#i-users"/></svg><span>Đặt lại mật khẩu</span><c:if test="${pendingPasswordResetCount > 0}"><span class="nav-count"><c:out value="${pendingPasswordResetCount}"/></span></c:if></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${app:label(currentUser.role)}"/></span></div></div>

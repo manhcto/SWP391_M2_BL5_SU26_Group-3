@@ -70,7 +70,7 @@ public class AssetUsageController extends HttpServlet {
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
 					return;
 				}
-				dao.returnUsage(AuthSession.userId(request), Long.parseLong(request.getParameter("usageId")),
+				dao.requestReturn(Long.parseLong(request.getParameter("usageId")), AuthSession.userId(request),
 						request.getParameter("conditionAfter"), request.getParameter("note"));
 			} else {
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST);

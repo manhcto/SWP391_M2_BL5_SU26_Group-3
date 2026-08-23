@@ -22,19 +22,25 @@ public class AuthorizationFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 		String path = request.getRequestURI().substring(request.getContextPath().length());
+		if ("/password-reset".equals(path))
+			response.setHeader("Cache-Control", "no-store");
+		String role = AuthSession.role(request);
+		if (role != null && AuthSession.mustChangePassword(request) && !allowsPasswordChange(path)) {
+			response.sendRedirect(request.getContextPath() + "/change-password");
+			return;
+		}
+		if (isUnsafe(request.getMethod()) && !Csrf.valid(request)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		String requiredRole = requiredRole(path);
 		if (requiredRole == null) {
 			chain.doFilter(request, response);
 			return;
 		}
 
-		String role = AuthSession.role(request);
 		if (role == null) {
 			response.sendRedirect(request.getContextPath() + "/login");
-			return;
-		}
-		if (AuthSession.mustChangePassword(request)) {
-			response.sendRedirect(request.getContextPath() + "/change-password");
 			return;
 		}
 		if (!requiredRole.equals(role)) {
@@ -43,6 +49,14 @@ public class AuthorizationFilter implements Filter {
 		}
 		request.setAttribute("permissions", Authorization.view(role));
 		chain.doFilter(request, response);
+	}
+
+	static boolean isUnsafe(String method) {
+		return !"GET".equals(method) && !"HEAD".equals(method) && !"OPTIONS".equals(method);
+	}
+
+	static boolean allowsPasswordChange(String path) {
+		return "/change-password".equals(path) || "/logout".equals(path);
 	}
 
 	private String requiredRole(String path) {
