@@ -21,7 +21,7 @@
                 </button>
                 <div>
                     <h1>Quản lý sự cố</h1>
-                    <p>Theo dõi và phân loại các sự cố phát sinh trong phòng LAB</p>
+                    <p>Điều tra các sự cố đã được Mentor chuyển tiếp</p>
                 </div>
             </div>
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
@@ -36,13 +36,16 @@
                            placeholder="Tìm theo mã, thiết bị hoặc người báo cáo" style="width:280px">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="OPEN" ${selectedStatus == 'OPEN' ? 'selected' : ''}>Đang mở</option>
+                        <option value="FORWARDED" ${selectedStatus == 'FORWARDED' ? 'selected' : ''}>Đã chuyển tiếp</option>
                         <option value="INVESTIGATING" ${selectedStatus == 'INVESTIGATING' ? 'selected' : ''}>Đang xử lý</option>
                         <option value="RESOLVED" ${selectedStatus == 'RESOLVED' ? 'selected' : ''}>Đã giải quyết</option>
                         <option value="CLOSED" ${selectedStatus == 'CLOSED' ? 'selected' : ''}>Đã đóng</option>
+                        <option value="OPEN" ${selectedStatus == 'OPEN' ? 'selected' : ''}>Mở (lịch sử)</option>
                     </select>
                     <select class="form-control" name="severity">
                         <option value="">Tất cả mức độ</option>
+                        <option value="LOW" ${selectedSeverity == 'LOW' ? 'selected' : ''}>Thấp</option>
+                        <option value="MEDIUM" ${selectedSeverity == 'MEDIUM' ? 'selected' : ''}>Trung bình</option>
                         <option value="HIGH" ${selectedSeverity == 'HIGH' ? 'selected' : ''}>Cao</option>
                         <option value="CRITICAL" ${selectedSeverity == 'CRITICAL' ? 'selected' : ''}>Nghiêm trọng</option>
                     </select>
@@ -69,9 +72,9 @@
                                         <td><span class="status ${incident.severity == 'CRITICAL' || incident.severity == 'HIGH' ? 'open' : 'review'}"><c:out value="${app:label(incident.severity)}"/></span></td>
                                         <td><c:out value="${incident.reporterName}"/><c:if test="${not empty incident.internName}"><br><small>Thực tập sinh: <c:out value="${incident.internName}"/></small></c:if></td>
                                         <td><c:out value="${app:dateTime(incident.reportedAt)}"/></td>
-                                        <td><span class="status ${incident.status == 'OPEN' ? 'open' : incident.status == 'RESOLVED' || incident.status == 'CLOSED' ? 'returned' : 'review'}"><c:out value="${app:label(incident.status)}"/></span></td>
+                                        <td><span class="status ${incident.status == 'FORWARDED' || incident.status == 'OPEN' ? 'open' : incident.status == 'RESOLVED' || incident.status == 'CLOSED' ? 'returned' : 'review'}"><c:out value="${app:label(incident.status)}"/></span></td>
                                         <td class="wrap-cell"><c:out value="${incident.description}"/></td>
-                                        <td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/lab-manager/incidents/${incident.incidentId}">${incident.status == 'OPEN' ? 'Xử lý' : 'Xem'}</a></td>
+                                        <td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/lab-manager/incidents/${incident.incidentId}">${incident.status == 'FORWARDED' || incident.status == 'INVESTIGATING' || incident.status == 'RESOLVED' ? 'Xử lý' : 'Xem'}</a></td>
                                     </tr>
                                 </c:forEach>
                                 </tbody>

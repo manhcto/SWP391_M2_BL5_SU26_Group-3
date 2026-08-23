@@ -70,6 +70,10 @@
                     <div><strong><c:out value="${responsibilityCount}"/></strong><span>Trách nhiệm</span><small>Kết luận
                         và quyết định của người hướng dẫn</small></div>
                 </a>
+                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/intern/incidents">
+                    <div class="stat-icon"><svg><use href="#i-alert"/></svg></div>
+                    <div><strong><c:out value="${reportedIncidentCount}"/></strong><span>Sự cố đã báo cáo</span><small>Theo dõi Mentor và Lab Manager xử lý</small></div>
+                </a>
                 <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/intern/usages">
                     <div class="stat-icon">
                         <svg>
@@ -137,6 +141,8 @@
                         <a class="intern-action" href="${pageContext.request.contextPath}/intern/usages"><span
                                 class="intern-action-icon blue"><svg><use
                                 href="#i-calendar"/></svg></span><span><strong>Lịch sử sử dụng</strong><small>Xem lịch sử mượn và trả</small></span></a>
+                        <a class="intern-action" href="${pageContext.request.contextPath}/intern/incidents"><span
+                                class="intern-action-icon gold"><svg><use href="#i-alert"/></svg></span><span><strong>Sự cố của tôi</strong><small>Báo cáo và theo dõi sự cố thiết bị</small></span></a>
                         <a class="intern-action" href="${pageContext.request.contextPath}/intern/responsibilities"><span
                                 class="intern-action-icon gold"><svg><use href="#i-list"/></svg></span><span><strong>Trách nhiệm của tôi</strong><small>Xem kết luận và quyết định</small></span></a>
                     </div>

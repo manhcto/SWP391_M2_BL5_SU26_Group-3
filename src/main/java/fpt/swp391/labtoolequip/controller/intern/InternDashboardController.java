@@ -2,6 +2,7 @@ package fpt.swp391.labtoolequip.controller.intern;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.AssetUsageDAO;
+import fpt.swp391.labtoolequip.dao.IncidentDAO;
 import fpt.swp391.labtoolequip.dao.ResponsibilityDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,6 +15,7 @@ import java.util.List;
 @WebServlet("/intern/dashboard")
 public class InternDashboardController extends HttpServlet {
 	private final AssetUsageDAO assetUsageDAO = new AssetUsageDAO();
+	private final IncidentDAO incidentDAO = new IncidentDAO();
 	private final ResponsibilityDAO responsibilityDAO = new ResponsibilityDAO();
 
 	@Override
@@ -40,6 +42,12 @@ public class InternDashboardController extends HttpServlet {
 		} catch (Exception exception) {
 			getServletContext().log("Could not load Intern responsibility dashboard data", exception);
 			request.setAttribute("responsibilityCount", 0);
+		}
+		try {
+			request.setAttribute("reportedIncidentCount", incidentDAO.countForReporter(userId));
+		} catch (Exception exception) {
+			getServletContext().log("Could not load Intern incident dashboard data", exception);
+			request.setAttribute("reportedIncidentCount", 0);
 		}
 		request.getRequestDispatcher("/WEB-INF/views/intern/dashboard.jsp").forward(request, response);
 	}

@@ -29,14 +29,14 @@ public class LabManagerDashboardController extends HttpServlet {
 			var assets = assetDAO.findAll();
 			var usages = assetUsageDAO.findAll("", "");
 			var inspections = inspectionDAO.findAll(null, "", "", "", "", "");
-			var incidents = incidentDAO.findAll("", "", "");
+			var incidents = incidentDAO.findForLabManager("", "", "");
 			var maintenance = maintenanceDAO.findAll("", "");
 			var disposals = disposalDAO.findAll("", "");
 			request.setAttribute("assetCount", assets.size());
 			request.setAttribute("availableAssetCount",
 					assets.stream().filter(item -> "AVAILABLE".equals(item.getStatus())).count());
 			request.setAttribute("maintenanceAssetCount",
-					assets.stream().filter(item -> "MAINTENANCE".equals(item.getStatus())).count());
+					maintenance.stream().filter(item -> "IN_PROGRESS".equals(item.getStatus())).count());
 			request.setAttribute("activeUsageCount",
 					usages.stream().filter(item -> "IN_USE".equals(item.getStatus())).count());
 			request.setAttribute("inspectionCount", inspections.size());
