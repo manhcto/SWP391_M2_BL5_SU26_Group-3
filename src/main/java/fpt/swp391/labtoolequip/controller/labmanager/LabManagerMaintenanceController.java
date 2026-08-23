@@ -72,16 +72,16 @@ public class LabManagerMaintenanceController extends HttpServlet {
 							? null
 							: Long.parseLong(incidentParam);
 					id = dao.create(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
-							incidentId, request.getParameter("approvalNote"), request.getParameter("note"),
-							request.getParameter("providerPhone"), request.getParameter("providerAddress"),
-							request.getParameter("description"), parseCost(request.getParameter("estimatedCost")));
+							incidentId, request.getParameter("note"), request.getParameter("providerPhone"),
+							request.getParameter("providerAddress"), request.getParameter("description"),
+							parseCost(request.getParameter("estimatedCost")));
 				}
 				// Lab Manager cập nhật tiến độ sửa chữa
 				case "updateProgress" -> {
 					id = Long.parseLong(request.getParameter("id"));
-					dao.updateProgress(id, request.getParameter("status"), request.getParameter("approvalNote"),
-							request.getParameter("note"), request.getParameter("providerPhone"),
-							request.getParameter("providerAddress"), request.getParameter("repairResult"),
+					dao.updateProgress(id, request.getParameter("status"), request.getParameter("note"),
+							request.getParameter("providerPhone"), request.getParameter("providerAddress"),
+							request.getParameter("repairResult"), parseCost(request.getParameter("estimatedCost")),
 							parseCost(request.getParameter("actualCost")));
 				}
 				// Lab Manager xóa phiếu bảo trì (trả thiết bị về AVAILABLE)
@@ -133,9 +133,12 @@ public class LabManagerMaintenanceController extends HttpServlet {
 		}
 		try {
 			long cost = Long.parseLong(value.trim());
-			return cost >= 0 ? cost : null;
+			if (cost < 0 || cost > 1_000_000_000L) {
+				throw new IllegalArgumentException("Chi phí phải nằm trong khoảng từ 0 đến 1.000.000.000 VNĐ.");
+			}
+			return cost;
 		} catch (NumberFormatException exception) {
-			return null;
+			throw new IllegalArgumentException("Chi phí không hợp lệ. Vui lòng chỉ nhập số nguyên.");
 		}
 	}
 }

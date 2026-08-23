@@ -108,33 +108,31 @@
                                                     </div>
 
                                                     <div class="form-group">
-                                                        <label>Dự toán kinh phí ban đầu (VNĐ)</label>
-                                                        <c:if test="${not empty record.estimatedCost}">
-                                                            <fmt:formatNumber var="fmtEstCost" value="${record.estimatedCost}" type="number" groupingUsed="true"/>
-                                                        </c:if>
-                                                        <input class="form-control" type="text"
-                                                            value="${not empty record.estimatedCost ? fmtEstCost.concat(' VNĐ') : 'Không có dự toán'}"
-                                                            readonly
-                                                            style="background:#f8fafc; color:#334155; font-weight:550; cursor:not-allowed; border-color:#d1d5db;">
+                                                        <label>Dự toán kinh phí (VNĐ)</label>
+                                                        <input class="form-control" type="number" name="estimatedCost" min="0" max="1000000000" step="1000"
+                                                            value="<c:out value='${record.estimatedCost}'/>"
+                                                            placeholder="Nhập dự toán kinh phí nếu có (VNĐ)">
                                                     </div>
 
                                                     <div class="form-group">
-                                                        <label>Đơn vị / Kỹ thuật viên sửa chữa</label>
-                                                        <input class="form-control" type="text" name="note"
+                                                        <label id="providerLabel">Đơn vị / Kỹ thuật viên sửa chữa</label>
+                                                        <input class="form-control" type="text" name="note" id="providerInput" maxlength="255"
                                                             value="<c:out value='${record.note}'/>"
                                                             placeholder="Ví dụ: Kỹ thuật viên Tektronix VN / FPT Services">
                                                     </div>
 
                                                     <div class="form-group">
                                                         <label>SĐT đơn vị / kỹ thuật viên</label>
-                                                        <input class="form-control" type="tel" name="providerPhone"
+                                                        <input class="form-control" type="tel" name="providerPhone" maxlength="20"
+                                                            pattern="^(0|\+84)[0-9.\s-]{8,15}$"
+                                                            title="Số điện thoại hợp lệ bắt đầu bằng 0 hoặc +84 và gồm 10-11 chữ số"
                                                             value="<c:out value='${record.providerPhone}'/>"
                                                             placeholder="Ví dụ: 0988.123.456">
                                                     </div>
 
                                                     <div class="form-group full-width">
                                                         <label>Địa chỉ đơn vị sửa chữa</label>
-                                                        <input class="form-control" type="text" name="providerAddress"
+                                                        <input class="form-control" type="text" name="providerAddress" maxlength="255"
                                                             value="<c:out value='${record.providerAddress}'/>"
                                                             placeholder="Ví dụ: 123 Cầu Giấy, Hà Nội hoặc Phòng Kỹ thuật Tòa Alpha">
                                                     </div>
@@ -144,7 +142,7 @@
                                                         style="display: none; grid-column: span 2;">
                                                         <label style="font-weight: 650; margin-bottom: 4px;">Chi phí thực tế (VNĐ) *</label>
                                                         <input class="form-control" type="number" name="actualCost" id="actualCostInput"
-                                                            min="0" step="1000"
+                                                            min="0" max="1000000000" step="1000"
                                                             value="<c:out value='${record.actualCost}'/>"
                                                             placeholder="Nhập số tiền thực tế đã thanh toán (VNĐ)">
                                                     </div>
@@ -152,8 +150,8 @@
                                                     <div class="form-group full-width" id="repairResultField"
                                                         style="display: none; grid-column: span 2;">
                                                         <label style="font-weight: 650; margin-bottom: 4px;">Kết quả sửa
-                                                            chữa / Linh kiện thay thế</label>
-                                                        <textarea class="form-control" name="repairResult" rows="4"
+                                                            chữa / Linh kiện thay thế *</label>
+                                                        <textarea class="form-control" name="repairResult" id="repairResultInput" rows="4" maxlength="1000"
                                                             style="width: 100%; min-height: 90px; box-sizing: border-box;"
                                                             placeholder="Ví dụ: Đã thay thế vòi phun extruder và cân chỉnh nhiệt độ bàn in. Thiết bị hoạt động hoàn hảo."><c:out value="${record.repairResult}"/></textarea>
                                                     </div>
@@ -172,15 +170,27 @@
                                                 <script>
                                                     document.addEventListener('DOMContentLoaded', function () {
                                                         const progressStatusSelect = document.getElementById('progressStatusSelect');
+                                                        const providerLabel = document.getElementById('providerLabel');
+                                                        const providerInput = document.getElementById('providerInput');
                                                         const repairResultField = document.getElementById('repairResultField');
+                                                        const repairResultInput = document.getElementById('repairResultInput');
                                                         const actualCostField = document.getElementById('actualCostField');
                                                         const actualCostInput = document.getElementById('actualCostInput');
                                                         if (progressStatusSelect) {
                                                              function toggleCompletionFields() {
                                                                  const val = progressStatusSelect.value;
                                                                  const isCompleted = (val === 'COMPLETED_SUCCESS' || val === 'COMPLETED_FAILED');
+                                                                 if (providerInput) {
+                                                                     providerInput.required = isCompleted;
+                                                                 }
+                                                                 if (providerLabel) {
+                                                                     providerLabel.textContent = isCompleted ? 'Đơn vị / Kỹ thuật viên sửa chữa *' : 'Đơn vị / Kỹ thuật viên sửa chữa';
+                                                                 }
                                                                  if (repairResultField) {
                                                                      repairResultField.style.display = isCompleted ? 'flex' : 'none';
+                                                                 }
+                                                                 if (repairResultInput) {
+                                                                     repairResultInput.required = isCompleted;
                                                                  }
                                                                  if (actualCostField) {
                                                                      actualCostField.style.display = isCompleted ? 'flex' : 'none';
@@ -250,32 +260,34 @@
                                                         <div class="form-group">
                                                             <label>Dự toán kinh phí sửa chữa (VNĐ)</label>
                                                             <input class="form-control" type="number"
-                                                                name="estimatedCost" min="0" step="1000"
+                                                                name="estimatedCost" min="0" max="1000000000" step="1000"
                                                                 placeholder="Ví dụ: 650000">
                                                         </div>
 
                                                         <div class="form-group">
                                                             <label>Đơn vị / Kỹ thuật viên sửa chữa</label>
-                                                            <input class="form-control" type="text" name="note"
+                                                            <input class="form-control" type="text" name="note" maxlength="255"
                                                                 placeholder="Ví dụ: FPT Tech Services / Kỹ thuật viên Tektronix">
                                                         </div>
 
                                                         <div class="form-group">
                                                             <label>SĐT đơn vị / kỹ thuật viên</label>
-                                                            <input class="form-control" type="tel" name="providerPhone"
+                                                            <input class="form-control" type="tel" name="providerPhone" maxlength="20"
+                                                                pattern="^(0|\+84)[0-9.\s-]{8,15}$"
+                                                                title="Số điện thoại hợp lệ bắt đầu bằng 0 hoặc +84 và gồm 10-11 chữ số"
                                                                 placeholder="Ví dụ: 0988.123.456">
                                                         </div>
 
                                                         <div class="form-group full-width">
                                                             <label>Địa chỉ đơn vị sửa chữa</label>
-                                                            <input class="form-control" type="text" name="providerAddress"
+                                                            <input class="form-control" type="text" name="providerAddress" maxlength="255"
                                                                 placeholder="Ví dụ: 123 Cầu Giấy, Hà Nội hoặc Phòng Kỹ thuật Tòa Alpha">
                                                         </div>
 
                                                         <div class="form-group full-width">
                                                             <label>Mô tả chi tiết tình trạng hỏng hóc &amp; Yêu cầu sửa
                                                                 chữa *</label>
-                                                            <textarea class="form-control" name="description" rows="4"
+                                                            <textarea class="form-control" name="description" rows="4" maxlength="1000"
                                                                 required
                                                                 placeholder="Mô tả cụ thể hiện tượng lỗi, bộ phận hỏng, nguyên nhân nghi ngờ, yêu cầu thay thế..."></textarea>
                                                         </div>

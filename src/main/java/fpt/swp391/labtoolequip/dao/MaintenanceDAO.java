@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class MaintenanceDAO {
 	private static final String SELECT = """
@@ -32,6 +33,9 @@ public class MaintenanceDAO {
 	public record MaintenanceSummary(int totalRecords, int inProgressCount, int completedCount, long totalEstimatedCost,
 			long totalActualCost) {
 	}
+
+	private static final Pattern PHONE_PATTERN = Pattern.compile("^(0|\\+84)[0-9]{9,10}$");
+	private static final long MAX_COST = 1_000_000_000L;
 
 	private final DBConnection db = new DBConnection();
 
@@ -168,11 +172,9 @@ public class MaintenanceDAO {
 	 * Lab Manager tạo phiếu bảo trì mới (trực tiếp IN_PROGRESS). Cập nhật trạng
 	 * thái tài sản sang MAINTENANCE trong cùng giao dịch.
 	 */
-	public long create(long userId, long assetId, Long incidentId, String approvalNote, String note,
-			String providerPhone, String providerAddress, String description, Long estimatedCost) throws SQLException {
-		if (description == null || description.isBlank()) {
-			throw new IllegalArgumentException("Vui lòng mô tả chi tiết tình trạng hỏng hóc & yêu cầu sửa chữa.");
-		}
+	public long create(long userId, long assetId, Long incidentId, String note, String providerPhone,
+			String providerAddress, String description, Long estimatedCost) throws SQLException {
+		validateCommonFields(note, providerPhone, providerAddress, description, estimatedCost);
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -197,9 +199,9 @@ public class MaintenanceDAO {
 
 				String sql = """
 						INSERT INTO dbo.maintenance_records
-						    (asset_id, incident_id, quantity, requested_by, approved_by, approved_at, repair_started_at, approval_note, note, provider_phone, provider_address, description, estimated_cost, status)
+						    (asset_id, incident_id, quantity, requested_by, approved_by, approved_at, repair_started_at, note, provider_phone, provider_address, description, estimated_cost, status)
 						OUTPUT INSERTED.maintenance_id
-						VALUES (?, ?, 1, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?, ?, ?, ?, 'IN_PROGRESS')
+						VALUES (?, ?, 1, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?, ?, ?, 'IN_PROGRESS')
 						""";
 				long id;
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -207,12 +209,11 @@ public class MaintenanceDAO {
 					setNullableLong(statement, 2, incidentId);
 					statement.setLong(3, userId);
 					statement.setLong(4, userId);
-					statement.setString(5, blankToNull(approvalNote));
-					statement.setString(6, blankToNull(note));
-					statement.setString(7, blankToNull(providerPhone));
-					statement.setString(8, blankToNull(providerAddress));
-					statement.setString(9, description.trim());
-					setNullableLong(statement, 10, estimatedCost);
+					statement.setString(5, blankToNull(note));
+					statement.setString(6, blankToNull(providerPhone));
+					statement.setString(7, blankToNull(providerAddress));
+					statement.setString(8, description.trim());
+					setNullableLong(statement, 9, estimatedCost);
 					try (ResultSet result = statement.executeQuery()) {
 						result.next();
 						id = result.getLong(1);
@@ -249,8 +250,8 @@ public class MaintenanceDAO {
 	 * Lab Manager cập nhật tiến độ sửa chữa (chỉ khi APPROVED / IN_PROGRESS). Khi
 	 * COMPLETED: đổi trạng thái thiết bị về AVAILABLE hoặc UNAVAILABLE.
 	 */
-	public void updateProgress(long id, String newStatus, String approvalNote, String note, String providerPhone,
-			String providerAddress, String repairResult, Long actualCost) throws SQLException {
+	public void updateProgress(long id, String newStatus, String note, String providerPhone, String providerAddress,
+			String repairResult, Long estimatedCost, Long actualCost) throws SQLException {
 		boolean isFailed = "COMPLETED_FAILED".equals(newStatus) || "FAILED".equals(newStatus);
 		String dbStatus = (isFailed || "COMPLETED".equals(newStatus) || "COMPLETED_SUCCESS".equals(newStatus))
 				? "COMPLETED"
@@ -259,9 +260,31 @@ public class MaintenanceDAO {
 		if (!"APPROVED".equals(dbStatus) && !"IN_PROGRESS".equals(dbStatus) && !"COMPLETED".equals(dbStatus)) {
 			throw new IllegalArgumentException("Trạng thái tiến độ không hợp lệ.");
 		}
-		if ("COMPLETED".equals(dbStatus) && actualCost == null) {
-			throw new IllegalArgumentException("Vui lòng nhập chi phí thực tế.");
+		if ("COMPLETED".equals(dbStatus)) {
+			if (actualCost == null) {
+				throw new IllegalArgumentException("Vui lòng nhập chi phí thực tế.");
+			}
+			if (repairResult == null || repairResult.isBlank()) {
+				throw new IllegalArgumentException(
+						"Vui lòng mô tả kết quả sửa chữa / linh kiện thay thế khi hoàn tất nghiệm thu.");
+			}
+			if (note == null || note.isBlank()) {
+				throw new IllegalArgumentException(
+						"Vui lòng nhập tên đơn vị hoặc kỹ thuật viên thực hiện sửa chữa khi hoàn tất nghiệm thu.");
+			}
 		}
+		if (repairResult != null && repairResult.trim().length() > 1000) {
+			throw new IllegalArgumentException("Kết quả sửa chữa không được vượt quá 1000 ký tự.");
+		}
+		if (note != null && note.trim().length() > 255) {
+			throw new IllegalArgumentException("Tên đơn vị/kỹ thuật viên sửa chữa không được vượt quá 255 ký tự.");
+		}
+		if (providerAddress != null && providerAddress.trim().length() > 255) {
+			throw new IllegalArgumentException("Địa chỉ đơn vị sửa chữa không được vượt quá 255 ký tự.");
+		}
+		validatePhone(providerPhone);
+		validateCost(estimatedCost, "Dự toán kinh phí");
+		validateCost(actualCost, "Chi phí thực tế");
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
@@ -276,8 +299,8 @@ public class MaintenanceDAO {
 							SET status = 'COMPLETED',
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
 							    repair_completed_at = SYSUTCDATETIME(),
-							    approval_note = COALESCE(?, approval_note), note = ?, provider_phone = ?, provider_address = ?,
-							    repair_result = ?, actual_cost = ?,
+							    note = ?, provider_phone = ?, provider_address = ?,
+							    repair_result = ?, estimated_cost = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
@@ -286,8 +309,8 @@ public class MaintenanceDAO {
 							UPDATE dbo.maintenance_records
 							SET status = 'IN_PROGRESS',
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
-							    approval_note = COALESCE(?, approval_note), note = ?, provider_phone = ?, provider_address = ?,
-							    repair_result = ?, actual_cost = ?,
+							    note = ?, provider_phone = ?, provider_address = ?,
+							    repair_result = ?, estimated_cost = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
@@ -295,19 +318,19 @@ public class MaintenanceDAO {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'APPROVED',
-							    approval_note = COALESCE(?, approval_note), note = ?, provider_phone = ?, provider_address = ?,
-							    repair_result = ?, actual_cost = ?,
+							    note = ?, provider_phone = ?, provider_address = ?,
+							    repair_result = ?, estimated_cost = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
 							WHERE maintenance_id = ?
 							""";
 				}
 
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
-					statement.setString(1, blankToNull(approvalNote));
-					statement.setString(2, blankToNull(note));
-					statement.setString(3, blankToNull(providerPhone));
-					statement.setString(4, blankToNull(providerAddress));
-					statement.setString(5, blankToNull(repairResult));
+					statement.setString(1, blankToNull(note));
+					statement.setString(2, blankToNull(providerPhone));
+					statement.setString(3, blankToNull(providerAddress));
+					statement.setString(4, blankToNull(repairResult));
+					setNullableLong(statement, 5, estimatedCost);
 					setNullableLong(statement, 6, actualCost);
 					statement.setLong(7, id);
 					statement.executeUpdate();
@@ -455,6 +478,44 @@ public class MaintenanceDAO {
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
 			}
+		}
+	}
+
+	private void validateCommonFields(String note, String providerPhone, String providerAddress, String description,
+			Long estimatedCost) {
+		if (description == null || description.isBlank()) {
+			throw new IllegalArgumentException("Vui lòng mô tả chi tiết tình trạng hỏng hóc & yêu cầu sửa chữa.");
+		}
+		if (description.trim().length() > 1000) {
+			throw new IllegalArgumentException("Mô tả tình trạng hỏng hóc không được vượt quá 1000 ký tự.");
+		}
+		if (note != null && note.trim().length() > 255) {
+			throw new IllegalArgumentException("Tên đơn vị/kỹ thuật viên sửa chữa không được vượt quá 255 ký tự.");
+		}
+		if (providerAddress != null && providerAddress.trim().length() > 255) {
+			throw new IllegalArgumentException("Địa chỉ đơn vị sửa chữa không được vượt quá 255 ký tự.");
+		}
+		validatePhone(providerPhone);
+		validateCost(estimatedCost, "Dự toán kinh phí");
+	}
+
+	private void validatePhone(String phone) {
+		if (phone == null || phone.isBlank()) {
+			return;
+		}
+		String cleanPhone = phone.trim().replaceAll("[.\\s-]", "");
+		if (!PHONE_PATTERN.matcher(cleanPhone).matches()) {
+			throw new IllegalArgumentException(
+					"Số điện thoại không hợp lệ (Phải bắt đầu bằng 0 hoặc +84 và gồm 10-11 chữ số).");
+		}
+		if (phone.trim().length() > 30) {
+			throw new IllegalArgumentException("Số điện thoại không được vượt quá 30 ký tự.");
+		}
+	}
+
+	private void validateCost(Long cost, String fieldName) {
+		if (cost != null && (cost < 0 || cost > MAX_COST)) {
+			throw new IllegalArgumentException(fieldName + " phải nằm trong khoảng từ 0 đến 1.000.000.000 VNĐ.");
 		}
 	}
 

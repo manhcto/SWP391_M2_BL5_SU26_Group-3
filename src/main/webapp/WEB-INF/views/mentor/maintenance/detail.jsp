@@ -139,12 +139,6 @@
                                     <p><strong><fmt:formatNumber value="${record.estimatedCost}" type="number" groupingUsed="true"/> VNĐ</strong></p>
                                 </div>
                             </c:if>
-                            <c:if test="${record.status != 'REJECTED' && record.status != 'PENDING' && not empty record.approvalNote}">
-                                <div class="info-item full-width" style="grid-column:1/-1;">
-                                    <label>Ghi chú phê duyệt</label>
-                                    <p><c:out value="${record.approvalNote}"/></p>
-                                </div>
-                            </c:if>
                         </div>
                     </article>
 
