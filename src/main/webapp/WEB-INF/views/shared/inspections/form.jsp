@@ -13,7 +13,8 @@
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">QUY TRÌNH BẢN NHÁP</p><h2>${empty inspection.inspectionId ? 'Hồ sơ kiểm tra mới' : 'Cập nhật hồ sơ kiểm tra'}</h2></div><a class="btn-secondary" href="${pageContext.request.contextPath}${roleBase}/inspections">Hủy</a></div>
             <c:if test="${not empty message}"><div class="error-message"><c:out value="${message}"/></div></c:if>
-            <form class="inspection-form" method="post" action="${pageContext.request.contextPath}${roleBase}/inspections">
+			<form class="inspection-form" method="post" action="${pageContext.request.contextPath}${roleBase}/inspections">
+				<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                 <input type="hidden" name="inspectionId" value="<c:out value='${inspection.inspectionId}'/>">
                 <article class="panel inspection-form-panel">
                     <div class="form-grid">
