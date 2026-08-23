@@ -24,6 +24,7 @@ class AssetUsageDAOIntegrationTest {
 	private final AssetUsageDAO dao = new AssetUsageDAO();
 	private final List<Long> assetIds = new ArrayList<>();
 	private final List<Long> userIds = new ArrayList<>();
+	private final List<Long> internIds = new ArrayList<>();
 
 	@AfterEach
 	void cleanUp() throws SQLException {
@@ -32,12 +33,10 @@ class AssetUsageDAOIntegrationTest {
 				execute(connection, "DELETE FROM dbo.asset_usages WHERE asset_id = ?", assetId);
 				execute(connection, "DELETE FROM dbo.assets WHERE asset_id = ?", assetId);
 			}
+			for (long internId : internIds)
+				execute(connection, "DELETE FROM dbo.lab_usage_request_students WHERE student_id = ?", internId);
 			for (long userId : userIds) {
-				execute(connection,
-						"DELETE FROM dbo.intern_profiles WHERE user_id = ? AND NOT EXISTS "
-								+ "(SELECT 1 FROM dbo.lab_usage_request_interns luri JOIN dbo.intern_profiles ip "
-								+ "ON ip.intern_id=luri.intern_id WHERE ip.user_id=?)",
-						userId, userId);
+				execute(connection, "DELETE FROM dbo.student_profiles WHERE user_id = ?", userId);
 				execute(connection, "DELETE FROM dbo.users WHERE user_id = ?", userId);
 			}
 		}
@@ -52,7 +51,7 @@ class AssetUsageDAOIntegrationTest {
 
 		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement("""
 				SELECT au.asset_id, ip.user_id, au.request_id, au.semester_id, au.status, au.note
-				FROM dbo.asset_usages au JOIN dbo.intern_profiles ip ON ip.intern_id=au.intern_id
+				FROM dbo.asset_usages au JOIN dbo.intern_profiles ip ON ip.intern_id=au.student_id
 				WHERE au.asset_usage_id=?
 				""")) {
 			statement.setLong(1, usageId);
@@ -196,8 +195,50 @@ class AssetUsageDAOIntegrationTest {
 						.prepareStatement("SELECT user_id FROM dbo.users WHERE email=?")) {
 			statement.setString(1, email);
 			try (ResultSet result = statement.executeQuery()) {
-				assertTrue(result.next(), "Missing demo account " + email);
-				return result.getLong(1);
+				if (result.next())
+					return result.getLong(1);
+			}
+		}
+		return createApprovedIntern();
+	}
+
+	private long createApprovedIntern() throws SQLException {
+		String suffix = UUID.randomUUID().toString().substring(0, 8);
+		try (Connection connection = db.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				long userId;
+				try (PreparedStatement statement = connection.prepareStatement(
+						"INSERT dbo.users(full_name,email,role,status) OUTPUT INSERTED.user_id VALUES('JUnit Intern',?,'INTERN','ACTIVE')")) {
+					statement.setString(1, "junit-approved-" + suffix + "@example.com");
+					try (ResultSet result = statement.executeQuery()) {
+						result.next();
+						userId = result.getLong(1);
+					}
+				}
+				long internId;
+				try (PreparedStatement statement = connection.prepareStatement(
+						"INSERT dbo.student_profiles(user_id,student_code,status) OUTPUT INSERTED.student_id VALUES(?,?,'ACTIVE')")) {
+					statement.setLong(1, userId);
+					statement.setString(2, "JUNIT-" + suffix);
+					try (ResultSet result = statement.executeQuery()) {
+						result.next();
+						internId = result.getLong(1);
+					}
+				}
+				try (PreparedStatement statement = connection.prepareStatement(
+						"INSERT dbo.lab_usage_request_students(request_id,semester_id,student_id) SELECT TOP 1 request_id,semester_id,? FROM dbo.lab_usage_requests WHERE status='APPROVED' ORDER BY request_id DESC")) {
+					statement.setLong(1, internId);
+					if (statement.executeUpdate() != 1)
+						throw new IllegalStateException("Database needs one approved usage request");
+				}
+				connection.commit();
+				userIds.add(userId);
+				internIds.add(internId);
+				return userId;
+			} catch (SQLException | RuntimeException exception) {
+				connection.rollback();
+				throw exception;
 			}
 		}
 	}

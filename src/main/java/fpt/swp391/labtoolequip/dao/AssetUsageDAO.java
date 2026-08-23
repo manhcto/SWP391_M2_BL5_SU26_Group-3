@@ -169,11 +169,11 @@ public class AssetUsageDAO {
 				  AND a.total_quantity > (
 					SELECT COALESCE(SUM(au.quantity), 0)
 					FROM dbo.asset_usages au
-					WHERE au.asset_id = a.asset_id AND au.status IN ('IN_USE', 'MAINTENANCE')
+					WHERE au.asset_id = a.asset_id AND au.status IN ('IN_USE', 'RETURN_PENDING')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
-					WHERE d.asset_id = a.asset_id AND d.status IN ('PENDING', 'APPROVED')
+					WHERE d.asset_id = a.asset_id AND d.asset_item_id IS NULL AND d.status IN ('PENDING', 'APPROVED')
 				  )
 				ORDER BY a.asset_name
 				""";
@@ -215,11 +215,11 @@ public class AssetUsageDAO {
 				  AND ai.condition IN ('GOOD', 'FAIR')
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.asset_usages au
-					WHERE au.asset_item_id = ai.asset_item_id AND au.status IN ('IN_USE', 'MAINTENANCE')
+					WHERE au.asset_item_id = ai.asset_item_id AND au.status IN ('IN_USE', 'RETURN_PENDING')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
-					WHERE d.asset_id = a.asset_id AND d.status IN ('PENDING', 'APPROVED')
+					WHERE d.asset_item_id = ai.asset_item_id AND d.status IN ('PENDING', 'APPROVED')
 				  )
 				ORDER BY a.asset_name, ai.asset_item_id
 				""";
@@ -379,34 +379,86 @@ public class AssetUsageDAO {
 		return "DAMAGED".equals(conditionAfter) || "BROKEN".equals(conditionAfter);
 	}
 
-	public void returnUsage(long userId, long usageId, String conditionAfter, String note) throws SQLException {
-		if (conditionAfter == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(conditionAfter)) {
+	public void requestReturn(long usageId, long userId, String reportedCondition, String note) throws SQLException {
+		if (reportedCondition == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(reportedCondition)) {
 			throw new IllegalArgumentException("Vui lòng chọn tình trạng hợp lệ khi trả thiết bị.");
 		}
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
-				ReturnTarget target = findReturnTarget(connection, userId, usageId);
-				if (target.assetItemId() != null) {
-					lockAssetItem(connection, target.assetItemId());
-				} else if (requiresQuarantine(conditionAfter)) {
-					lockAsset(connection, target.assetId());
-				}
-				if (!target.equals(lockUsageForReturn(connection, userId, usageId))) {
-					throw new IllegalStateException("Lượt mượn đã thay đổi.");
-				}
-				updateReturnedUsage(connection, userId, usageId, conditionAfter, note);
-				if (target.assetItemId() != null) {
-					updateReturnedAssetItem(connection, target.assetItemId(), conditionAfter);
-				} else if (requiresQuarantine(conditionAfter)) {
-					// ponytail: quarantine the aggregate until per-unit damage tracking is
-					// available.
-					updateReturnedQuantityAsset(connection, target.assetId(), conditionAfter);
+				lockUsageForReturn(connection, userId, usageId);
+				try (PreparedStatement statement = connection.prepareStatement(
+						"""
+								UPDATE au SET status='RETURN_PENDING', reported_condition_after=?, return_requested_at=SYSUTCDATETIME(),
+								return_note=?, updated_at=SYSUTCDATETIME()
+								FROM dbo.asset_usages au JOIN dbo.intern_profiles ip ON ip.intern_id=au.student_id
+								WHERE au.asset_usage_id=? AND ip.user_id=? AND au.status='IN_USE' AND au.returned_at IS NULL
+								""")) {
+					statement.setString(1, reportedCondition);
+					statement.setString(2, blankToNull(note));
+					statement.setLong(3, usageId);
+					statement.setLong(4, userId);
+					if (statement.executeUpdate() != 1)
+						throw new IllegalStateException("Không thể yêu cầu trả lượt mượn này.");
 				}
 				connection.commit();
 			} catch (SQLException | RuntimeException exception) {
 				connection.rollback();
 				throw exception;
+			}
+		}
+	}
+
+	public void confirmReturn(long usageId, long mentorId, String verifiedCondition, String note) throws SQLException {
+		if (verifiedCondition == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(verifiedCondition))
+			throw new IllegalArgumentException("Vui lòng chọn tình trạng xác minh hợp lệ.");
+		try (Connection connection = db.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				ReturnTarget target = lockPendingReturnForMentor(connection, usageId, mentorId);
+				if (target.assetItemId() != null)
+					lockAssetItem(connection, target.assetItemId());
+				try (PreparedStatement statement = connection.prepareStatement("""
+						UPDATE dbo.asset_usages SET status='RETURNED', returned_at=SYSUTCDATETIME(),
+						verified_condition_after=?, condition_after=?, return_verified_at=SYSUTCDATETIME(),
+						return_verified_by=?, return_note=COALESCE(?, return_note), updated_at=SYSUTCDATETIME()
+						WHERE asset_usage_id=? AND status='RETURN_PENDING'
+						""")) {
+					statement.setString(1, verifiedCondition);
+					statement.setString(2, verifiedCondition);
+					statement.setLong(3, mentorId);
+					statement.setString(4, blankToNull(note));
+					statement.setLong(5, usageId);
+					if (statement.executeUpdate() != 1)
+						throw new IllegalStateException("Yêu cầu trả đã được xử lý.");
+				}
+				if (target.assetItemId() != null)
+					updateReturnedAssetItem(connection, target.assetItemId(), verifiedCondition);
+				else if (requiresQuarantine(verifiedCondition))
+					updateReturnedQuantityAsset(connection, target.assetId(), verifiedCondition);
+				connection.commit();
+			} catch (SQLException | RuntimeException exception) {
+				connection.rollback();
+				throw exception;
+			}
+		}
+	}
+
+	private ReturnTarget lockPendingReturnForMentor(Connection connection, long usageId, long mentorId)
+			throws SQLException {
+		String sql = """
+				SELECT au.asset_id, au.asset_item_id FROM dbo.asset_usages au WITH (UPDLOCK, HOLDLOCK)
+				WHERE au.asset_usage_id=? AND au.status='RETURN_PENDING' AND EXISTS (
+				 SELECT 1 FROM dbo.lab_usage_requests lur WHERE lur.request_id=au.request_id
+				 AND lur.semester_id=au.semester_id AND lur.mentor_id=? AND lur.status='APPROVED')
+				""";
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, usageId);
+			statement.setLong(2, mentorId);
+			try (ResultSet result = statement.executeQuery()) {
+				if (!result.next())
+					throw new IllegalStateException("Yêu cầu trả không thuộc phạm vi xác nhận của bạn.");
+				return new ReturnTarget(result.getLong(1), nullableLong(result, "asset_item_id"));
 			}
 		}
 	}
@@ -601,7 +653,7 @@ public class AssetUsageDAO {
 
 	private int activeQuantity(Connection connection, long assetId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT COALESCE(SUM(quantity), 0) FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+				"SELECT COALESCE(SUM(quantity), 0) FROM dbo.asset_usages WHERE asset_id = ? AND status IN ('IN_USE', 'RETURN_PENDING')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				result.next();
@@ -659,6 +711,11 @@ public class AssetUsageDAO {
 				usage.setReturnedAt(ViewFormat.fromUtc(result.getTimestamp("returned_at")));
 				usage.setConditionBefore(result.getString("condition_before"));
 				usage.setConditionAfter(result.getString("condition_after"));
+				usage.setReportedConditionAfter(result.getString("reported_condition_after"));
+				usage.setReturnRequestedAt(ViewFormat.fromUtc(result.getTimestamp("return_requested_at")));
+				usage.setVerifiedConditionAfter(result.getString("verified_condition_after"));
+				usage.setReturnVerifiedAt(ViewFormat.fromUtc(result.getTimestamp("return_verified_at")));
+				usage.setReturnVerifiedBy(nullableLong(result, "return_verified_by"));
 				usage.setStatus(result.getString("status"));
 				usage.setNote(result.getString("note"));
 				usage.setReturnNote(result.getString("return_note"));
@@ -716,7 +773,7 @@ public class AssetUsageDAO {
 
 	private boolean hasActiveUsageForItem(Connection connection, long assetItemId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'MAINTENANCE')")) {
+				"SELECT 1 FROM dbo.asset_usages WHERE asset_item_id = ? AND status IN ('IN_USE', 'RETURN_PENDING')")) {
 			statement.setLong(1, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();

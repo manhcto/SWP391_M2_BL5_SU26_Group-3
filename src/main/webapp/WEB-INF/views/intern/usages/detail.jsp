@@ -33,7 +33,7 @@
             <div class="content-heading">
                 <div><p class="eyebrow">CỔNG INTERN</p>
                     <h2><c:out value="${usage.assetName}"/></h2></div>
-                <span class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out
+                <span class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'RETURN_PENDING' ? 'review' : 'in-use')}"><c:out
                         value="${app:label(usage.status)}"/></span></div>
             <dl class="panel detail-grid">
                 <div class="detail-item">
@@ -72,10 +72,11 @@
                             value="${empty usage.conditionBefore ? 'Chưa ghi nhận' : app:label(usage.conditionBefore)}"/></dd>
                 </div>
                 <div class="detail-item">
-                    <dt>Tình trạng sau khi trả</dt>
-                    <dd><c:out
-                            value="${empty usage.conditionAfter ? 'Chờ trả' : app:label(usage.conditionAfter)}"/></dd>
-                </div>
+                        <dt>Tình trạng Intern báo cáo</dt>
+                        <dd><c:out
+                                value="${empty usage.reportedConditionAfter ? 'Chưa yêu cầu trả' : app:label(usage.reportedConditionAfter)}"/></dd>
+                    </div>
+                <div class="detail-item"><dt>Tình trạng Mentor xác minh</dt><dd><c:out value="${empty usage.verifiedConditionAfter ? 'Chưa xác minh' : app:label(usage.verifiedConditionAfter)}"/></dd></div>
                 <div class="detail-item wide">
                     <dt>Ghi chú sử dụng</dt>
                     <dd><c:out value="${empty usage.note ? 'Không có ghi chú.' : usage.note}"/></dd>
@@ -90,7 +91,7 @@
                 <article class="panel">
                     <header class="panel-header">
                         <div class="panel-title"><span class="title-icon"><svg><use href="#i-calendar"/></svg></span>
-                            <h3>Trả thiết bị này</h3></div>
+                            <h3>Yêu cầu trả thiết bị</h3></div>
                     </header>
                     <form method="post" action="${pageContext.request.contextPath}/intern/usages">
                         <input type="hidden" name="csrfToken" value="${csrfToken}">
@@ -108,7 +109,7 @@
                             <div class="form-group full-width"><label for="note">Ghi chú trả thiết bị</label><textarea
                                     class="form-control" id="note" name="note"></textarea></div>
                             <div class="form-group full-width form-actions">
-                                <button class="primary-button" type="submit">Xác nhận trả</button>
+                                <button class="primary-button" type="submit">Gửi yêu cầu trả</button>
                             </div>
                         </div>
                     </form>

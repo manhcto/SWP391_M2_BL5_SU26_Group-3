@@ -35,7 +35,8 @@
             <c:if test="${usage.status == 'IN_USE'}">
                 <article class="panel">
                     <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-calendar"/></svg></span><h3>Trả thiết bị này</h3></div></header>
-                    <form method="post" action="${pageContext.request.contextPath}/intern/usages">
+					<form method="post" action="${pageContext.request.contextPath}/intern/usages">
+						<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="return"><input type="hidden" name="usageId" value="${usage.assetUsageId}">
                         <div class="form-grid">
                             <div class="form-group"><label for="conditionAfter">Tình trạng sau khi sử dụng</label><select class="form-control" id="conditionAfter" name="conditionAfter" required><option value="GOOD">Tốt</option><option value="FAIR">Khá — Mentor có thể tự xử lý</option><option value="DAMAGED">Hư hỏng — cần báo cáo</option><option value="BROKEN">Không hoạt động — cần báo cáo</option></select><small>Nếu chỉ lỗi nhẹ như lỏng giắc cắm, chọn Khá; không tạo báo cáo Lab Manager.</small></div>
