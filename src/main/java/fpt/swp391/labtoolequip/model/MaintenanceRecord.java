@@ -1,11 +1,14 @@
 package fpt.swp391.labtoolequip.model;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class MaintenanceRecord {
 	private Long maintenanceId;
 	private Long assetId;
+	private Long assetItemId;
 	private Long incidentId;
+	private Long scheduleId;
 	private Integer quantity;
 	private Long requestedBy;
 	private String description;
@@ -22,6 +25,7 @@ public class MaintenanceRecord {
 	private String note;
 	private String providerPhone;
 	private String providerAddress;
+	private String imageUrl;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
@@ -34,6 +38,8 @@ public class MaintenanceRecord {
 	private String approverName;
 	private String incidentDescription;
 	private String assetItemCode;
+	private String scheduleTitle;
+	private LocalDate scheduledDate;
 
 	public MaintenanceRecord() {
 	}
@@ -268,5 +274,45 @@ public class MaintenanceRecord {
 
 	public void setAssetItemCode(String assetItemCode) {
 		this.assetItemCode = assetItemCode;
+	}
+
+	public String getImageUrl() {
+		return imageUrl;
+	}
+
+	public void setImageUrl(String imageUrl) {
+		this.imageUrl = imageUrl;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
+	}
+
+	public Long getScheduleId() {
+		return scheduleId;
+	}
+
+	public void setScheduleId(Long scheduleId) {
+		this.scheduleId = scheduleId;
+	}
+
+	public String getScheduleTitle() {
+		return scheduleTitle;
+	}
+
+	public void setScheduleTitle(String scheduleTitle) {
+		this.scheduleTitle = scheduleTitle;
+	}
+
+	public LocalDate getScheduledDate() {
+		return scheduledDate;
+	}
+
+	public void setScheduledDate(LocalDate scheduledDate) {
+		this.scheduledDate = scheduledDate;
 	}
 }

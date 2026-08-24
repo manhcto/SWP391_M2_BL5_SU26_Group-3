@@ -142,65 +142,96 @@
                         </div>
                     </article>
 
-                    <%-- KẾT QUẢ SỬA CHỮA (chỉ hiện khi đang sửa hoặc hoàn tất) --%>
+                    <%-- KẾT QUẢ SỬA CHỮA --%>
                     <c:if test="${record.status == 'IN_PROGRESS' || record.status == 'COMPLETED'}">
                         <article class="panel">
-                            <div style="padding:16px 20px;border-bottom:1px solid #edf0ec;">
-                                <strong>Tiến độ &amp; Kết quả sửa chữa (Do Lab Manager cập nhật)</strong>
+                            <div style="padding:14px 18px;border-bottom:1px solid #edf0ec;">
+                                <strong>Tiến độ &amp; Kết quả sửa chữa</strong>
                             </div>
-                            <div class="info-grid">
-                                <div class="info-item">
-                                    <label>Trạng thái sửa chữa</label>
-                                    <p>
-                                        <c:choose>
-                                            <c:when test="${record.status == 'COMPLETED'}">
-                                                <c:choose>
-                                                    <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
-                                                        <span class="status overdue" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">❌ Sửa thất bại</span>
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <span class="status returned" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">✅ Sửa thành công</span>
-                                                    </c:otherwise>
-                                                </c:choose>
-                                            </c:when>
-                                            <c:when test="${record.status == 'IN_PROGRESS'}">
-                                                <span class="status maintenance" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">⏳ Đang sửa chữa</span>
-                                            </c:when>
-                                            <c:otherwise>
-                                                <span class="status in-use" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">Đã duyệt – Chờ sửa</span>
-                                            </c:otherwise>
-                                        </c:choose>
-                                    </p>
-                                </div>
-                                <div class="info-item">
-                                    <label>Đơn vị / Kỹ thuật viên</label>
-                                    <p><c:choose>
-                                        <c:when test="${not empty record.note}"><c:out value="${record.note}"/></c:when>
-                                        <c:otherwise>—</c:otherwise>
-                                    </c:choose></p>
-                                </div>
-                                <div class="info-item">
-                                    <label>Ngày bắt đầu sửa</label>
-                                    <p><c:out value="${app:dateTime(record.repairStartedAt)}"/></p>
-                                </div>
-                                <c:if test="${record.status == 'COMPLETED'}">
+                            <div style="padding:18px; display:flex; flex-direction:row; gap:24px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+                                <div class="info-grid" style="flex:1; min-width:280px; padding:0;">
                                     <div class="info-item">
-                                        <label>Ngày hoàn thành</label>
-                                        <p><c:out value="${app:dateTime(record.repairCompletedAt)}"/></p>
-                                    </div>
-                                </c:if>
-                                <c:if test="${not empty record.actualCost}">
-                                    <div class="info-item">
-                                        <label>Chi phí thực tế</label>
-                                        <p style="color:#2563eb;font-weight:700;font-size:15px;">
-                                            <fmt:formatNumber value="${record.actualCost}" type="number" groupingUsed="true"/> VNĐ
+                                        <label>Trạng thái sửa chữa</label>
+                                        <p>
+                                            <c:choose>
+                                                 <c:when test="${record.status == 'COMPLETED'}">
+                                                     <c:choose>
+                                                         <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
+                                                             <span class="status overdue" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">❌ Sửa thất bại</span>
+                                                         </c:when>
+                                                         <c:otherwise>
+                                                             <span class="status returned" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">✅ Sửa thành công</span>
+                                                         </c:otherwise>
+                                                     </c:choose>
+                                                 </c:when>
+                                                 <c:when test="${record.status == 'IN_PROGRESS'}">
+                                                     <span class="status maintenance" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">⏳ Đang sửa chữa</span>
+                                                 </c:when>
+                                                 <c:otherwise>
+                                                     <span class="status in-use" style="font-size:13.5px;padding:4px 10px;font-weight:600;display:inline-block;">Đã duyệt – Chờ sửa</span>
+                                                 </c:otherwise>
+                                             </c:choose>
                                         </p>
                                     </div>
-                                </c:if>
-                                <c:if test="${not empty record.repairResult}">
-                                    <div class="info-item full-width" style="grid-column:1/-1;">
-                                        <label>Kết quả sửa chữa</label>
-                                        <p style="white-space:pre-line"><c:out value="${record.repairResult}"/></p>
+                                    <div class="info-item">
+                                        <label>Đơn vị / Kỹ thuật viên</label>
+                                        <p><c:choose>
+                                            <c:when test="${not empty record.note}"><c:out value="${record.note}"/></c:when>
+                                            <c:otherwise>—</c:otherwise>
+                                        </c:choose></p>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>SĐT đơn vị / kỹ thuật viên</label>
+                                        <p><c:choose>
+                                            <c:when test="${not empty record.providerPhone}">
+                                                <a href="tel:${record.providerPhone}" style="color:#2563eb;font-weight:600;"><c:out value="${record.providerPhone}"/></a>
+                                            </c:when>
+                                            <c:otherwise>—</c:otherwise>
+                                        </c:choose></p>
+                                    </div>
+                                    <c:if test="${not empty record.providerAddress}">
+                                        <div class="info-item">
+                                            <label>Địa chỉ đơn vị sửa chữa</label>
+                                            <p><c:out value="${record.providerAddress}"/></p>
+                                        </div>
+                                    </c:if>
+                                    <div class="info-item">
+                                        <label>Ngày bắt đầu sửa</label>
+                                        <p><c:out value="${app:dateTime(record.repairStartedAt)}"/></p>
+                                    </div>
+                                    <c:if test="${record.status == 'COMPLETED'}">
+                                        <div class="info-item">
+                                            <label>Ngày hoàn thành</label>
+                                            <p><c:out value="${app:dateTime(record.repairCompletedAt)}"/></p>
+                                        </div>
+                                    </c:if>
+                                    <c:if test="${not empty record.actualCost}">
+                                        <div class="info-item">
+                                            <label>Chi phí thực tế</label>
+                                            <p style="color:#2563eb;font-weight:700;font-size:15px;">
+                                                <fmt:formatNumber value="${record.actualCost}" type="number" groupingUsed="true"/> VNĐ
+                                            </p>
+                                        </div>
+                                    </c:if>
+                                    <c:if test="${not empty record.repairResult}">
+                                        <div class="info-item full-width" style="grid-column:1/-1;">
+                                            <label>Kết quả sửa chữa</label>
+                                            <p style="white-space:pre-line"><c:out value="${record.repairResult}"/></p>
+                                        </div>
+                                    </c:if>
+                                </div>
+
+                                <c:if test="${not empty record.imageUrl}">
+                                    <div style="width:230px; flex-shrink:0; text-align:center;">
+                                        <label style="display:block; font-size:11.5px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; text-align:left;">Ảnh đính kèm</label>
+                                        <a href="<c:out value='${record.imageUrl}'/>" target="_blank" title="Nhấp để xem ảnh kích thước lớn" style="display:block; border-radius:8px; overflow:hidden; border:1px solid #cbd5e1; box-shadow:0 1px 4px rgba(0,0,0,0.08); background:#fff;">
+                                            <img src="<c:out value='${record.imageUrl}'/>" alt="Ảnh đính kèm" style="width:100%; max-height:180px; object-fit:cover; display:block;">
+                                        </a>
+                                        <div style="margin-top:8px;">
+                                            <a href="<c:out value='${record.imageUrl}'/>" target="_blank" style="font-size:12px; color:#2563eb; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                                🔍 Xem ảnh gốc
+                                            </a>
+                                        </div>
                                     </div>
                                 </c:if>
                             </div>
