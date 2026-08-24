@@ -50,7 +50,7 @@
                         <dt>Trạng thái</dt><dd><c:out value="${app:label(item.status)}"/></dd>
                         <dt>Ghi chú</dt><dd><c:out value="${empty item.note ? 'Không có' : item.note}"/></dd>
                     </dl>
-                    <a class="btn-secondary" href="${assetBasePath}">Quay lại danh sách</a>
+                    <div class="row-actions"><a class="btn-secondary" href="${assetBasePath}">Quay lại danh sách</a><a class="primary-button" href="${assetBasePath}/${item.assetItemId}/lifecycle">Lịch sử vòng đời</a></div>
                 </div>
             </article>
         </section>

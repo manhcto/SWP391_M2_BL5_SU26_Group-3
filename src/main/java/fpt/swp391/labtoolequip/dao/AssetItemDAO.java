@@ -4,6 +4,7 @@ import fpt.swp391.labtoolequip.common.DBConnection;
 import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.AssetCategory;
 import fpt.swp391.labtoolequip.model.AssetItem;
+import fpt.swp391.labtoolequip.model.AssetItemLifecycleEvent;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -83,6 +84,99 @@ public class AssetItemDAO {
 				PreparedStatement statement = connection.prepareStatement(SELECT + " WHERE i.asset_item_id = ?")) {
 			statement.setLong(1, id);
 			return read(statement).stream().findFirst();
+		}
+	}
+
+	public List<AssetItemLifecycleEvent> findLifecycle(long assetItemId) throws SQLException {
+		String sql = """
+				SELECT event_time, event_type, event_label, detail, event_status, actor_name, reference_type,
+				       reference_id, event_scope
+				FROM (
+				 SELECT i.created_at, 'REGISTRATION', N'Đăng ký sản phẩm', i.note, i.status, NULL,
+				        'ASSET_ITEM', i.asset_item_id, 'ITEM', 10 FROM dbo.asset_items i WHERE i.asset_item_id=?
+				 UNION ALL
+				 SELECT event.event_time, event.event_type, event.event_label, event.detail, allocation.status,
+				        event.actor_name, 'ALLOCATION', allocation.allocation_id, 'ITEM', event.sort_order
+				 FROM dbo.equipment_allocations allocation
+				 LEFT JOIN dbo.users handover ON handover.user_id=allocation.handed_over_by
+				 LEFT JOIN dbo.users recovery ON recovery.user_id=allocation.recovered_by
+				 CROSS APPLY (VALUES
+				   (allocation.handed_over_at,'ALLOCATION_HANDOVER',N'Bàn giao theo cấp phát',CAST(NULL AS nvarchar(max)),handover.full_name,20),
+				   (allocation.received_at,'ALLOCATION_RECEIVED',N'Xác nhận nhận cấp phát',CAST(NULL AS nvarchar(max)),CAST(NULL AS nvarchar(100)),21),
+				   (allocation.recovered_at,'ALLOCATION_RECOVERED',N'Thu hồi cấp phát',allocation.return_note,recovery.full_name,22)
+				 ) event(event_time,event_type,event_label,detail,actor_name,sort_order)
+				 WHERE allocation.asset_item_id=? AND event.event_time IS NOT NULL
+				 UNION ALL
+				 SELECT event.event_time,event.event_type,event.event_label,event.detail,usage.status,event.actor_name,
+				        'ASSET_USAGE',usage.asset_usage_id,'ITEM',event.sort_order
+				 FROM dbo.asset_usages usage
+				 JOIN dbo.student_profiles profile ON profile.student_id=usage.student_id
+				 JOIN dbo.users intern ON intern.user_id=profile.user_id
+				 LEFT JOIN dbo.users verifier ON verifier.user_id=usage.return_verified_by
+				 CROSS APPLY (VALUES
+				   (usage.borrowed_at,'USAGE_BORROWED',N'Bắt đầu sử dụng',usage.note,intern.full_name,30),
+				   (usage.return_requested_at,'RETURN_REQUESTED',N'Yêu cầu trả thiết bị',usage.return_note,intern.full_name,31),
+				   (COALESCE(usage.return_verified_at,usage.returned_at),'RETURN_CONFIRMED',N'Xác nhận hoàn trả',usage.return_note,verifier.full_name,32)
+				 ) event(event_time,event_type,event_label,detail,actor_name,sort_order)
+				 WHERE usage.asset_item_id=? AND event.event_time IS NOT NULL
+				 UNION ALL
+				 SELECT event.event_time,event.event_type,event.event_label,event.detail,incident.status,actor.full_name,
+				        'INCIDENT',incident.incident_id,'ITEM',event.sort_order
+				 FROM dbo.incidents incident LEFT JOIN dbo.asset_usages usage ON usage.asset_usage_id=incident.asset_usage_id
+				 CROSS APPLY (VALUES
+				   (incident.reported_at,'INCIDENT_REPORTED',N'Báo cáo sự cố',incident.description,incident.reported_by,40),
+				   (incident.forwarded_at,'INCIDENT_FORWARDED',N'Chuyển sự cố để xử lý',incident.mentor_review_note,incident.reviewed_by,41),
+				   (incident.technical_assessed_at,'INCIDENT_ASSESSED',N'Đánh giá kỹ thuật',incident.technical_note,incident.technical_assessed_by,42)
+				 ) event(event_time,event_type,event_label,detail,actor_id,sort_order)
+				 LEFT JOIN dbo.users actor ON actor.user_id=event.actor_id
+				 WHERE (incident.asset_item_id=? OR (incident.asset_item_id IS NULL AND usage.asset_item_id=?)) AND event.event_time IS NOT NULL
+				 UNION ALL
+				 SELECT event.event_time,event.event_type,event.event_label,event.detail,maintenance.status,actor.full_name,
+				        'MAINTENANCE',maintenance.maintenance_id,'ITEM',event.sort_order
+				 FROM dbo.maintenance_records maintenance
+				 CROSS APPLY (VALUES
+				   (maintenance.requested_at,'MAINTENANCE_REQUESTED',N'Tạo phiếu bảo trì',maintenance.description,maintenance.requested_by,50),
+				   (maintenance.approved_at,'MAINTENANCE_REVIEWED',N'Duyệt bảo trì',maintenance.approval_note,maintenance.approved_by,51),
+				   (maintenance.repair_started_at,'MAINTENANCE_STARTED',N'Bắt đầu bảo trì',maintenance.note,maintenance.approved_by,52),
+				   (maintenance.repair_completed_at,'MAINTENANCE_COMPLETED',N'Hoàn tất bảo trì',maintenance.repair_result,maintenance.approved_by,53)
+				 ) event(event_time,event_type,event_label,detail,actor_id,sort_order)
+				 LEFT JOIN dbo.users actor ON actor.user_id=event.actor_id
+				 WHERE maintenance.asset_item_id=? AND event.event_time IS NOT NULL
+				 UNION ALL
+				 SELECT event.event_time,event.event_type,event.event_label,event.detail,disposal.status,actor.full_name,
+				        'DISPOSAL',disposal.disposal_id,'ITEM',event.sort_order
+				 FROM dbo.disposal_records disposal
+				 CROSS APPLY (VALUES
+				   (disposal.requested_at,'DISPOSAL_REQUESTED',N'Yêu cầu thanh lý',disposal.reason,disposal.requested_by,60),
+				   (disposal.approved_at,'DISPOSAL_REVIEWED',N'Duyệt thanh lý',disposal.approval_note,disposal.approved_by,61),
+				   (disposal.completed_at,'DISPOSAL_COMPLETED',N'Hoàn tất thanh lý',disposal.completion_note,disposal.completed_by,62)
+				 ) event(event_time,event_type,event_label,detail,actor_id,sort_order)
+				 LEFT JOIN dbo.users actor ON actor.user_id=event.actor_id
+				 WHERE disposal.asset_item_id=? AND event.event_time IS NOT NULL
+				 UNION ALL
+				 SELECT record.inspection_date,'PARENT_INSPECTION',N'Kiểm tra Asset cha',item.discrepancy_note,
+				        record.status,actor.full_name,'INSPECTION',record.inspection_id,'PARENT_ASSET',70
+				 FROM dbo.asset_items physical
+				 JOIN dbo.inspection_items item ON item.asset_id=physical.asset_id
+				 JOIN dbo.inspection_records record ON record.inspection_id=item.inspection_id
+				 JOIN dbo.users actor ON actor.user_id=record.inspected_by WHERE physical.asset_item_id=?
+				) events(event_time,event_type,event_label,detail,event_status,actor_name,reference_type,reference_id,event_scope,sort_order)
+				ORDER BY event_time, sort_order, reference_id
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			for (int index = 1; index <= 8; index++)
+				statement.setLong(index, assetItemId);
+			try (ResultSet result = statement.executeQuery()) {
+				List<AssetItemLifecycleEvent> events = new ArrayList<>();
+				while (result.next())
+					events.add(new AssetItemLifecycleEvent(ViewFormat.fromUtc(result.getTimestamp("event_time")),
+							result.getString("event_type"), result.getString("event_label"), result.getString("detail"),
+							result.getString("event_status"), result.getString("actor_name"),
+							result.getString("reference_type"), result.getLong("reference_id"),
+							result.getString("event_scope")));
+				return events;
+			}
 		}
 	}
 

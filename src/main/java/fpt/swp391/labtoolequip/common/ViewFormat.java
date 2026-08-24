@@ -74,6 +74,7 @@ public final class ViewFormat {
 			case "UNAVAILABLE" -> "Không khả dụng";
 			case "DISPOSED" -> "Đã thanh lý";
 			case "IN_USE" -> "Đang sử dụng";
+			case "RETURN_PENDING" -> "Chờ xác nhận trả";
 			case "RETURNED" -> "Đã trả";
 			case "GOOD" -> "Tốt";
 			case "FAIR" -> "Khá";
@@ -111,6 +112,9 @@ public final class ViewFormat {
 			case "MONITOR" -> "Theo dõi";
 			case "REMOVE_FROM_USE" -> "Ngừng sử dụng";
 			case "DISPOSAL_REVIEW" -> "Xem xét thanh lý";
+			case "E_WASTE" -> "Rác thải điện tử";
+			case "SCRAP" -> "Phế liệu";
+			case "RETURN_TO_VENDOR" -> "Trả nhà cung cấp";
 			case "UNDETERMINED" -> "Chưa xác định";
 			case "NONE" -> "Không có trách nhiệm";
 			case "PARTIAL" -> "Trách nhiệm một phần";
