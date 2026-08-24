@@ -691,8 +691,6 @@
                                                                                                                 <span
                                                                                                                     class="batch-mode-dash"
                                                                                                                     style="display:none; color:#cbd5e1; font-size:15px; font-weight:bold;">—</span>
-                                                                                                            </c:otherwise>
-                                                                                                        </c:choose>
                                                                                                             </c:when>
                                                                                                             <c:otherwise>
                                                                                                                 <span
