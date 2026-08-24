@@ -62,8 +62,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Email (@fpt.edu.vn) <span class="lock-badge">🔒 Cố định</span></label>
-                                <input class="form-control readonly-field" type="email" value="<c:out value='${user.email}'/>" readonly disabled>
+                                <label>Email (Gmail / @fpt.edu.vn) *</label>
+                                <input class="form-control" type="email" name="email" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: anhnm@fpt.edu.vn hoặc sinhvien@gmail.com">
                             </div>
 
                             <c:if test="${user.role == 'INTERN' || not empty user.studentCode}">
@@ -139,6 +139,11 @@
                                     <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>Người hướng dẫn</option>
                                     <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>Quản lý phòng LAB</option>
                                 </select>
+                                <c:if test="${hasLabManager}">
+                                    <small id="lmNotice" style="display:none; color:#0369a1; font-size:11.5px; margin-top:5px; line-height:1.4;">
+                                        ℹ️ Hệ thống hiện có Quản lý phòng LAB (<b><c:out value="${currentLmName}"/></b>). Khi tạo tài khoản mới này, tài khoản Quản lý cũ sẽ tự động chuyển sang trạng thái <b>Khóa (INACTIVE)</b>.
+                                    </small>
+                                </c:if>
                             </div>
 
                             <div class="form-group" id="studentCodeGroup">
@@ -147,8 +152,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label id="emailLabel">Email (@fpt.edu.vn) *</label>
-                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: anhnmse160123@fpt.edu.vn">
+                                <label id="emailLabel">Email (Gmail / @fpt.edu.vn) *</label>
+                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: anhnm@fpt.edu.vn hoặc sinhvien@gmail.com">
                             </div>
 
                             <div class="form-group" id="majorGroup">
@@ -198,17 +203,19 @@
         const chGroup = document.getElementById('cohortGroup');
         const emailLabel = document.getElementById('emailLabel');
         const emailInput = document.getElementById('emailInput');
+        const lmNotice = document.getElementById('lmNotice');
 
         if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
         if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
         if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
+        if (lmNotice) lmNotice.style.display = (roleSelect.value === 'LAB_MANAGER') ? 'block' : 'none';
 
         if (isIntern) {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) * <span style="color:#0284c7; font-weight:normal;">(Đăng nhập qua Google OAuth)</span>';
-            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnmse160123@fpt.edu.vn';
+            if (emailLabel) emailLabel.innerHTML = 'Email (Gmail / @fpt.edu.vn) * <span style="color:#0284c7; font-weight:normal;">(Dùng đăng nhập qua Google)</span>';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnm@fpt.edu.vn hoặc sinhvien@gmail.com';
         } else if (roleSelect.value === 'MENTOR') {
             if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
-            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnm@fpt.edu.vn hoặc mentor@gmail.com';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: mentor@gmail.com hoặc mentor@fpt.edu.vn';
         } else {
             if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
             if (emailInput) emailInput.placeholder = 'Ví dụ: manager@gmail.com hoặc manager@fpt.edu.vn';

@@ -634,11 +634,12 @@ public class InternListDAO {
 		} else {
 			try (PreparedStatement statement = connection.prepareStatement("""
 					UPDATE dbo.student_profiles
-					SET cohort = ?, status = 'ACTIVE', updated_at = SYSUTCDATETIME()
+					SET student_code = ?, cohort = ?, status = 'ACTIVE', updated_at = SYSUTCDATETIME()
 					WHERE student_id = ?
 					""")) {
-				statement.setString(1, intern.getCohort());
-				statement.setLong(2, studentId);
+				statement.setString(1, intern.getStudentCode());
+				statement.setString(2, intern.getCohort());
+				statement.setLong(3, studentId);
 				statement.executeUpdate();
 			}
 		}
@@ -718,7 +719,10 @@ public class InternListDAO {
 	private List<InternListStudent> findStudents(Connection connection, long requestId) throws SQLException {
 		String sql = """
 				SELECT e.request_id, e.semester_id, approved.student_id, e.added_at,
-				       e.student_code, e.full_name, e.email, e.cohort
+				       COALESCE(sp.student_code, e.student_code) AS student_code,
+				       COALESCE(u.full_name, e.full_name) AS full_name,
+				       COALESCE(u.email, e.email) AS email,
+				       COALESCE(sp.cohort, e.cohort) AS cohort
 				FROM dbo.lab_usage_request_student_entries e
 				LEFT JOIN dbo.users u ON LOWER(u.email) = LOWER(e.email) AND u.role = 'INTERN'
 				LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
