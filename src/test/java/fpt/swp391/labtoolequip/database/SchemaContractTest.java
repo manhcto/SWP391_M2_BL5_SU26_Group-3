@@ -45,5 +45,31 @@ class SchemaContractTest {
 		assertTrue(schema.contains("reason_code varchar(30) NULL"));
 		assertTrue(schema.contains("'ARDUINO-UNO-KIT'"));
 		assertTrue(schema.contains("'PRESENTATION-REMOTE'"));
+		assertTrue(schema.contains("'anhnmhe171286@fpt.edu.vn'"));
+		assertTrue(schema.contains("'minhlahe180101@fpt.edu.vn'"));
+	}
+
+	@Test
+	void freshBootstrapUsesUniqueFilesAndStopsWhenDatabaseExists() throws IOException {
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("SET NOEXEC ON"));
+		assertTrue(schema.contains("InstanceDefaultDataPath"));
+		assertTrue(schema.contains("InstanceDefaultLogPath"));
+		assertTrue(schema.contains("REPLACE(CONVERT(varchar(36), NEWID())"));
+	}
+
+	@Test
+	void demoFixtureCoversActionableModuleStates() throws IOException {
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("DEMO-READY FIXTURE"));
+		assertTrue(schema.contains("'RETURN_PENDING'"));
+		assertTrue(schema.contains("'PENDING_APPROVAL'"));
+		assertTrue(schema.contains("'DISCREPANCY_FOUND'"));
+		assertTrue(schema.contains("'IN_PROGRESS'"));
+		assertTrue(schema.contains("'ISSUE_REPORTED'"));
+		assertTrue(schema.contains("'PROJECTOR-EBX06'"));
+		assertTrue(schema.contains("'WEBCAM-C920'"));
 	}
 }

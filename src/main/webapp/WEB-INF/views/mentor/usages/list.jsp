@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Sử dụng thiết bị | LAB Asset</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css?v=iter3">
 </head>
 <body class="mentor-page">
 <c:set var="activeMenu" value="usages" scope="request"/>
@@ -32,10 +32,15 @@
                     <button class="primary-button" type="submit">Lọc</button><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/usages">Đặt lại</a>
                 </div>
             </form>
+            <c:if test="${not empty param.confirmed}"><div class="success-message">Đã xác nhận <c:out value="${param.confirmed}"/> yêu cầu trả thiết bị.</div></c:if>
+            <c:if test="${not empty message}"><div class="error-message"><c:out value="${message}"/></div></c:if>
             <article class="panel">
                 <c:choose><c:when test="${empty usages}"><div class="empty-box"><div class="empty-box-icon"><svg><use href="#i-calendar"/></svg></div><h3>Chưa có lịch sử sử dụng</h3><p>Không có bản ghi phù hợp với bộ lọc.</p></div></c:when><c:otherwise>
-                    <div class="table-scroll"><table><thead><tr><th>Thực tập sinh</th><th>Thiết bị / sản phẩm</th><th>Yêu cầu trả</th><th>Intern báo cáo</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><c:forEach items="${usages}" var="u"><tr><td><c:out value="${u.internName}"/></td><td><strong><c:out value="${u.assetName}"/></strong><br><small><c:out value="${empty u.assetItemTag ? u.assetCode : u.assetItemTag}"/></small></td><td><c:out value="${empty u.returnRequestedAt ? 'Chưa yêu cầu' : app:dateTime(u.returnRequestedAt)}"/></td><td><c:out value="${empty u.reportedConditionAfter ? '-' : app:label(u.reportedConditionAfter)}"/></td><td><span class="status"><c:out value="${app:label(u.status)}"/></span></td><td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/mentor/usages/${u.assetUsageId}">${u.status == 'RETURN_PENDING' ? 'Xác nhận' : 'Xem'}</a></td></tr></c:forEach></tbody></table></div>
-                    <div class="table-footer"><span>Hiển thị ${usages.size()} lượt sử dụng</span></div>
+                    <form method="post" action="${pageContext.request.contextPath}/mentor/usages">
+                        <input type="hidden" name="csrfToken" value="${csrfToken}"><input type="hidden" name="action" value="bulkConfirmReturn">
+                        <div class="table-scroll"><table><thead><tr><th><span class="sr-only">Chọn</span></th><th>Thực tập sinh</th><th>Thiết bị / sản phẩm</th><th>Yêu cầu trả</th><th>Intern báo cáo</th><th>Tình trạng thực tế</th><th>Ghi chú</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody><c:forEach items="${usages}" var="u"><c:set var="bulkEligible" value="${u.status == 'RETURN_PENDING' && not empty u.assetItemId}"/><tr><td><c:if test="${bulkEligible}"><input type="checkbox" name="selectedUsageId" value="${u.assetUsageId}" aria-label="Chọn yêu cầu trả của ${u.internName}"></c:if></td><td><c:out value="${u.internName}"/></td><td><strong><c:out value="${u.assetName}"/></strong><br><small><c:out value="${empty u.assetItemTag ? u.assetCode : u.assetItemTag}"/></small></td><td><c:out value="${empty u.returnRequestedAt ? 'Chưa yêu cầu' : app:dateTime(u.returnRequestedAt)}"/></td><td><c:out value="${empty u.reportedConditionAfter ? '-' : app:label(u.reportedConditionAfter)}"/></td><td><c:choose><c:when test="${bulkEligible}"><select class="form-control" name="verifiedCondition_${u.assetUsageId}" aria-label="Tình trạng thực tế ${u.assetItemTag}"><option value="GOOD">Tốt</option><option value="FAIR">Khá</option><option value="DAMAGED">Hư hỏng</option><option value="BROKEN">Không hoạt động</option></select></c:when><c:otherwise>-</c:otherwise></c:choose></td><td><c:choose><c:when test="${bulkEligible}"><input class="form-control" name="note_${u.assetUsageId}" maxlength="500" placeholder="Tùy chọn" aria-label="Ghi chú xác minh ${u.assetItemTag}"></c:when><c:otherwise>-</c:otherwise></c:choose></td><td><span class="status"><c:out value="${app:label(u.status)}"/></span></td><td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/mentor/usages/${u.assetUsageId}">${u.status == 'RETURN_PENDING' ? 'Xác nhận' : 'Xem'}</a></td></tr></c:forEach></tbody></table></div>
+                        <div class="table-footer"><span>Hiển thị ${usages.size()} lượt sử dụng</span><button class="primary-button" type="submit">Xác nhận các mục đã chọn</button></div>
+                    </form>
                 </c:otherwise></c:choose>
             </article>
         </section>

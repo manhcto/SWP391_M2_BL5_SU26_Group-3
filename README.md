@@ -179,6 +179,7 @@ Các tài khoản nội bộ demo dùng mật khẩu `123` cho môi trường lo
 | `admin@gmail.com` | `ADMIN` |
 | `manager@gmail.com` | `LAB_MANAGER` |
 | `mentor@gmail.com` | `MENTOR` |
+| `mentor.ops@gmail.com` | `MENTOR` |
 
 Intern demo đăng nhập bằng Google:
 
@@ -190,12 +191,12 @@ Intern demo đăng nhập bằng Google:
 | `minhtbhe186275@fpt.edu.vn` | `HE186275` |
 | `minhlahe180101@fpt.edu.vn` | `HE180101` |
 
-Mock data tạo kỳ `DEMO-2026`, một danh sách Intern `APPROVED`, năm membership và thiết bị mẫu cho luồng mượn/trả, thanh lý.
+Mock data dùng ngày tương đối và tạo ba kỳ/danh sách `APPROVED`, `PENDING`, `REJECTED`; năm Intern FPT; 15 loại tài sản và 17 Item vật lý. Fixture phủ các trạng thái demo của Usage/Bulk Return, Allocation, Inspection, Incident, Responsibility, Maintenance, Disposal, Password Reset, Dashboard và Lifecycle Timeline. Hai Item `ARD-UNO-R3-001` và `WEBCAM-C920-001` được giữ trống để thao tác live.
 
 Khởi tạo database và dữ liệu demo:
 
 ```powershell
-sqlcmd -S localhost,1433 -U sa -P <password> -C -b -i database/lab_asset_management_full.sql
+sqlcmd -S localhost,1433 -U sa -P <password> -C -b -f 65001 -i database/lab_asset_management_full.sql
 ```
 
 ## Chạy dự án

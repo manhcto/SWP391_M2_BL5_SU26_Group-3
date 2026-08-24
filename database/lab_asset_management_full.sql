@@ -20,8 +20,26 @@ GO
 USE [master];
 GO
 
-IF DB_ID(N'lab_asset_management') IS NULL
-    EXEC(N'CREATE DATABASE [lab_asset_management]');
+IF DB_ID(N'lab_asset_management') IS NOT NULL
+BEGIN
+    RAISERROR('Database lab_asset_management already exists. This script is for a fresh database only.', 16, 1);
+    SET NOEXEC ON;
+END;
+
+DECLARE @databaseSuffix varchar(32) = REPLACE(CONVERT(varchar(36), NEWID()), '-', '');
+DECLARE @dataPath nvarchar(4000) = CONVERT(nvarchar(4000), SERVERPROPERTY('InstanceDefaultDataPath'));
+DECLARE @logPath nvarchar(4000) = CONVERT(nvarchar(4000), SERVERPROPERTY('InstanceDefaultLogPath'));
+DECLARE @createDatabase nvarchar(max);
+
+IF @dataPath IS NULL OR @logPath IS NULL
+    THROW 51000, 'SQL Server default data or log path is unavailable.', 1;
+
+SET @createDatabase = N'CREATE DATABASE [lab_asset_management]
+    ON PRIMARY (NAME = N''lab_asset_management_data'', FILENAME = N'''
+    + REPLACE(@dataPath + N'lab_asset_management_' + @databaseSuffix + N'.mdf', '''', '''''')
+    + N''') LOG ON (NAME = N''lab_asset_management_log'', FILENAME = N'''
+    + REPLACE(@logPath + N'lab_asset_management_' + @databaseSuffix + N'_log.ldf', '''', '''''') + N''')';
+EXEC sys.sp_executesql @createDatabase;
 GO
 
 USE [lab_asset_management];
@@ -708,15 +726,6 @@ BEGIN CATCH
         ROLLBACK TRANSACTION;
     THROW;
 END CATCH;
-GO
-
-SELECT
-    u.full_name,
-    u.email,
-    u.role,
-    '123' AS demo_password
-FROM dbo.users AS u
-ORDER BY u.user_id;
 GO
 
 /* ========================================================================
@@ -1416,5 +1425,372 @@ BEGIN
 END;
 GO
 
+/* FPT Google accounts used by the project team for Intern flow testing. */
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+    DECLARE @fptSemesterId bigint;
+    DECLARE @fptRequestId bigint;
+    DECLARE @fptMentorId bigint;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.semesters WHERE code = 'DEMO-2026')
+        INSERT dbo.semesters (code, name, start_date, end_date, status)
+        VALUES ('DEMO-2026', N'Demo 2026', '2026-01-01', '2026-12-31', 'ACTIVE');
+    SELECT @fptSemesterId = semester_id FROM dbo.semesters WHERE code = 'DEMO-2026';
+    SELECT TOP (1) @fptMentorId = user_id FROM dbo.users WHERE role = 'MENTOR' AND status = 'ACTIVE' ORDER BY user_id;
+
+    DECLARE @fptInterns TABLE (full_name nvarchar(100), email varchar(255), student_code varchar(30));
+    INSERT @fptInterns (full_name, email, student_code) VALUES
+        (N'Nguyễn Minh Anh', 'anhnmhe171286@fpt.edu.vn', 'HE171286'),
+        (N'Nguyễn Đức Trung', 'trungndhe180362@fpt.edu.vn', 'HE180362'),
+        (N'Từ Minh Đức', 'ductmhe180875@fpt.edu.vn', 'HE180875'),
+        (N'Trần Bình Minh', 'minhtbhe186275@fpt.edu.vn', 'HE186275'),
+        (N'Lương Anh Minh', 'minhlahe180101@fpt.edu.vn', 'HE180101');
+
+    INSERT dbo.users (full_name, email, password_hash, role, status)
+    SELECT source.full_name, source.email, NULL, 'INTERN', 'ACTIVE'
+    FROM @fptInterns source WHERE NOT EXISTS (SELECT 1 FROM dbo.users existing WHERE existing.email = source.email);
+
+    INSERT dbo.student_profiles (user_id, student_code, cohort, status)
+    SELECT account.user_id, source.student_code, 'K18', 'ACTIVE'
+    FROM @fptInterns source JOIN dbo.users account ON account.email = source.email
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.student_profiles profile WHERE profile.user_id = account.user_id OR profile.student_code = source.student_code);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.lab_usage_requests WHERE semester_id = @fptSemesterId)
+        INSERT dbo.lab_usage_requests
+            (semester_id, mentor_id, group_name, status, request_note, approved_by, approved_at, approval_note)
+        VALUES (@fptSemesterId, @fptMentorId, N'DEMO-2026 Intern List', 'APPROVED',
+                N'Danh sách tài khoản FPT dùng kiểm thử Google OAuth.', @fptMentorId, SYSUTCDATETIME(), N'Dữ liệu demo.');
+    SELECT @fptRequestId = request_id FROM dbo.lab_usage_requests WHERE semester_id = @fptSemesterId;
+
+    INSERT dbo.lab_usage_request_student_entries (request_id, semester_id, student_code, full_name, email, cohort)
+    SELECT @fptRequestId, @fptSemesterId, source.student_code, source.full_name, source.email, 'K18'
+    FROM @fptInterns source
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.lab_usage_request_student_entries entry
+                      WHERE entry.request_id = @fptRequestId AND (entry.student_code = source.student_code OR entry.email = source.email));
+
+    INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
+    SELECT @fptRequestId, @fptSemesterId, profile.student_id
+    FROM @fptInterns source JOIN dbo.users account ON account.email = source.email
+    JOIN dbo.student_profiles profile ON profile.user_id = account.user_id
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.lab_usage_request_students member
+                      WHERE member.request_id = @fptRequestId AND member.student_id = profile.student_id);
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO
+
+/* ========================================================================
+   DEMO-READY FIXTURE
+   Replaces the small migration-era samples with one coherent LAB dataset.
+   Every implemented module has realistic history plus actionable records.
+   Dates are relative so a fresh setup remains usable in future semesters.
+   ======================================================================== */
+SET XACT_ABORT ON;
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    DELETE FROM dbo.equipment_allocation_issue_reports;
+    DELETE FROM dbo.equipment_allocations;
+    DELETE FROM dbo.equipment_allocation_requests;
+    DELETE FROM dbo.equipment_group_members;
+    DELETE FROM dbo.equipment_groups;
+    DELETE FROM dbo.equipment_activities;
+    DELETE FROM dbo.password_reset_requests;
+    DELETE FROM dbo.disposal_records;
+    DELETE FROM dbo.maintenance_records;
+    DELETE FROM dbo.responsibilities;
+    DELETE FROM dbo.incidents;
+    DELETE FROM dbo.inspection_items;
+    DELETE FROM dbo.inspection_records;
+    DELETE FROM dbo.asset_usages;
+    DELETE FROM dbo.asset_items;
+    DELETE FROM dbo.assets;
+    DELETE FROM dbo.asset_categories;
+    DELETE FROM dbo.lab_usage_request_student_entries;
+    DELETE FROM dbo.lab_usage_request_students;
+    DELETE FROM dbo.lab_usage_requests;
+    DELETE FROM dbo.semesters;
+    DELETE FROM dbo.student_profiles;
+    DELETE FROM dbo.users;
+
+    DECLARE @now datetime2(0) = SYSUTCDATETIME();
+    DECLARE @today date = CONVERT(date, @now);
+    DECLARE @passwordHash varchar(255) = '$2a$10$c4PNSNs0bJn0drrJzAxThu4TBztls3COfVZA.W33b0BL6cquNIS.C';
+
+    INSERT dbo.users (full_name, email, password_hash, role, status)
+    VALUES
+        (N'Nguyễn Hoài An', 'admin@gmail.com', @passwordHash, 'ADMIN', 'ACTIVE'),
+        (N'Trần Quốc Huy', 'manager@gmail.com', @passwordHash, 'LAB_MANAGER', 'ACTIVE'),
+        (N'Lê Thu Hà', 'mentor@gmail.com', @passwordHash, 'MENTOR', 'ACTIVE'),
+        (N'Phạm Minh Quân', 'mentor.ops@gmail.com', @passwordHash, 'MENTOR', 'ACTIVE'),
+        (N'Đặng Ngọc Lan', 'inactive.manager@gmail.com', @passwordHash, 'LAB_MANAGER', 'INACTIVE'),
+        (N'Nguyễn Minh Anh', 'anhnmhe171286@fpt.edu.vn', NULL, 'INTERN', 'ACTIVE'),
+        (N'Nguyễn Đức Trung', 'trungndhe180362@fpt.edu.vn', NULL, 'INTERN', 'ACTIVE'),
+        (N'Từ Minh Đức', 'ductmhe180875@fpt.edu.vn', NULL, 'INTERN', 'ACTIVE'),
+        (N'Trần Bình Minh', 'minhtbhe186275@fpt.edu.vn', NULL, 'INTERN', 'ACTIVE'),
+        (N'Lương Anh Minh', 'minhlahe180101@fpt.edu.vn', NULL, 'INTERN', 'ACTIVE'),
+        (N'Bùi Gia Hân', 'hanbghe180999@fpt.edu.vn', NULL, 'INTERN', 'INACTIVE');
+
+    DECLARE @admin bigint = (SELECT user_id FROM dbo.users WHERE email='admin@gmail.com');
+    DECLARE @manager bigint = (SELECT user_id FROM dbo.users WHERE email='manager@gmail.com');
+    DECLARE @mentor bigint = (SELECT user_id FROM dbo.users WHERE email='mentor@gmail.com');
+    DECLARE @mentorOps bigint = (SELECT user_id FROM dbo.users WHERE email='mentor.ops@gmail.com');
+    DECLARE @anh bigint = (SELECT user_id FROM dbo.users WHERE email='anhnmhe171286@fpt.edu.vn');
+    DECLARE @trung bigint = (SELECT user_id FROM dbo.users WHERE email='trungndhe180362@fpt.edu.vn');
+    DECLARE @duc bigint = (SELECT user_id FROM dbo.users WHERE email='ductmhe180875@fpt.edu.vn');
+    DECLARE @minh bigint = (SELECT user_id FROM dbo.users WHERE email='minhtbhe186275@fpt.edu.vn');
+    DECLARE @luong bigint = (SELECT user_id FROM dbo.users WHERE email='minhlahe180101@fpt.edu.vn');
+    DECLARE @han bigint = (SELECT user_id FROM dbo.users WHERE email='hanbghe180999@fpt.edu.vn');
+
+    INSERT dbo.student_profiles (user_id, student_code, major_id, cohort, status)
+    VALUES
+        (@anh, 'HE171286', (SELECT major_id FROM dbo.majors WHERE major_code='SE'), 'K17', 'ACTIVE'),
+        (@trung, 'HE180362', (SELECT major_id FROM dbo.majors WHERE major_code='AI'), 'K18', 'ACTIVE'),
+        (@duc, 'HE180875', (SELECT major_id FROM dbo.majors WHERE major_code='SE'), 'K18', 'ACTIVE'),
+        (@minh, 'HE186275', (SELECT major_id FROM dbo.majors WHERE major_code='IS'), 'K18', 'ACTIVE'),
+        (@luong, 'HE180101', (SELECT major_id FROM dbo.majors WHERE major_code='IA'), 'K18', 'ACTIVE'),
+        (@han, 'HE180999', (SELECT major_id FROM dbo.majors WHERE major_code='SE'), 'K18', 'INACTIVE');
+
+    DECLARE @anhStudent bigint = (SELECT student_id FROM dbo.student_profiles WHERE user_id=@anh);
+    DECLARE @trungStudent bigint = (SELECT student_id FROM dbo.student_profiles WHERE user_id=@trung);
+    DECLARE @ducStudent bigint = (SELECT student_id FROM dbo.student_profiles WHERE user_id=@duc);
+    DECLARE @minhStudent bigint = (SELECT student_id FROM dbo.student_profiles WHERE user_id=@minh);
+    DECLARE @luongStudent bigint = (SELECT student_id FROM dbo.student_profiles WHERE user_id=@luong);
+
+    INSERT dbo.semesters (code, name, start_date, end_date, status)
+    VALUES
+        ('DEMO-ACTIVE', N'Kỳ thực tập hiện tại', DATEADD(DAY,-45,@today), DATEADD(DAY,75,@today), 'ACTIVE'),
+        ('DEMO-NEXT', N'Kỳ thực tập kế tiếp', DATEADD(DAY,90,@today), DATEADD(DAY,180,@today), 'UPCOMING'),
+        ('DEMO-CLOSED', N'Kỳ thực tập đã kết thúc', DATEADD(DAY,-210,@today), DATEADD(DAY,-90,@today), 'CLOSED');
+    DECLARE @activeSemester bigint = (SELECT semester_id FROM dbo.semesters WHERE code='DEMO-ACTIVE');
+    DECLARE @nextSemester bigint = (SELECT semester_id FROM dbo.semesters WHERE code='DEMO-NEXT');
+    DECLARE @closedSemester bigint = (SELECT semester_id FROM dbo.semesters WHERE code='DEMO-CLOSED');
+
+    INSERT dbo.lab_usage_requests
+        (semester_id, mentor_id, group_name, status, request_note, approved_by, approved_at, approval_note, created_at)
+    VALUES
+        (@activeSemester,@mentor,N'Nhóm IoT K18 - Smart Garden','APPROVED',N'Nhóm phát triển hệ thống giám sát nhà kính thông minh.',@admin,DATEADD(DAY,-43,@now),N'Đủ hồ sơ, phạm vi sử dụng LAB phù hợp.',DATEADD(DAY,-44,@now)),
+        (@nextSemester,@mentor,N'Nhóm Embedded K19 - Robot vận chuyển','PENDING',N'Danh sách dự kiến cho dự án robot tự hành.',NULL,NULL,NULL,DATEADD(DAY,-2,@now)),
+        (@closedSemester,@mentorOps,N'Nhóm Robotics K17 - Kho thông minh','REJECTED',N'Danh sách bổ sung sau thời hạn đăng ký.',@admin,DATEADD(DAY,-205,@now),N'Từ chối vì nộp sau thời hạn và thiếu xác nhận môn học.',DATEADD(DAY,-208,@now));
+    DECLARE @activeRequest bigint = (SELECT request_id FROM dbo.lab_usage_requests WHERE semester_id=@activeSemester);
+    DECLARE @nextRequest bigint = (SELECT request_id FROM dbo.lab_usage_requests WHERE semester_id=@nextSemester);
+    DECLARE @closedRequest bigint = (SELECT request_id FROM dbo.lab_usage_requests WHERE semester_id=@closedSemester);
+
+    INSERT dbo.lab_usage_request_student_entries (request_id,semester_id,student_code,full_name,email,cohort)
+    VALUES
+        (@activeRequest,@activeSemester,'HE171286',N'Nguyễn Minh Anh','anhnmhe171286@fpt.edu.vn','K17'),
+        (@activeRequest,@activeSemester,'HE180362',N'Nguyễn Đức Trung','trungndhe180362@fpt.edu.vn','K18'),
+        (@activeRequest,@activeSemester,'HE180875',N'Từ Minh Đức','ductmhe180875@fpt.edu.vn','K18'),
+        (@activeRequest,@activeSemester,'HE186275',N'Trần Bình Minh','minhtbhe186275@fpt.edu.vn','K18'),
+        (@activeRequest,@activeSemester,'HE180101',N'Lương Anh Minh','minhlahe180101@fpt.edu.vn','K18'),
+        (@nextRequest,@nextSemester,'HE190201',N'Vũ Hải Nam','namvhhe190201@fpt.edu.vn','K19'),
+        (@nextRequest,@nextSemester,'HE190245',N'Hoàng Ngọc Mai','maihnhe190245@fpt.edu.vn','K19'),
+        (@closedRequest,@closedSemester,'HE170112',N'Đặng Anh Dũng','dungdahe170112@fpt.edu.vn','K17');
+    INSERT dbo.lab_usage_request_students (request_id,semester_id,student_id)
+    VALUES
+        (@activeRequest,@activeSemester,@anhStudent),(@activeRequest,@activeSemester,@trungStudent),
+        (@activeRequest,@activeSemester,@ducStudent),(@activeRequest,@activeSemester,@minhStudent),
+        (@activeRequest,@activeSemester,@luongStudent);
+
+    INSERT dbo.asset_categories (category_name,description,status)
+    VALUES
+        (N'Kit vi điều khiển',N'Bo mạch và bộ kit phục vụ lập trình nhúng.','ACTIVE'),
+        (N'Thiết bị đo lường',N'Thiết bị đo điện, kiểm tra tín hiệu và hiệu chuẩn.','ACTIVE'),
+        (N'Máy tính và phụ kiện',N'Máy tính nhúng, chuột, webcam và phụ kiện trình chiếu.','ACTIVE'),
+        (N'Dụng cụ điện tử',N'Trạm hàn, đầu dò và dụng cụ sửa chữa phần cứng.','ACTIVE'),
+        (N'Thiết bị cố định',N'Thiết bị lắp đặt cố định trong phòng LAB.','ACTIVE'),
+        (N'Linh kiện tiêu hao',N'Dây nối, cảm biến và linh kiện quản lý theo số lượng.','ACTIVE');
+    DECLARE @catKit bigint=(SELECT category_id FROM dbo.asset_categories WHERE category_name=N'Kit vi điều khiển');
+    DECLARE @catMeasure bigint=(SELECT category_id FROM dbo.asset_categories WHERE category_name=N'Thiết bị đo lường');
+    DECLARE @catComputer bigint=(SELECT category_id FROM dbo.asset_categories WHERE category_name=N'Máy tính và phụ kiện');
+    DECLARE @catTool bigint=(SELECT category_id FROM dbo.asset_categories WHERE category_name=N'Dụng cụ điện tử');
+    DECLARE @catFixed bigint=(SELECT category_id FROM dbo.asset_categories WHERE category_name=N'Thiết bị cố định');
+    DECLARE @catConsumable bigint=(SELECT category_id FROM dbo.asset_categories WHERE category_name=N'Linh kiện tiêu hao');
+
+    INSERT dbo.assets (asset_code,asset_name,category_id,tracking_mode,total_quantity,condition,status,is_borrowable,storage_location,description,created_at)
+    VALUES
+        ('ARD-UNO-R3',N'Bộ kit Arduino Uno R3',@catKit,'SERIALIZED',1,'GOOD','AVAILABLE',1,N'Tủ IoT A1',N'Kit cá nhân gồm Arduino Uno, breadboard, dây USB và bộ dây jumper.',DATEADD(DAY,-420,@now)),
+        ('RPI4-4GB',N'Raspberry Pi 4 Model B 4GB',@catComputer,'SERIALIZED',1,'GOOD','AVAILABLE',1,N'Tủ IoT A2',N'Máy tính nhúng dùng cho gateway và xử lý ảnh biên.',DATEADD(DAY,-380,@now)),
+        ('DMM-AN8008',N'Đồng hồ vạn năng ANENG AN8008',@catMeasure,'SERIALIZED',1,'GOOD','AVAILABLE',1,N'Tủ đo lường B1',N'Đồng hồ True RMS kèm que đo và túi bảo vệ.',DATEADD(DAY,-350,@now)),
+        ('MOUSE-M331',N'Chuột không dây Logitech M331',@catComputer,'SERIALIZED',1,'GOOD','AVAILABLE',1,N'Tủ phụ kiện C1',N'Chuột không dây dùng cùng laptop trình bày.',DATEADD(DAY,-300,@now)),
+        ('RPI3-LEGACY',N'Raspberry Pi 3 Model B đời cũ',@catComputer,'SERIALIZED',1,'BROKEN','DISPOSED',0,N'Kho thanh lý',N'Thiết bị lịch sử đã hỏng nguồn và hoàn tất thanh lý.',DATEADD(DAY,-900,@now)),
+        ('REMOTE-R400',N'Bút trình chiếu Logitech R400',@catComputer,'SERIALIZED',1,'GOOD','AVAILABLE',1,N'Tủ phụ kiện C2',N'Bút trình chiếu dùng cho nghiệm thu sprint.',DATEADD(DAY,-240,@now)),
+        ('PROJECTOR-EBX06',N'Máy chiếu Epson EB-X06',@catFixed,'SERIALIZED',1,'BROKEN','UNAVAILABLE',0,N'Phòng LAB - trần khu A',N'Máy chiếu cố định, bóng đèn suy giảm và lỗi nguồn.',DATEADD(DAY,-1200,@now)),
+        ('OSC-PROBE-10X',N'Đầu dò oscilloscope Hantek 10X',@catMeasure,'SERIALIZED',1,'DAMAGED','UNAVAILABLE',1,N'Tủ đo lường B2',N'Đầu dò 100 MHz, đầu kẹp mass bị lỏng.',DATEADD(DAY,-260,@now)),
+        ('SOLDER-936',N'Trạm hàn Hakko 936',@catTool,'SERIALIZED',1,'DAMAGED','AVAILABLE',0,N'Bàn sửa chữa D1',N'Trạm hàn dùng sửa mạch, cảm biến nhiệt đang sai lệch.',DATEADD(DAY,-700,@now)),
+        ('TABLET-GALAXY-A',N'Máy tính bảng Galaxy Tab A 2019',@catComputer,'SERIALIZED',1,'BROKEN','UNAVAILABLE',0,N'Kho chờ xử lý',N'Màn hình nứt, pin phồng, không còn an toàn sử dụng.',DATEADD(DAY,-1000,@now)),
+        ('WEBCAM-C920',N'Webcam Logitech C920',@catComputer,'SERIALIZED',1,'GOOD','AVAILABLE',1,N'Tủ phụ kiện C3',N'Webcam Full HD dùng họp trực tuyến và nhận diện hình ảnh.',DATEADD(DAY,-180,@now)),
+        ('ARD-CLASS-SET',N'Bộ Arduino thực hành theo nhóm',@catKit,'QUANTITY',3,'GOOD','AVAILABLE',1,N'Kệ lớp học A3',N'Ba bộ kit đồng nhất cấp theo nhóm thực tập.',DATEADD(DAY,-330,@now)),
+        ('SENSOR-ENV-SET',N'Bộ cảm biến môi trường',@catConsumable,'QUANTITY',2,'DAMAGED','MAINTENANCE',1,N'Tủ IoT A4',N'Bộ DHT22, cảm biến ánh sáng và độ ẩm đất.',DATEADD(DAY,-200,@now)),
+        ('JUMPER-65',N'Bộ dây jumper 65 sợi',@catConsumable,'QUANTITY',20,'GOOD','AVAILABLE',1,N'Khay linh kiện E1',N'Dây đực-đực, đực-cái và cái-cái quản lý theo số lượng.',DATEADD(DAY,-150,@now)),
+        ('LAB-PROJECTOR',N'Máy chiếu Epson EB-E01',@catFixed,'SERIALIZED',1,'GOOD','AVAILABLE',0,N'Phòng LAB - trần khu B',N'Thiết bị cố định phục vụ giảng dạy và demo.',DATEADD(DAY,-500,@now));
+
+    DECLARE @asset TABLE(code varchar(50) PRIMARY KEY,id bigint);
+    INSERT @asset SELECT asset_code,asset_id FROM dbo.assets;
+    INSERT dbo.asset_items (asset_id,item_code,serial_number,image_path,condition,status,is_borrowable,storage_location,purchase_date,warranty_until,note,created_at)
+    VALUES
+        ((SELECT id FROM @asset WHERE code='ARD-UNO-R3'),'ARD-UNO-R3-001','VN-ARD-2025-001',N'/assets/images/equipment/arduino-uno-kit.svg','GOOD','AVAILABLE',1,N'Tủ IoT A1',DATEADD(DAY,-420,@today),DATEADD(DAY,310,@today),N'Đủ 28 linh kiện, sẵn sàng cho mượn live.',DATEADD(DAY,-420,@now)),
+        ((SELECT id FROM @asset WHERE code='RPI4-4GB'),'RPI4-4GB-001','10000000A7C91F2B',N'/assets/images/equipment/raspberry-pi-kit.svg','GOOD','IN_USE',1,N'Tủ IoT A2',DATEADD(DAY,-380,@today),DATEADD(DAY,-15,@today),N'Kèm nguồn USB-C 5V/3A và thẻ nhớ 64GB.',DATEADD(DAY,-380,@now)),
+        ((SELECT id FROM @asset WHERE code='DMM-AN8008'),'DMM-AN8008-001','AN8-VN-2403158',N'/assets/images/equipment/digital-multimeter.svg','GOOD','IN_USE',1,N'Tủ đo lường B1',DATEADD(DAY,-350,@today),DATEADD(DAY,15,@today),N'Đã hiệu chuẩn gần nhất ba tháng trước.',DATEADD(DAY,-350,@now)),
+        ((SELECT id FROM @asset WHERE code='MOUSE-M331'),'MOUSE-M331-001','M331-24-88721',N'/assets/images/equipment/wireless-mouse.svg','GOOD','IN_USE',1,N'Tủ phụ kiện C1',DATEADD(DAY,-300,@today),NULL,N'Đã thay pin trước khi bàn giao.',DATEADD(DAY,-300,@now)),
+        ((SELECT id FROM @asset WHERE code='RPI3-LEGACY'),'RPI3-LEGACY-001','000000008F32BC11',N'/assets/images/equipment/raspberry-pi-kit.svg','BROKEN','DISPOSED',0,N'Kho thanh lý',DATEADD(DAY,-900,@today),NULL,N'Đã tháo thẻ nhớ, hoàn tất bàn giao rác thải điện tử.',DATEADD(DAY,-900,@now)),
+        ((SELECT id FROM @asset WHERE code='REMOTE-R400'),'REMOTE-R400-001','R400-VN-55102',N'/assets/images/equipment/presentation-remote.svg','GOOD','UNAVAILABLE',1,N'Tủ phụ kiện C2',DATEADD(DAY,-240,@today),DATEADD(DAY,125,@today),N'Đã gán trực tiếp, chờ Intern xác nhận nhận.',DATEADD(DAY,-240,@now)),
+        ((SELECT id FROM @asset WHERE code='PROJECTOR-EBX06'),'PROJECTOR-EBX06-001','X6KJ012948',NULL,'BROKEN','UNAVAILABLE',0,N'Phòng LAB - trần khu A',DATEADD(DAY,-1200,@today),NULL,N'Đang chờ Lab Manager duyệt đề xuất thanh lý.',DATEADD(DAY,-1200,@now)),
+        ((SELECT id FROM @asset WHERE code='OSC-PROBE-10X'),'OSC-PROBE-10X-001','HT-P6100-2407',N'/assets/images/equipment/digital-multimeter.svg','DAMAGED','UNAVAILABLE',1,N'Tủ đo lường B2',DATEADD(DAY,-260,@today),DATEADD(DAY,105,@today),N'Đang chờ duyệt phiếu bảo trì.',DATEADD(DAY,-260,@now)),
+        ((SELECT id FROM @asset WHERE code='SOLDER-936'),'SOLDER-936-001','HK936-19-00482',NULL,'DAMAGED','MAINTENANCE',0,N'Bàn sửa chữa D1',DATEADD(DAY,-700,@today),NULL,N'Đang thay cảm biến nhiệt và kiểm tra tiếp địa.',DATEADD(DAY,-700,@now)),
+        ((SELECT id FROM @asset WHERE code='TABLET-GALAXY-A'),'TABLET-GALAXY-A-001','R9MMA02K7TT',NULL,'BROKEN','UNAVAILABLE',0,N'Kho chờ xử lý',DATEADD(DAY,-1000,@today),NULL,N'Đề xuất thanh lý đã được duyệt, chờ bàn giao.',DATEADD(DAY,-1000,@now)),
+        ((SELECT id FROM @asset WHERE code='WEBCAM-C920'),'WEBCAM-C920-001','C920-2238LZA',NULL,'GOOD','AVAILABLE',1,N'Tủ phụ kiện C3',DATEADD(DAY,-180,@today),DATEADD(DAY,185,@today),N'Dành cho live demo tạo yêu cầu cấp phát.',DATEADD(DAY,-180,@now)),
+        ((SELECT id FROM @asset WHERE code='ARD-CLASS-SET'),'ARD-CLASS-SET-001','ARD-GRP-001',N'/assets/images/equipment/arduino-uno-kit.svg','GOOD','IN_USE',1,N'Kệ lớp học A3',DATEADD(DAY,-330,@today),NULL,N'Đang cấp cho nhóm Smart Garden.',DATEADD(DAY,-330,@now)),
+        ((SELECT id FROM @asset WHERE code='ARD-CLASS-SET'),'ARD-CLASS-SET-002','ARD-GRP-002',N'/assets/images/equipment/arduino-uno-kit.svg','GOOD','AVAILABLE',1,N'Kệ lớp học A3',DATEADD(DAY,-330,@today),NULL,N'Bộ dự phòng số 1.',DATEADD(DAY,-330,@now)),
+        ((SELECT id FROM @asset WHERE code='ARD-CLASS-SET'),'ARD-CLASS-SET-003','ARD-GRP-003',N'/assets/images/equipment/arduino-uno-kit.svg','FAIR','AVAILABLE',1,N'Kệ lớp học A3',DATEADD(DAY,-330,@today),NULL,N'Bộ dự phòng số 2, hộp có vết xước nhẹ.',DATEADD(DAY,-330,@now)),
+        ((SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'),'SENSOR-ENV-SET-001','ENV-GRP-001',N'/assets/images/equipment/raspberry-pi-kit.svg','DAMAGED','MAINTENANCE',1,N'Tủ IoT A4',DATEADD(DAY,-200,@today),DATEADD(DAY,165,@today),N'Cảm biến độ ẩm đất trả giá trị không ổn định.',DATEADD(DAY,-200,@now)),
+        ((SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'),'SENSOR-ENV-SET-002','ENV-GRP-002',N'/assets/images/equipment/raspberry-pi-kit.svg','GOOD','AVAILABLE',1,N'Tủ IoT A4',DATEADD(DAY,-200,@today),DATEADD(DAY,165,@today),N'Bộ dự phòng đầy đủ.',DATEADD(DAY,-200,@now)),
+        ((SELECT id FROM @asset WHERE code='LAB-PROJECTOR'),'LAB-PROJECTOR-001','EBE01-X9K22018',NULL,'GOOD','AVAILABLE',0,N'Phòng LAB - trần khu B',DATEADD(DAY,-500,@today),DATEADD(DAY,-135,@today),N'Tài sản cố định, không hiển thị trong luồng mượn.',DATEADD(DAY,-500,@now));
+
+    DECLARE @item TABLE(code varchar(70) PRIMARY KEY,id bigint,asset_id bigint);
+    INSERT @item SELECT item_code,asset_item_id,asset_id FROM dbo.asset_items;
+
+    INSERT dbo.asset_usages
+        (request_id,semester_id,student_id,asset_id,asset_item_id,quantity,borrowed_at,due_at,returned_at,
+         condition_before,condition_after,reported_condition_after,return_requested_at,verified_condition_after,
+         return_verified_at,return_verified_by,status,note,return_note,created_by,created_at,updated_at)
+    VALUES
+        (@activeRequest,@activeSemester,@anhStudent,(SELECT asset_id FROM @item WHERE code='RPI4-4GB-001'),(SELECT id FROM @item WHERE code='RPI4-4GB-001'),1,DATEADD(DAY,-6,@now),DATEADD(DAY,-1,@now),NULL,'GOOD',NULL,NULL,NULL,NULL,NULL,NULL,'IN_USE',N'Chạy gateway MQTT và dashboard thu thập dữ liệu.',NULL,@anh,DATEADD(DAY,-6,@now),DATEADD(DAY,-6,@now)),
+        (@activeRequest,@activeSemester,@trungStudent,(SELECT asset_id FROM @item WHERE code='DMM-AN8008-001'),(SELECT id FROM @item WHERE code='DMM-AN8008-001'),1,DATEADD(DAY,-3,@now),DATEADD(DAY,1,@now),NULL,'GOOD',NULL,'GOOD',DATEADD(HOUR,-5,@now),NULL,NULL,NULL,'RETURN_PENDING',N'Đo nguồn 5V và kiểm tra dòng tiêu thụ của cảm biến.',N'Đã vệ sinh que đo, thiết bị hoạt động bình thường.',@trung,DATEADD(DAY,-3,@now),DATEADD(HOUR,-5,@now)),
+        (@activeRequest,@activeSemester,@ducStudent,(SELECT asset_id FROM @item WHERE code='MOUSE-M331-001'),(SELECT id FROM @item WHERE code='MOUSE-M331-001'),1,DATEADD(DAY,-2,@now),DATEADD(DAY,1,@now),NULL,'GOOD',NULL,'FAIR',DATEADD(HOUR,-3,@now),NULL,NULL,NULL,'RETURN_PENDING',N'Dùng cùng laptop để trình bày sprint review.',N'Con lăn đôi lúc phản hồi chậm.',@duc,DATEADD(DAY,-2,@now),DATEADD(HOUR,-3,@now)),
+        (@activeRequest,@activeSemester,@minhStudent,(SELECT asset_id FROM @item WHERE code='ARD-UNO-R3-001'),(SELECT id FROM @item WHERE code='ARD-UNO-R3-001'),1,DATEADD(DAY,-18,@now),DATEADD(DAY,-14,@now),DATEADD(DAY,-15,@now),'GOOD','GOOD','GOOD',DATEADD(HOUR,20,DATEADD(DAY,-16,@now)),'GOOD',DATEADD(DAY,-15,@now),@mentor,'RETURNED',N'Lập trình bộ điều khiển tưới tự động.',N'Đủ linh kiện, không phát hiện hư hỏng.',@minh,DATEADD(DAY,-18,@now),DATEADD(DAY,-15,@now)),
+        (@activeRequest,@activeSemester,@luongStudent,(SELECT asset_id FROM @item WHERE code='RPI3-LEGACY-001'),(SELECT id FROM @item WHERE code='RPI3-LEGACY-001'),1,DATEADD(DAY,-85,@now),DATEADD(DAY,-78,@now),DATEADD(DAY,-79,@now),'FAIR','BROKEN','DAMAGED',DATEADD(DAY,-80,@now),'BROKEN',DATEADD(DAY,-79,@now),@mentor,'RETURNED',N'Dùng thử nghiệm gateway dự phòng cho hệ thống cũ.',N'Không khởi động; đèn nguồn nhấp nháy bất thường.',@luong,DATEADD(DAY,-85,@now),DATEADD(DAY,-79,@now));
+
+    DECLARE @usageRpi4 bigint=(SELECT asset_usage_id FROM dbo.asset_usages WHERE asset_item_id=(SELECT id FROM @item WHERE code='RPI4-4GB-001'));
+    DECLARE @usageDmm bigint=(SELECT asset_usage_id FROM dbo.asset_usages WHERE asset_item_id=(SELECT id FROM @item WHERE code='DMM-AN8008-001'));
+    DECLARE @usageMouse bigint=(SELECT asset_usage_id FROM dbo.asset_usages WHERE asset_item_id=(SELECT id FROM @item WHERE code='MOUSE-M331-001'));
+    DECLARE @usageArduino bigint=(SELECT asset_usage_id FROM dbo.asset_usages WHERE asset_item_id=(SELECT id FROM @item WHERE code='ARD-UNO-R3-001'));
+    DECLARE @usageLegacy bigint=(SELECT asset_usage_id FROM dbo.asset_usages WHERE asset_item_id=(SELECT id FROM @item WHERE code='RPI3-LEGACY-001'));
+
+    INSERT dbo.inspection_records (semester_id,inspected_by,inspection_type,scope,inspection_date,status,result,note,created_at)
+    VALUES
+        (@activeSemester,@manager,'INSPECTION','SELECTED_ASSETS',DATEADD(DAY,-20,@now),'COMPLETED','NORMAL',N'Kiểm tra trước khi bàn giao thiết bị cho sprint mới.',DATEADD(DAY,-20,@now)),
+        (@activeSemester,@manager,'INVENTORY','WHOLE_LAB',DATEADD(DAY,-8,@now),'COMPLETED','DISCREPANCY_FOUND',N'Kiểm kê giữa kỳ, phát hiện thiếu dây jumper và một cảm biến lỗi.',DATEADD(DAY,-8,@now)),
+        (@activeSemester,@manager,'INSPECTION','SELECTED_ASSETS',DATEADD(DAY,2,@now),'DRAFT',NULL,N'Bản nháp tái kiểm tra các thiết bị chờ xử lý.',@now);
+    DECLARE @insNormal bigint=(SELECT inspection_id FROM dbo.inspection_records WHERE result='NORMAL');
+    DECLARE @insDiff bigint=(SELECT inspection_id FROM dbo.inspection_records WHERE result='DISCREPANCY_FOUND');
+    DECLARE @insDraft bigint=(SELECT inspection_id FROM dbo.inspection_records WHERE status='DRAFT');
+    INSERT dbo.inspection_items (inspection_id,asset_id,expected_quantity,actual_quantity,expected_condition,actual_condition,discrepancy_type,discrepancy_note)
+    VALUES
+        (@insNormal,(SELECT id FROM @asset WHERE code='ARD-UNO-R3'),1,1,'GOOD','GOOD',NULL,NULL),
+        (@insNormal,(SELECT id FROM @asset WHERE code='ARD-CLASS-SET'),3,3,'GOOD','GOOD',NULL,NULL),
+        (@insDiff,(SELECT id FROM @asset WHERE code='JUMPER-65'),20,18,'GOOD','GOOD','MISSING',N'Thiếu 2 dây cái-cái sau buổi workshop.'),
+        (@insDiff,(SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'),2,2,'GOOD','DAMAGED','CONDITION_MISMATCH',N'Một cảm biến độ ẩm đất trả kết quả dao động.'),
+        (@insDiff,(SELECT id FROM @asset WHERE code='RPI3-LEGACY'),1,1,'FAIR','BROKEN','CONDITION_MISMATCH',N'Bo mạch không khởi động khi cấp nguồn chuẩn.'),
+        (@insDraft,(SELECT id FROM @asset WHERE code='PROJECTOR-EBX06'),1,0,'BROKEN',NULL,'PENDING_RECHECK',N'Chờ tháo thiết bị khỏi giá treo để kiểm tra.'),
+        (@insDraft,(SELECT id FROM @asset WHERE code='OSC-PROBE-10X'),1,1,'DAMAGED','DAMAGED',NULL,N'Chờ kết quả bảo trì đầu kẹp mass.');
+
+    INSERT dbo.incidents
+        (asset_id,asset_usage_id,asset_item_id,inspection_item_id,reported_by,affected_quantity,incident_type,description,severity,status,
+         occurred_at,reported_at,investigation_note,handling_result,reported_cause,determined_cause,reviewed_by,reviewed_at,
+         mentor_review_note,forwarded_at,technical_cause,technical_severity,repairability,recommended_action,technical_note,
+         technical_assessed_by,technical_assessed_at,created_at,updated_at)
+    VALUES
+        ((SELECT id FROM @asset WHERE code='RPI4-4GB'),@usageRpi4,(SELECT id FROM @item WHERE code='RPI4-4GB-001'),NULL,@anh,1,'MALFUNCTION',N'Gateway mất kết nối Wi-Fi hai lần trong lúc chạy thử tải cao.','MEDIUM','REPORTED',DATEADD(HOUR,-8,@now),DATEADD(HOUR,-7,@now),NULL,NULL,'UNKNOWN',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,DATEADD(HOUR,-7,@now),DATEADD(HOUR,-7,@now)),
+        ((SELECT id FROM @asset WHERE code='DMM-AN8008'),@usageDmm,(SELECT id FROM @item WHERE code='DMM-AN8008-001'),NULL,@trung,1,'MALFUNCTION',N'Màn hình đôi lúc mờ khi đo liên tục hơn mười phút.','LOW','FORWARDED',DATEADD(DAY,-2,@now),DATEADD(HOUR,2,DATEADD(DAY,-2,@now)),NULL,NULL,'UNKNOWN',NULL,@mentor,DATEADD(DAY,-1,@now),N'Đã xác nhận hiện tượng, đề nghị kiểm tra pin và tiếp điểm.',DATEADD(DAY,-1,@now),NULL,NULL,NULL,NULL,NULL,NULL,NULL,DATEADD(HOUR,2,DATEADD(DAY,-2,@now)),DATEADD(DAY,-1,@now)),
+        ((SELECT id FROM @asset WHERE code='MOUSE-M331'),@usageMouse,(SELECT id FROM @item WHERE code='MOUSE-M331-001'),NULL,@duc,1,'MALFUNCTION',N'Con lăn phản hồi chậm và bỏ qua một số bước cuộn.','MEDIUM','INVESTIGATING',DATEADD(DAY,-1,@now),DATEADD(HOUR,1,DATEADD(DAY,-1,@now)),N'Đang kiểm tra encoder và bụi bên trong.',NULL,'UNKNOWN',NULL,@mentor,DATEADD(HOUR,-20,@now),N'Đã vệ sinh bên ngoài nhưng lỗi vẫn tái hiện.',DATEADD(HOUR,-20,@now),NULL,NULL,NULL,NULL,NULL,NULL,NULL,DATEADD(HOUR,1,DATEADD(DAY,-1,@now)),DATEADD(HOUR,-20,@now)),
+        ((SELECT id FROM @asset WHERE code='ARD-UNO-R3'),@usageArduino,(SELECT id FROM @item WHERE code='ARD-UNO-R3-001'),NULL,@minh,1,'OTHER',N'Một dây jumper lỏng chân cắm trong quá trình thử nghiệm.','LOW','RESOLVED',DATEADD(DAY,-16,@now),DATEADD(HOUR,1,DATEADD(DAY,-16,@now)),N'Đối chiếu checklist cho thấy hao mòn phụ kiện thông thường.',N'Đã thay dây jumper dự phòng, bo mạch hoạt động ổn định.','NATURAL','NATURAL',@mentor,DATEADD(DAY,-15,@now),N'Không ghi nhận thao tác sai của Intern.',DATEADD(DAY,-15,@now),'NATURAL_WEAR','MINOR','REPAIRABLE','CONTINUE_USE',N'Lỗi nằm ở dây kết nối tiêu hao, không ảnh hưởng bo mạch.',@manager,DATEADD(DAY,-14,@now),DATEADD(HOUR,1,DATEADD(DAY,-16,@now)),DATEADD(DAY,-14,@now)),
+        ((SELECT id FROM @asset WHERE code='RPI3-LEGACY'),@usageLegacy,(SELECT id FROM @item WHERE code='RPI3-LEGACY-001'),NULL,@luong,1,'DAMAGE',N'Bo mạch không khởi động sau khi có mùi khét nhẹ tại cổng nguồn.','HIGH','RESOLVED',DATEADD(DAY,-80,@now),DATEADD(HOUR,1,DATEADD(DAY,-80,@now)),N'Kiểm tra nguồn cấp và lịch sử sử dụng.',N'IC nguồn hỏng, sửa thử không thành công.','UNKNOWN','INTERN',@mentor,DATEADD(DAY,-78,@now),N'Intern dùng adapter không nằm trong bộ phụ kiện được cấp.',DATEADD(DAY,-78,@now),'MISUSE','MAJOR','NOT_REPAIRABLE','DISPOSAL_REVIEW',N'Điện áp adapter không phù hợp làm hỏng tầng nguồn.',@manager,DATEADD(DAY,-75,@now),DATEADD(HOUR,1,DATEADD(DAY,-80,@now)),DATEADD(DAY,-75,@now)),
+        ((SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'),NULL,(SELECT id FROM @item WHERE code='SENSOR-ENV-SET-001'),(SELECT inspection_item_id FROM dbo.inspection_items WHERE inspection_id=@insDiff AND asset_id=(SELECT id FROM @asset WHERE code='SENSOR-ENV-SET')),@mentor,1,'MALFUNCTION',N'Cảm biến độ ẩm đất trả giá trị nhảy bất thường sau khi cấp phát theo nhóm.','HIGH','OPEN',DATEADD(DAY,-7,@now),DATEADD(DAY,-7,@now),N'Đã cô lập bộ cảm biến khỏi hoạt động của nhóm.',NULL,'UNKNOWN',NULL,NULL,NULL,N'Phát hiện từ kiểm kê giữa kỳ.',DATEADD(DAY,-7,@now),NULL,NULL,NULL,NULL,NULL,NULL,NULL,DATEADD(DAY,-7,@now),DATEADD(DAY,-7,@now)),
+        ((SELECT id FROM @asset WHERE code='JUMPER-65'),NULL,NULL,(SELECT inspection_item_id FROM dbo.inspection_items WHERE inspection_id=@insDiff AND asset_id=(SELECT id FROM @asset WHERE code='JUMPER-65')),@mentor,2,'MISSING',N'Thiếu hai dây jumper cái-cái so với số lượng sổ kho.','LOW','RESOLVED',DATEADD(DAY,-8,@now),DATEADD(DAY,-8,@now),N'Đối chiếu biên bản workshop và hộp linh kiện.',N'Ghi nhận hao hụt linh kiện tiêu hao, bổ sung từ kho dự phòng.','NATURAL','NATURAL',@mentor,DATEADD(DAY,-7,@now),N'Không đủ bằng chứng gắn trách nhiệm cho cá nhân.',DATEADD(DAY,-7,@now),'NATURAL_WEAR','MINOR','NOT_APPLICABLE','MONITOR',N'Linh kiện giá trị thấp, quản lý theo số lượng.',@manager,DATEADD(DAY,-6,@now),DATEADD(DAY,-8,@now),DATEADD(DAY,-6,@now));
+
+    DECLARE @incArduino bigint=(SELECT incident_id FROM dbo.incidents WHERE asset_usage_id=@usageArduino);
+    DECLARE @incLegacy bigint=(SELECT incident_id FROM dbo.incidents WHERE asset_usage_id=@usageLegacy);
+    DECLARE @incSensor bigint=(SELECT incident_id FROM dbo.incidents WHERE asset_item_id=(SELECT id FROM @item WHERE code='SENSOR-ENV-SET-001'));
+    DECLARE @incJumper bigint=(SELECT incident_id FROM dbo.incidents WHERE inspection_item_id=(SELECT inspection_item_id FROM dbo.inspection_items WHERE inspection_id=@insDiff AND asset_id=(SELECT id FROM @asset WHERE code='JUMPER-65')));
+
+    INSERT dbo.responsibilities
+        (incident_id,student_id,determined_by,conclusion,decision,status,responsibility_level,evidence_summary,responsibility_note,
+         handling_recommendation,responsibility_assessed_by,responsibility_assessed_at,determined_at)
+    VALUES
+        (@incLegacy,@luongStudent,@mentor,N'Intern sử dụng adapter ngoài danh mục được cấp.',N'Nhắc nhở quy trình và đề xuất bồi hoàn adapter chuẩn.','CONFIRMED','FULL',N'Ảnh adapter, nhật ký mượn và kết luận IC nguồn cháy do sai điện áp.',N'Việc dùng nguồn sai thông số trực tiếp gây hỏng tầng nguồn.',N'Đào tạo lại quy trình cấp nguồn; xem xét bồi hoàn theo quy định.',@mentor,DATEADD(DAY,-74,@now),DATEADD(DAY,-74,@now)),
+        (@incJumper,NULL,@mentor,N'Không xác định cá nhân làm thất lạc linh kiện tiêu hao.',N'LAB bổ sung từ tồn kho dự phòng.','CONFIRMED','NONE',N'Biên bản workshop không có bàn giao cá nhân.',N'Không đủ căn cứ quy trách nhiệm.',N'Tăng tần suất kiểm đếm hộp linh kiện.',@mentor,DATEADD(DAY,-5,@now),DATEADD(DAY,-5,@now));
+
+    INSERT dbo.maintenance_records
+        (asset_id,asset_item_id,incident_id,quantity,requested_by,description,requested_at,status,approved_by,approved_at,
+         approval_note,repair_started_at,repair_completed_at,repair_result,repair_outcome,estimated_cost,actual_cost,note,created_at,updated_at)
+    VALUES
+        ((SELECT id FROM @asset WHERE code='OSC-PROBE-10X'),(SELECT id FROM @item WHERE code='OSC-PROBE-10X-001'),NULL,1,@mentor,N'Thay đầu kẹp mass và kiểm tra suy hao tín hiệu.',DATEADD(HOUR,-10,@now),'PENDING',NULL,NULL,NULL,NULL,NULL,NULL,'PENDING',250000,NULL,N'Ưu tiên xử lý trước buổi thực hành đo tín hiệu.',DATEADD(HOUR,-10,@now),DATEADD(HOUR,-10,@now)),
+        ((SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'),(SELECT id FROM @item WHERE code='SENSOR-ENV-SET-001'),@incSensor,1,@mentor,N'Thay cảm biến độ ẩm đất và hiệu chuẩn lại toàn bộ bộ kit.',DATEADD(DAY,-6,@now),'IN_PROGRESS',@manager,DATEADD(DAY,-5,@now),N'Đồng ý sửa tại LAB.',DATEADD(DAY,-4,@now),NULL,NULL,'PENDING',320000,NULL,N'Kỹ thuật viên Nguyễn Văn Sơn đang kiểm tra.',DATEADD(DAY,-6,@now),DATEADD(DAY,-4,@now)),
+        ((SELECT id FROM @asset WHERE code='ARD-UNO-R3'),(SELECT id FROM @item WHERE code='ARD-UNO-R3-001'),@incArduino,1,@mentor,N'Thay dây jumper lỗi và kiểm tra các chân I/O.',DATEADD(DAY,-15,@now),'COMPLETED',@manager,DATEADD(DAY,-15,@now),N'Cho phép thay phụ kiện tại chỗ.',DATEADD(DAY,-15,@now),DATEADD(DAY,-14,@now),N'Đã thay dây, kiểm tra digital/analog I/O đạt yêu cầu.','SUCCESS',50000,35000,N'Hoàn tất bởi kỹ thuật viên LAB.',DATEADD(DAY,-15,@now),DATEADD(DAY,-14,@now)),
+        ((SELECT id FROM @asset WHERE code='RPI3-LEGACY'),(SELECT id FROM @item WHERE code='RPI3-LEGACY-001'),@incLegacy,1,@mentor,N'Chẩn đoán và thử thay IC nguồn cho Raspberry Pi đời cũ.',DATEADD(DAY,-73,@now),'COMPLETED',@manager,DATEADD(DAY,-72,@now),N'Cho phép thử sửa một lần trước khi thanh lý.',DATEADD(DAY,-71,@now),DATEADD(DAY,-68,@now),N'Thay IC nguồn không khôi phục được bo mạch; nhiều lớp PCB đã tổn thương.','FAILED',850000,420000,N'Chuyển đề xuất thanh lý.',DATEADD(DAY,-73,@now),DATEADD(DAY,-68,@now));
+    DECLARE @mntLegacy bigint=(SELECT maintenance_id FROM dbo.maintenance_records WHERE asset_item_id=(SELECT id FROM @item WHERE code='RPI3-LEGACY-001'));
+
+    INSERT dbo.disposal_records
+        (asset_id,asset_item_id,maintenance_id,quantity,requested_by,reason,reason_code,technical_review_note,requested_at,status,
+         approved_by,approved_at,approval_note,disposal_method,completed_by,completed_at,completion_note,created_at,updated_at)
+    VALUES
+        ((SELECT id FROM @asset WHERE code='PROJECTOR-EBX06'),(SELECT id FROM @item WHERE code='PROJECTOR-EBX06-001'),NULL,1,@mentor,N'Bóng đèn và bo nguồn đều hỏng; chi phí thay thế vượt giá trị còn lại.','REPAIR_NOT_ECONOMICAL',NULL,DATEADD(DAY,-1,@now),'PENDING',NULL,NULL,NULL,NULL,NULL,NULL,NULL,DATEADD(DAY,-1,@now),DATEADD(DAY,-1,@now)),
+        ((SELECT id FROM @asset WHERE code='TABLET-GALAXY-A'),(SELECT id FROM @item WHERE code='TABLET-GALAXY-A-001'),NULL,1,@mentor,N'Pin phồng và màn hình nứt, có nguy cơ mất an toàn.','UNSAFE',N'Đã xác nhận pin biến dạng; không tiếp tục lưu kho lâu dài.',DATEADD(DAY,-4,@now),'APPROVED',@manager,DATEADD(DAY,-3,@now),N'Duyệt bàn giao đơn vị xử lý rác thải điện tử.',NULL,NULL,NULL,NULL,DATEADD(DAY,-4,@now),DATEADD(DAY,-3,@now)),
+        ((SELECT id FROM @asset WHERE code='JUMPER-65'),NULL,NULL,20,@mentor,N'Đề xuất thanh lý toàn bộ vì thiếu hai dây sau kiểm kê.','OTHER',NULL,DATEADD(DAY,-7,@now),'REJECTED',@manager,DATEADD(DAY,-6,@now),N'Từ chối: chỉ thiếu số lượng nhỏ, phần còn lại vẫn sử dụng tốt.',NULL,NULL,NULL,NULL,DATEADD(DAY,-7,@now),DATEADD(DAY,-6,@now)),
+        ((SELECT id FROM @asset WHERE code='RPI3-LEGACY'),(SELECT id FROM @item WHERE code='RPI3-LEGACY-001'),@mntLegacy,1,@mentor,N'Sửa chữa thất bại; bo mạch không còn khả năng phục hồi.','NOT_REPAIRABLE',N'Kết quả bảo trì xác nhận hỏng nhiều lớp PCB và không thể sửa kinh tế.',DATEADD(DAY,-67,@now),'COMPLETED',@manager,DATEADD(DAY,-66,@now),N'Duyệt thanh lý theo quy trình rác thải điện tử.','E_WASTE',@manager,DATEADD(DAY,-60,@now),N'Đã tháo thẻ nhớ, xóa nhãn tài sản và bàn giao GreenTech Recycling.',DATEADD(DAY,-67,@now),DATEADD(DAY,-60,@now));
+
+    INSERT dbo.equipment_activities (request_id,mentor_id,activity_name,description,start_date,end_date,status,created_at)
+    VALUES (@activeRequest,@mentor,N'Smart Garden - Sprint tích hợp',N'Cấp thiết bị dùng xuyên suốt giai đoạn tích hợp gateway, cảm biến và dashboard.',DATEADD(DAY,-30,@today),DATEADD(DAY,30,@today),'ACTIVE',DATEADD(DAY,-32,@now));
+    DECLARE @activity bigint=SCOPE_IDENTITY();
+    INSERT dbo.equipment_groups (activity_id,group_name,leader_intern_id)
+    VALUES (@activity,N'Nhóm Gateway và Cảm biến',@anhStudent);
+    DECLARE @allocationGroup bigint=SCOPE_IDENTITY();
+    INSERT dbo.equipment_group_members (allocation_group_id,intern_id)
+    VALUES (@allocationGroup,@anhStudent),(@allocationGroup,@trungStudent),(@allocationGroup,@ducStudent);
+
+    INSERT dbo.equipment_allocation_requests
+        (activity_id,allocation_group_id,intern_id,asset_id,requested_quantity,note,status,requested_by,reviewed_by,reviewed_at,review_note,created_at)
+    VALUES
+        (@activity,@allocationGroup,NULL,(SELECT id FROM @asset WHERE code='ARD-CLASS-SET'),1,N'Lập trình node điều khiển tưới.','APPROVED',@mentor,@manager,DATEADD(DAY,-28,@now),N'Đã gán bộ số 001.',DATEADD(DAY,-29,@now)),
+        (@activity,NULL,@anhStudent,(SELECT id FROM @asset WHERE code='REMOTE-R400'),1,N'Bàn giao trực tiếp cho trưởng nhóm dùng demo.','APPROVED',@mentor,@manager,DATEADD(DAY,-2,@now),N'Chờ Intern xác nhận nhận.',DATEADD(DAY,-3,@now)),
+        (@activity,@allocationGroup,NULL,(SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'),1,N'Đo nhiệt độ, ánh sáng và độ ẩm đất.','APPROVED',@mentor,@manager,DATEADD(DAY,-12,@now),N'Đã gán bộ số 001.',DATEADD(DAY,-13,@now)),
+        (@activity,NULL,NULL,(SELECT id FROM @asset WHERE code='WEBCAM-C920'),1,N'Nhận diện tình trạng cây từ ảnh.','PENDING_APPROVAL',@mentor,NULL,NULL,NULL,DATEADD(HOUR,-6,@now)),
+        (@activity,NULL,NULL,(SELECT id FROM @asset WHERE code='MOUSE-M331'),1,N'Phụ kiện dự phòng cho khu demo.','REJECTED',@mentor,@manager,DATEADD(DAY,-1,@now),N'Không cần cấp dài hạn; sử dụng theo lượt mượn.',DATEADD(DAY,-2,@now));
+    DECLARE @reqClass bigint=(SELECT allocation_request_id FROM dbo.equipment_allocation_requests WHERE asset_id=(SELECT id FROM @asset WHERE code='ARD-CLASS-SET'));
+    DECLARE @reqRemote bigint=(SELECT allocation_request_id FROM dbo.equipment_allocation_requests WHERE asset_id=(SELECT id FROM @asset WHERE code='REMOTE-R400'));
+    DECLARE @reqSensor bigint=(SELECT allocation_request_id FROM dbo.equipment_allocation_requests WHERE asset_id=(SELECT id FROM @asset WHERE code='SENSOR-ENV-SET'));
+    INSERT dbo.equipment_allocations (allocation_request_id,asset_item_id,status,handed_over_by,handed_over_at,received_at)
+    VALUES
+        (@reqClass,(SELECT id FROM @item WHERE code='ARD-CLASS-SET-001'),'ACTIVE',@manager,DATEADD(DAY,-27,@now),DATEADD(DAY,-27,@now)),
+        (@reqRemote,(SELECT id FROM @item WHERE code='REMOTE-R400-001'),'READY_FOR_HANDOVER',@manager,DATEADD(DAY,-2,@now),NULL),
+        (@reqSensor,(SELECT id FROM @item WHERE code='SENSOR-ENV-SET-001'),'ISSUE_REPORTED',@manager,DATEADD(DAY,-11,@now),DATEADD(DAY,-11,@now));
+    DECLARE @sensorAllocation bigint=(SELECT allocation_id FROM dbo.equipment_allocations WHERE allocation_request_id=@reqSensor);
+    INSERT dbo.equipment_allocation_issue_reports
+        (allocation_id,reported_by,issue_type,description,status,mentor_note,incident_id,reviewed_by,reviewed_at,created_at)
+    VALUES (@sensorAllocation,@duc,'DAMAGE',N'Cảm biến độ ẩm đất trả giá trị dao động mạnh dù đất ổn định.','VERIFIED',N'Đã tái hiện lỗi và chuyển bảo trì.',@incSensor,@mentor,DATEADD(DAY,-7,@now),DATEADD(DAY,-8,@now));
+
+    INSERT dbo.password_reset_requests
+        (target_user_id,status,request_note,reviewed_by,reviewed_at,review_note,issued_at,consumed_at,created_at,updated_at)
+    VALUES
+        (@mentorOps,'PENDING',N'Không còn truy cập thiết bị lưu mật khẩu cũ.',NULL,NULL,NULL,NULL,NULL,DATEADD(HOUR,-4,@now),DATEADD(HOUR,-4,@now)),
+        (@manager,'REJECTED',N'Nghi ngờ mật khẩu bị lộ sau buổi hướng dẫn.',@admin,DATEADD(DAY,-9,@now),N'Đã xác minh người dùng vẫn đăng nhập được; yêu cầu tạo lại nếu cần.',NULL,NULL,DATEADD(DAY,-10,@now),DATEADD(DAY,-9,@now)),
+        (@mentor,'CONSUMED',N'Đổi máy tính làm việc và cần cấp lại quyền truy cập.',@admin,DATEADD(DAY,-35,@now),N'Đã xác minh danh tính qua quản lý LAB.',DATEADD(DAY,-35,@now),DATEADD(DAY,-34,@now),DATEADD(DAY,-36,@now),DATEADD(DAY,-34,@now));
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+GO
+
 SELECT 'FULL DATABASE SETUP COMPLETED' AS setup_status;
+SELECT full_name, email, role,
+       CASE WHEN role = 'INTERN' THEN 'Google FPT' ELSE '123' END AS demo_login
+FROM dbo.users
+WHERE status = 'ACTIVE'
+ORDER BY CASE role WHEN 'ADMIN' THEN 1 WHEN 'LAB_MANAGER' THEN 2 WHEN 'MENTOR' THEN 3 ELSE 4 END, full_name;
+SELECT 'Assets' AS entity, COUNT(*) AS total FROM dbo.assets
+UNION ALL SELECT 'Physical items', COUNT(*) FROM dbo.asset_items
+UNION ALL SELECT 'Usage records', COUNT(*) FROM dbo.asset_usages
+UNION ALL SELECT 'Incidents', COUNT(*) FROM dbo.incidents
+UNION ALL SELECT 'Inspections', COUNT(*) FROM dbo.inspection_records
+UNION ALL SELECT 'Maintenance records', COUNT(*) FROM dbo.maintenance_records
+UNION ALL SELECT 'Disposal records', COUNT(*) FROM dbo.disposal_records
+UNION ALL SELECT 'Allocation requests', COUNT(*) FROM dbo.equipment_allocation_requests;
 GO

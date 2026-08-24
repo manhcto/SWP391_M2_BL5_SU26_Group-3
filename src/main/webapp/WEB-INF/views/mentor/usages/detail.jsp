@@ -9,7 +9,7 @@
 <div class="app-shell">
     <%@ include file="../includes/sidebar.jspf" %>
     <main class="main-content">
-        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Chi tiết sử dụng thiết bị</h1><p>Thông tin mượn, trả thiết bị của thực tập sinh</p></div></div><div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/usages">Quay lại lịch sử</a></div></header>
+        <header class="topbar"><div class="heading-wrap"><button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><div><h1>Chi tiết sử dụng thiết bị</h1><p>Thông tin mượn, trả thiết bị của thực tập sinh</p></div></div><div class="topbar-actions"><c:if test="${not empty usage.assetItemId}"><a class="primary-button" href="${pageContext.request.contextPath}/mentor/assets/${usage.assetItemId}/lifecycle">Vòng đời sản phẩm</a></c:if><a class="btn-secondary" href="${pageContext.request.contextPath}/mentor/usages">Quay lại lịch sử</a></div></header>
         <section class="content-area">
             <div class="content-heading"><div><p class="eyebrow">LƯỢT SỬ DỤNG #AU-${usage.assetUsageId}</p><h2><c:out value="${usage.assetName}"/></h2></div><span class="status ${usage.status == 'IN_USE' ? 'in-use' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'returned')}"><c:out value="${app:label(usage.status)}"/></span></div>
             <c:if test="${not empty message}"><div class="error-message"><c:out value="${message}"/></div></c:if>

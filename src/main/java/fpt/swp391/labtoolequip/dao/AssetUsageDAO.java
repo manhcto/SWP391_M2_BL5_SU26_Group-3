@@ -18,6 +18,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import util.AppConfig;
@@ -436,38 +438,76 @@ public class AssetUsageDAO {
 	}
 
 	public void confirmReturn(long usageId, long mentorId, String verifiedCondition, String note) throws SQLException {
-		if (verifiedCondition == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(verifiedCondition))
-			throw new IllegalArgumentException("Vui lòng chọn tình trạng xác minh hợp lệ.");
+		validateReturnConfirmations(List.of(new ReturnConfirmation(usageId, verifiedCondition, note)));
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				ReturnTarget target = lockPendingReturnForMentor(connection, usageId, mentorId);
-				if (target.assetItemId() != null)
-					lockAssetItem(connection, target.assetItemId());
-				try (PreparedStatement statement = connection.prepareStatement("""
-						UPDATE dbo.asset_usages SET status='RETURNED', returned_at=SYSUTCDATETIME(),
-						verified_condition_after=?, condition_after=?, return_verified_at=SYSUTCDATETIME(),
-						return_verified_by=?, return_note=COALESCE(?, return_note), updated_at=SYSUTCDATETIME()
-						WHERE asset_usage_id=? AND status='RETURN_PENDING'
-						""")) {
-					statement.setString(1, verifiedCondition);
-					statement.setString(2, verifiedCondition);
-					statement.setLong(3, mentorId);
-					statement.setString(4, blankToNull(note));
-					statement.setLong(5, usageId);
-					if (statement.executeUpdate() != 1)
-						throw new IllegalStateException("Yêu cầu trả đã được xử lý.");
-				}
-				if (target.assetItemId() != null)
-					updateReturnedAssetItem(connection, target.assetItemId(), verifiedCondition);
-				else if (requiresQuarantine(verifiedCondition))
-					updateReturnedQuantityAsset(connection, target.assetId(), verifiedCondition);
+				confirmLockedReturn(connection, usageId, mentorId, verifiedCondition, note, target);
 				connection.commit();
 			} catch (SQLException | RuntimeException exception) {
 				connection.rollback();
 				throw exception;
 			}
 		}
+	}
+
+	public void bulkConfirmReturns(long mentorId, List<ReturnConfirmation> confirmations) throws SQLException {
+		validateReturnConfirmations(confirmations);
+		List<ReturnConfirmation> ordered = confirmations.stream()
+				.sorted(Comparator.comparingLong(ReturnConfirmation::usageId)).toList();
+		try (Connection connection = db.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				for (ReturnConfirmation confirmation : ordered) {
+					ReturnTarget target = lockPendingReturnForMentor(connection, confirmation.usageId(), mentorId);
+					if (target.assetItemId() == null)
+						throw new IllegalStateException("Xác nhận hàng loạt chỉ áp dụng cho sản phẩm có mã riêng.");
+					confirmLockedReturn(connection, confirmation.usageId(), mentorId, confirmation.verifiedCondition(),
+							confirmation.note(), target);
+				}
+				connection.commit();
+			} catch (SQLException | RuntimeException exception) {
+				connection.rollback();
+				throw exception;
+			}
+		}
+	}
+
+	static void validateReturnConfirmations(List<ReturnConfirmation> confirmations) {
+		if (confirmations == null || confirmations.isEmpty())
+			throw new IllegalArgumentException("Vui lòng chọn ít nhất một yêu cầu trả.");
+		HashSet<Long> ids = new HashSet<>();
+		for (ReturnConfirmation confirmation : confirmations) {
+			if (confirmation == null || confirmation.usageId() <= 0 || !ids.add(confirmation.usageId()))
+				throw new IllegalArgumentException("Danh sách yêu cầu trả không hợp lệ.");
+			if (!List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(confirmation.verifiedCondition()))
+				throw new IllegalArgumentException("Vui lòng chọn tình trạng xác minh hợp lệ.");
+		}
+	}
+
+	private void confirmLockedReturn(Connection connection, long usageId, long mentorId, String verifiedCondition,
+			String note, ReturnTarget target) throws SQLException {
+		if (target.assetItemId() != null)
+			lockAssetItem(connection, target.assetItemId());
+		try (PreparedStatement statement = connection.prepareStatement("""
+				UPDATE dbo.asset_usages SET status='RETURNED', returned_at=SYSUTCDATETIME(),
+				verified_condition_after=?, condition_after=?, return_verified_at=SYSUTCDATETIME(),
+				return_verified_by=?, return_note=COALESCE(?, return_note), updated_at=SYSUTCDATETIME()
+				WHERE asset_usage_id=? AND status='RETURN_PENDING'
+				""")) {
+			statement.setString(1, verifiedCondition);
+			statement.setString(2, verifiedCondition);
+			statement.setLong(3, mentorId);
+			statement.setString(4, blankToNull(note));
+			statement.setLong(5, usageId);
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Yêu cầu trả đã được xử lý.");
+		}
+		if (target.assetItemId() != null)
+			updateReturnedAssetItem(connection, target.assetItemId(), verifiedCondition);
+		else if (requiresQuarantine(verifiedCondition))
+			updateReturnedQuantityAsset(connection, target.assetId(), verifiedCondition);
 	}
 
 	private ReturnTarget lockPendingReturnForMentor(Connection connection, long usageId, long mentorId)
@@ -815,8 +855,14 @@ public class AssetUsageDAO {
 	private record ReturnTarget(long assetId, Long assetItemId) {
 	}
 
+	public record ReturnConfirmation(long usageId, String verifiedCondition, String note) {
+	}
+
 	static Instant dueAtEndOfBorrowDay(ZonedDateTime borrowedAt) {
-		return borrowedAt.toLocalDate().atTime(DAILY_RETURN_DEADLINE).atZone(borrowedAt.getZone()).toInstant();
+		LocalDate dueDate = borrowedAt.toLocalTime().isAfter(DAILY_RETURN_DEADLINE)
+				? borrowedAt.toLocalDate().plusDays(1)
+				: borrowedAt.toLocalDate();
+		return dueDate.atTime(DAILY_RETURN_DEADLINE).atZone(borrowedAt.getZone()).toInstant();
 	}
 
 	private record Membership(long requestId, long semesterId, long internId, LocalDate endDate) {

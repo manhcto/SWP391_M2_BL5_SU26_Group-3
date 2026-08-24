@@ -19,6 +19,19 @@ public class MentorAssetController extends HttpServlet {
 		try {
 			request.setAttribute("assetBasePath", request.getContextPath() + "/mentor/assets");
 			String path = request.getPathInfo();
+			if (path != null && path.matches("/\\d+/lifecycle")) {
+				long id = Long.parseLong(path.substring(1, path.indexOf("/lifecycle")));
+				var item = dao.findById(id).orElse(null);
+				if (item == null) {
+					response.sendError(HttpServletResponse.SC_NOT_FOUND);
+					return;
+				}
+				request.setAttribute("item", item);
+				request.setAttribute("events", dao.findLifecycle(id));
+				request.setAttribute("roleBase", "/mentor");
+				request.getRequestDispatcher("/WEB-INF/views/shared/assets/lifecycle.jsp").forward(request, response);
+				return;
+			}
 			if (path != null && path.matches("/\\d+")) {
 				var item = dao.findById(Long.parseLong(path.substring(1))).orElse(null);
 				if (item == null || !"AVAILABLE".equals(item.getStatus())) {
@@ -33,7 +46,8 @@ public class MentorAssetController extends HttpServlet {
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
-			var assetItems = dao.findAll(request.getParameter("keyword"), "AVAILABLE", "", request.getParameter("category"));
+			var assetItems = dao.findAll(request.getParameter("keyword"), "AVAILABLE", "",
+					request.getParameter("category"));
 			request.setAttribute("assetItems", assetItems);
 			request.setAttribute("borrowableAssetCount",
 					assetItems.stream().filter(item -> Boolean.TRUE.equals(item.getBorrowable())).count());

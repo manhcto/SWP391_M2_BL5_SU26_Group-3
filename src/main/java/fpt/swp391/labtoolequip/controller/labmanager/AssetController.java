@@ -36,6 +36,10 @@ public class AssetController extends HttpServlet {
 				showItem(request, response, Long.parseLong(path.substring(1, path.indexOf("/edit"))), true);
 				return;
 			}
+			if (path != null && path.matches("/\\d+/lifecycle")) {
+				showLifecycle(request, response, Long.parseLong(path.substring(1, path.indexOf("/lifecycle"))));
+				return;
+			}
 			if (path != null && path.matches("/\\d+")) {
 				showItem(request, response, Long.parseLong(path.substring(1)),
 						Boolean.TRUE.equals(request.getAttribute("editMode")));
@@ -174,12 +178,26 @@ public class AssetController extends HttpServlet {
 		try {
 			int quantity = parseQuantity(request.getParameter("quantity"));
 			dao.createBundle(request.getParameter("assetCode"), request.getParameter("assetName"),
-					Long.parseLong(request.getParameter("categoryId")), parseBorrowable(request.getParameter("assetType")),
-					request.getParameter("description"), readItems(request, quantity, uploadedImages));
+					Long.parseLong(request.getParameter("categoryId")),
+					parseBorrowable(request.getParameter("assetType")), request.getParameter("description"),
+					readItems(request, quantity, uploadedImages));
 		} catch (IOException | SQLException | RuntimeException exception) {
 			uploadedImages.forEach(AssetImageStorage::delete);
 			throw exception;
 		}
+	}
+
+	private void showLifecycle(HttpServletRequest request, HttpServletResponse response, long id)
+			throws SQLException, ServletException, IOException {
+		AssetItem item = dao.findById(id).orElse(null);
+		if (item == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		request.setAttribute("item", item);
+		request.setAttribute("events", dao.findLifecycle(id));
+		request.setAttribute("roleBase", "/lab-manager");
+		request.getRequestDispatcher("/WEB-INF/views/shared/assets/lifecycle.jsp").forward(request, response);
 	}
 
 	private void updateItem(HttpServletRequest request, long id) throws IOException, SQLException, ServletException {

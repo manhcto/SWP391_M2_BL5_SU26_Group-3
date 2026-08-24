@@ -9,15 +9,17 @@ import fpt.swp391.labtoolequip.model.AssetItem;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AssetUsageDAOTest {
 	@Test
 	void setsTheDueTimeToTheEndOfTheBorrowDay() {
-		ZonedDateTime borrowedAt = ZonedDateTime.of(2026, 8, 21, 14, 30, 0, 0,
-				ZoneId.of("Asia/Ho_Chi_Minh"));
+		ZonedDateTime borrowedAt = ZonedDateTime.of(2026, 8, 21, 14, 30, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh"));
 
 		assertEquals(Instant.parse("2026-08-21T10:40:00Z"), AssetUsageDAO.dueAtEndOfBorrowDay(borrowedAt));
+		assertEquals(Instant.parse("2026-08-22T10:40:00Z"), AssetUsageDAO
+				.dueAtEndOfBorrowDay(ZonedDateTime.of(2026, 8, 21, 18, 0, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh"))));
 	}
 
 	@Test
@@ -67,6 +69,20 @@ class AssetUsageDAOTest {
 		assertEquals(true, AssetUsageDAO.requiresQuarantine("DAMAGED"));
 		assertEquals(true, AssetUsageDAO.requiresQuarantine("BROKEN"));
 		assertEquals(false, AssetUsageDAO.requiresQuarantine("GOOD"));
+	}
+
+	@Test
+	void validatesAtomicBulkReturnInput() {
+		assertDoesNotThrow(() -> AssetUsageDAO
+				.validateReturnConfirmations(List.of(new AssetUsageDAO.ReturnConfirmation(1, "GOOD", null),
+						new AssetUsageDAO.ReturnConfirmation(2, "BROKEN", "Vỡ vỏ"))));
+		assertThrows(IllegalArgumentException.class, () -> AssetUsageDAO.validateReturnConfirmations(List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> AssetUsageDAO
+						.validateReturnConfirmations(List.of(new AssetUsageDAO.ReturnConfirmation(1, "GOOD", null),
+								new AssetUsageDAO.ReturnConfirmation(1, "FAIR", null))));
+		assertThrows(IllegalArgumentException.class, () -> AssetUsageDAO
+				.validateReturnConfirmations(List.of(new AssetUsageDAO.ReturnConfirmation(1, "UNKNOWN", null))));
 	}
 
 	private Asset asset(String status, boolean borrowable, String condition) {
