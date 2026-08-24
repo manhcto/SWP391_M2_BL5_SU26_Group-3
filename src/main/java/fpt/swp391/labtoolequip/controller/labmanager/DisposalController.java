@@ -75,7 +75,8 @@ public class DisposalController extends HttpServlet {
 				case "approve" -> dao.review(id, AuthSession.userId(request), true, request.getParameter("reviewNote"));
 				case "reject" -> dao.review(id, AuthSession.userId(request), false, request.getParameter("reviewNote"));
 				case "complete" -> {
-					dao.complete(id, request.getParameter("completionNote"));
+					dao.complete(id, AuthSession.userId(request), request.getParameter("disposalMethod"),
+							request.getParameter("completionNote"));
 				}
 				default -> {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST);

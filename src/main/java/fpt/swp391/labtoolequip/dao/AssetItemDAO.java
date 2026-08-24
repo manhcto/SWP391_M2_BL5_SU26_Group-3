@@ -23,6 +23,19 @@ public class AssetItemDAO {
 			JOIN dbo.assets a ON a.asset_id = i.asset_id
 			JOIN dbo.asset_categories c ON c.category_id = a.category_id
 			""";
+	private static final String BORROWABLE_CONDITIONS = """
+			WHERE a.status = 'AVAILABLE' AND a.is_borrowable = 1
+			  AND i.status = 'AVAILABLE' AND i.is_borrowable = 1
+			  AND i.condition IN ('GOOD', 'FAIR')
+			  AND NOT EXISTS (
+				SELECT 1 FROM dbo.asset_usages usage
+				WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'MAINTENANCE')
+			  )
+			  AND NOT EXISTS (
+				SELECT 1 FROM dbo.disposal_records disposal
+				WHERE disposal.asset_id = a.asset_id AND disposal.status IN ('PENDING', 'APPROVED')
+			  )
+			""";
 	private final DBConnection db = new DBConnection();
 
 	public List<AssetItem> findAll(String keyword, String status, String condition) throws SQLException {
@@ -75,8 +88,7 @@ public class AssetItemDAO {
 	public List<AssetItem> findBorrowable(String keyword, String categoryName) throws SQLException {
 		String search = keyword == null ? "" : keyword.trim();
 		String category = categoryName == null ? "" : categoryName.trim();
-		String sql = SELECT + """
-				WHERE a.is_borrowable = 1 AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR')
+		String sql = SELECT + BORROWABLE_CONDITIONS + """
 				  AND (? = '' OR i.item_code LIKE ? OR i.serial_number LIKE ? OR a.asset_name LIKE ?
 				       OR a.asset_code LIKE ? OR c.category_name LIKE ?)
 				  AND (? = '' OR c.category_name = ?)
@@ -97,8 +109,8 @@ public class AssetItemDAO {
 
 	public Optional<AssetItem> findBorrowableById(long id) throws SQLException {
 		try (Connection connection = db.getConnection();
-				PreparedStatement statement = connection.prepareStatement(SELECT
-						+ " WHERE a.is_borrowable = 1 AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR') AND i.asset_item_id = ?")) {
+				PreparedStatement statement = connection
+						.prepareStatement(SELECT + BORROWABLE_CONDITIONS + " AND i.asset_item_id = ?")) {
 			statement.setLong(1, id);
 			return read(statement).stream().findFirst();
 		}
@@ -109,7 +121,7 @@ public class AssetItemDAO {
 				WHERE i.status <> 'DISPOSED' AND a.status <> 'DISPOSED'
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.asset_usages usage
-					WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'MAINTENANCE')
+					WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'RETURN_PENDING')
 				  )
 				ORDER BY a.asset_name, i.item_code
 				""";
@@ -141,8 +153,8 @@ public class AssetItemDAO {
 				FROM dbo.asset_categories c
 				JOIN dbo.assets a ON a.category_id = c.category_id
 				JOIN dbo.asset_items i ON i.asset_id = a.asset_id
-				WHERE c.status = 'ACTIVE' AND a.is_borrowable = 1
-				  AND i.status = 'AVAILABLE' AND i.condition IN ('GOOD', 'FAIR')
+				""" + BORROWABLE_CONDITIONS + """
+				  AND c.status = 'ACTIVE'
 				ORDER BY c.category_name
 				""";
 		try (Connection connection = db.getConnection();
@@ -192,7 +204,7 @@ public class AssetItemDAO {
 				UPDATE dbo.asset_items
 				SET serial_number = ?, image_path = ?, condition = ?, status = ?,
 				    purchase_date = ?, warranty_until = ?, note = ?, updated_at = SYSUTCDATETIME()
-				WHERE asset_item_id = ?
+				WHERE asset_item_id = ? AND status <> 'DISPOSED'
 				""";
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
@@ -208,7 +220,7 @@ public class AssetItemDAO {
 					setNullableString(statement, 7, item.getNote());
 					statement.setLong(8, item.getAssetItemId());
 					if (statement.executeUpdate() == 0)
-						throw new IllegalArgumentException("Sản phẩm không còn tồn tại.");
+						throw new IllegalArgumentException("Sản phẩm không tồn tại hoặc đã thanh lý.");
 				}
 				refreshAssetCondition(connection, assetIdOf(connection, item.getAssetItemId()));
 				connection.commit();
@@ -453,11 +465,14 @@ public class AssetItemDAO {
 		if (!List.of("AVAILABLE", "MAINTENANCE", "UNAVAILABLE", "DISPOSED").contains(item.getStatus()))
 			throw new IllegalArgumentException("Trạng thái sản phẩm không hợp lệ.");
 		if (("DAMAGED".equals(item.getCondition()) || "BROKEN".equals(item.getCondition()))
-				&& !List.of("MAINTENANCE", "DISPOSED").contains(item.getStatus()))
-			throw new IllegalArgumentException(
-					"Sản phẩm hư hỏng nặng phải chuyển sang Đang bảo trì và được Mentor báo cáo Lab Manager.");
+				&& !List.of("MAINTENANCE", "UNAVAILABLE", "DISPOSED").contains(item.getStatus()))
+			throw new IllegalArgumentException("Sản phẩm hư hỏng nặng phải được đưa ra khỏi trạng thái sẵn sàng.");
 		if (item.getSerialNumber() != null && item.getSerialNumber().length() > 100)
 			throw new IllegalArgumentException("Serial không được dài quá 100 ký tự.");
+		String imagePath = item.getImagePath();
+		if (imagePath != null && !imagePath.isBlank()
+				&& (!imagePath.matches("/(uploads|assets)/[A-Za-z0-9_./-]+") || imagePath.contains("..")))
+			throw new IllegalArgumentException("Đường dẫn ảnh phải là đường dẫn nội bộ hợp lệ.");
 	}
 
 	private void setNullableString(PreparedStatement statement, int index, String value) throws SQLException {

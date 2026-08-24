@@ -339,7 +339,8 @@ public class InternListDAO {
 					return false;
 				}
 				Map<Long, Long> internAccounts = findInternAccounts(connection, requestId);
-				deleteRequestHistory(connection, requestId);
+				if (exists(connection, "SELECT 1 FROM dbo.asset_usages WHERE request_id = ?", requestId))
+					throw new IllegalStateException("Không thể xóa danh sách đã phát sinh lịch sử sử dụng tài sản.");
 				try (PreparedStatement memberships = connection
 						.prepareStatement("DELETE dbo.lab_usage_request_students WHERE request_id = ?")) {
 					memberships.setLong(1, requestId);
@@ -398,36 +399,6 @@ public class InternListDAO {
 			}
 		}
 		return studentIds;
-	}
-
-	private void deleteRequestHistory(Connection connection, long requestId) throws SQLException {
-		List<String> statements = List.of("""
-				DELETE d FROM dbo.disposal_records d
-				JOIN dbo.maintenance_records m ON m.maintenance_id = d.maintenance_id
-				JOIN dbo.incidents i ON i.incident_id = m.incident_id
-				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
-				WHERE au.request_id = ?
-				""", """
-				DELETE m FROM dbo.maintenance_records m
-				JOIN dbo.incidents i ON i.incident_id = m.incident_id
-				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
-				WHERE au.request_id = ?
-				""", """
-				DELETE r FROM dbo.responsibilities r
-				JOIN dbo.incidents i ON i.incident_id = r.incident_id
-				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
-				WHERE au.request_id = ?
-				""", """
-				DELETE i FROM dbo.incidents i
-				JOIN dbo.asset_usages au ON au.asset_usage_id = i.asset_usage_id
-				WHERE au.request_id = ?
-				""", "DELETE dbo.asset_usages WHERE request_id = ?");
-		for (String sql : statements) {
-			try (PreparedStatement statement = connection.prepareStatement(sql)) {
-				statement.setLong(1, requestId);
-				statement.executeUpdate();
-			}
-		}
 	}
 
 	private Map<Long, Long> findInternAccounts(Connection connection, long requestId) throws SQLException {

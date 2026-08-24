@@ -7,6 +7,7 @@ import fpt.swp391.labtoolequip.auth.Permission;
 import fpt.swp391.labtoolequip.dao.AssetUsageDAO;
 import fpt.swp391.labtoolequip.dao.AssetItemDAO;
 import fpt.swp391.labtoolequip.dao.IncidentDAO;
+import fpt.swp391.labtoolequip.model.AssetUsage;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @WebServlet("/mentor/incidents/*")
 public class MentorIncidentController extends HttpServlet {
@@ -30,6 +32,7 @@ public class MentorIncidentController extends HttpServlet {
 			return;
 		}
 		try {
+			request.setAttribute("csrfToken", Csrf.token(request));
 			String path = request.getPathInfo();
 			if ("/new".equals(path)) {
 				if (!Authorization.has(request, Permission.INCIDENT_REPORT)) {
@@ -40,10 +43,7 @@ public class MentorIncidentController extends HttpServlet {
 				return;
 			}
 			if (path != null && path.matches("/\\d+")) {
-				request.setAttribute("incident",
-						incidentDAO.findByIdForMentor(Long.parseLong(path.substring(1)), AuthSession.userId(request))
-								.orElseThrow());
-				forward(request, response, "detail.jsp");
+				showDetail(request, response, Long.parseLong(path.substring(1)));
 				return;
 			}
 			if (path != null && !"/".equals(path)) {
@@ -67,26 +67,45 @@ public class MentorIncidentController extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
-		if (!Csrf.valid(request) || !Authorization.has(request, Permission.INCIDENT_REPORT)) {
+		if (!Csrf.valid(request)) {
 			response.sendError(HttpServletResponse.SC_FORBIDDEN);
 			return;
 		}
-		if (!"create".equals(request.getParameter("action"))) {
+		String action = request.getParameter("action");
+		if (!"create".equals(action) && !"forward".equals(action)) {
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 		try {
-			var incidentIds = incidentDAO.createForMentor(AuthSession.userId(request),
-					request.getParameterValues("targets"), request.getParameter("incidentType"),
-					request.getParameter("severity"), occurredAt(request), request.getParameter("description"),
-					request.getParameter("reportedCause"));
-			response.sendRedirect(request.getContextPath() + "/mentor/incidents?created=" + incidentIds.size());
+			if ("create".equals(action)) {
+				if (!Authorization.has(request, Permission.INCIDENT_REPORT)) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
+				var incidentIds = incidentDAO.createForMentor(AuthSession.userId(request),
+						request.getParameterValues("targets"), request.getParameter("incidentType"),
+						request.getParameter("severity"), occurredAt(request), request.getParameter("description"),
+						request.getParameter("reportedCause"));
+				response.sendRedirect(request.getContextPath() + "/mentor/incidents?created=" + incidentIds.size());
+				return;
+			}
+			if (!Authorization.has(request, Permission.INCIDENT_REVIEW)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN);
+				return;
+			}
+			long incidentId = incidentId(request);
+			incidentDAO.reviewAndForward(incidentId, AuthSession.userId(request),
+					request.getParameter("mentorReviewNote"));
+			response.sendRedirect(request.getContextPath() + "/mentor/incidents/" + incidentId + "?forwarded=1");
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			request.setAttribute("message", exception.getMessage());
 			try {
-				showForm(request, response);
+				if ("create".equals(action))
+					showForm(request, response);
+				else
+					showDetail(request, response, incidentId(request));
 			} catch (SQLException nested) {
 				throw new ServletException(nested);
 			}
@@ -96,9 +115,41 @@ public class MentorIncidentController extends HttpServlet {
 	private void showForm(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		request.setAttribute("csrfToken", Csrf.token(request));
-		request.setAttribute("usages", usageDAO.findAll("", "IN_USE"));
+		List<AssetUsage> usages = usageDAO.findIncidentReportableForMentor(AuthSession.userId(request));
+		request.setAttribute("priorityUsages",
+				usages.stream().filter(MentorIncidentController::shouldPrioritizeReturnedDamage).toList());
+		request.setAttribute("otherUsages",
+				usages.stream().filter(usage -> !shouldPrioritizeReturnedDamage(usage)).toList());
+		String usageId = request.getParameter("usageId");
+		if (usageId != null && usageId.matches("\\d+")
+				&& usages.stream().anyMatch(usage -> usage.getAssetUsageId().toString().equals(usageId)))
+			request.setAttribute("preselectedTarget", "usage:" + usageId);
 		request.setAttribute("assetItems", assetItemDAO.findReportableItems());
 		forward(request, response, "form.jsp");
+	}
+
+	static boolean shouldPrioritizeReturnedDamage(AssetUsage usage) {
+		return "RETURNED".equals(usage.getStatus())
+				&& ("DAMAGED".equals(usage.getConditionAfter()) || "BROKEN".equals(usage.getConditionAfter()));
+	}
+
+	private void showDetail(HttpServletRequest request, HttpServletResponse response, long incidentId)
+			throws SQLException, ServletException, IOException {
+		request.setAttribute("csrfToken", Csrf.token(request));
+		request.setAttribute("incident",
+				incidentDAO.findByIdForMentor(incidentId, AuthSession.userId(request)).orElseThrow());
+		forward(request, response, "detail.jsp");
+	}
+
+	private long incidentId(HttpServletRequest request) {
+		try {
+			long value = Long.parseLong(request.getParameter("incidentId"));
+			if (value <= 0)
+				throw new NumberFormatException();
+			return value;
+		} catch (NumberFormatException exception) {
+			throw new IllegalArgumentException("Sự cố không hợp lệ.");
+		}
 	}
 
 	private LocalDateTime occurredAt(HttpServletRequest request) {

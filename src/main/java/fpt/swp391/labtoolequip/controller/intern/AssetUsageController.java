@@ -4,7 +4,6 @@ import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.auth.Authorization;
 import fpt.swp391.labtoolequip.auth.Csrf;
 import fpt.swp391.labtoolequip.auth.Permission;
-import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.dao.AssetUsageDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -13,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 
 @WebServlet("/intern/usages/*")
 public class AssetUsageController extends HttpServlet {
@@ -62,15 +60,14 @@ public class AssetUsageController extends HttpServlet {
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
 					return;
 				}
-				dao.borrow(AuthSession.userId(request), nullableLong(request, "assetId"),
-						nullableLong(request, "assetItemId"), Integer.parseInt(request.getParameter("quantity")),
-						request.getParameter("note"), borrowedAt(request));
+				dao.borrowItem(AuthSession.userId(request), requiredId(request, "assetItemId"),
+						request.getParameter("note"));
 			} else if ("return".equals(action)) {
 				if (!Authorization.has(request, Permission.ASSET_USAGE_RETURN)) {
 					response.sendError(HttpServletResponse.SC_FORBIDDEN);
 					return;
 				}
-				dao.returnUsage(AuthSession.userId(request), Long.parseLong(request.getParameter("usageId")),
+				dao.requestReturn(Long.parseLong(request.getParameter("usageId")), AuthSession.userId(request),
 						request.getParameter("conditionAfter"), request.getParameter("note"));
 			} else {
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST);
@@ -93,29 +90,22 @@ public class AssetUsageController extends HttpServlet {
 		}
 	}
 
-	private Long nullableLong(HttpServletRequest request, String name) {
-		String value = request.getParameter(name);
-		return value == null || value.isBlank() ? null : Long.valueOf(value);
-	}
-
 	private void showBorrow(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		request.setAttribute("csrfToken", Csrf.token(request));
-		request.setAttribute("defaultBorrowedAt", ViewFormat.dateTimeInput(ViewFormat.now()));
-		request.setAttribute("assets", dao.findBorrowableAssets());
 		request.setAttribute("assetItems", dao.findBorrowableAssetItems());
 		forward(request, response, "borrow.jsp");
 	}
 
-	private LocalDateTime borrowedAt(HttpServletRequest request) {
-		String value = request.getParameter("borrowedAt");
-		if (value == null || value.isBlank()) {
-			throw new IllegalArgumentException("Vui lòng chọn ngày và giờ mượn.");
-		}
+	private long requiredId(HttpServletRequest request, String name) {
 		try {
-			return LocalDateTime.parse(value);
-		} catch (RuntimeException exception) {
-			throw new IllegalArgumentException("Ngày và giờ mượn không hợp lệ.");
+			long value = Long.parseLong(request.getParameter(name));
+			if (value <= 0) {
+				throw new NumberFormatException();
+			}
+			return value;
+		} catch (NumberFormatException exception) {
+			throw new IllegalArgumentException("Vui lòng chọn một sản phẩm cụ thể để mượn.");
 		}
 	}
 

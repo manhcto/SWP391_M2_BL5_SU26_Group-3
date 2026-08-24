@@ -10,6 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -61,8 +62,8 @@ public class ChangePasswordController extends HttpServlet {
 				throw new IllegalArgumentException("Temporary password has expired.");
 			if (!LoginController.validPassword(user, current))
 				throw new IllegalArgumentException("Current password is incorrect.");
-			if (password == null || password.length() < 8 || !password.equals(confirm))
-				throw new IllegalArgumentException("New password must match and contain at least 8 characters.");
+			if (!validNewPassword(password) || !password.equals(confirm))
+				throw new IllegalArgumentException("Mật khẩu mới phải khớp và có độ dài từ 8 đến 72 byte UTF-8.");
 			if (!users.changePassword(user.getUserId(), BCrypt.hashpw(password, BCrypt.gensalt())))
 				throw new IllegalStateException("Password could not be changed.");
 			resets.consumeIssued(user.getUserId());
@@ -75,5 +76,12 @@ public class ChangePasswordController extends HttpServlet {
 			request.setAttribute("message", e.getMessage());
 			doGet(request, response);
 		}
+	}
+
+	static boolean validNewPassword(String password) {
+		if (password == null)
+			return false;
+		int bytes = password.getBytes(StandardCharsets.UTF_8).length;
+		return bytes >= 8 && bytes <= 72;
 	}
 }

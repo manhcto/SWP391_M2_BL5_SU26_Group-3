@@ -5,7 +5,6 @@ import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.auth.Csrf;
 import fpt.swp391.labtoolequip.auth.Permission;
 import fpt.swp391.labtoolequip.dao.IncidentDAO;
-import fpt.swp391.labtoolequip.dao.ResponsibilityDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -17,7 +16,6 @@ import java.sql.SQLException;
 @WebServlet("/lab-manager/incidents/*")
 public class IncidentController extends HttpServlet {
 	private final IncidentDAO dao = new IncidentDAO();
-	private final ResponsibilityDAO responsibilityDAO = new ResponsibilityDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -30,7 +28,8 @@ public class IncidentController extends HttpServlet {
 			request.setAttribute("csrfToken", Csrf.token(request));
 			String path = request.getPathInfo();
 			if (path != null && path.matches("/\\d+")) {
-				request.setAttribute("incident", dao.findById(Long.parseLong(path.substring(1))).orElseThrow());
+				request.setAttribute("incident",
+						dao.findByIdForLabManager(Long.parseLong(path.substring(1))).orElseThrow());
 				forward(request, response, "detail.jsp");
 				return;
 			}
@@ -44,7 +43,7 @@ public class IncidentController extends HttpServlet {
 			request.setAttribute("keyword", keyword);
 			request.setAttribute("selectedStatus", status);
 			request.setAttribute("selectedSeverity", severity);
-			request.setAttribute("incidents", dao.findAll(keyword, status, severity));
+			request.setAttribute("incidents", dao.findForLabManager(keyword, status, severity));
 			forward(request, response, "list.jsp");
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
@@ -57,34 +56,21 @@ public class IncidentController extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
-		if (!Csrf.valid(request) || !Authorization.has(request, Permission.INCIDENT_REVIEW)) {
+		if (!Csrf.valid(request) || !Authorization.has(request, Permission.INCIDENT_RESOLVE)) {
 			response.sendError(HttpServletResponse.SC_FORBIDDEN);
 			return;
 		}
 		String action = request.getParameter("action");
-		if (!"update".equals(action) && !"createResponsibility".equals(action)) {
+		if (!"update".equals(action)) {
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 			return;
 		}
 		try {
 			long incidentId = incidentId(request);
-			dao.updateByLabManager(incidentId, request.getParameter("status"),
-					request.getParameter("investigationNote"), request.getParameter("handlingResult"),
-					request.getParameter("determinedCause"));
-			if ("createResponsibility".equals(action)) {
-				var incident = dao.findById(incidentId).orElseThrow();
-				if (!"INTERN".equals(incident.getDeterminedCause()) || incident.getInternName() == null)
-					throw new IllegalStateException(
-							"Chỉ tạo trách nhiệm khi Lab Manager kết luận Intern gây ra và có Intern liên quan.");
-				String conclusion = request.getParameter("investigationNote");
-				if (conclusion == null || conclusion.isBlank())
-					conclusion = "Lab Manager xác định thực tập sinh chịu trách nhiệm.";
-				long responsibilityId = responsibilityDAO.create(AuthSession.userId(request), incidentId, conclusion,
-						null, "CONFIRMED", null);
-				response.sendRedirect(
-						request.getContextPath() + "/lab-manager/responsibilities/" + responsibilityId + "/edit");
-				return;
-			}
+			dao.updateByLabManager(incidentId, AuthSession.userId(request), request.getParameter("status"),
+					request.getParameter("technicalCause"), request.getParameter("technicalSeverity"),
+					request.getParameter("repairability"), request.getParameter("recommendedAction"),
+					request.getParameter("technicalNote"), request.getParameter("handlingResult"));
 			response.sendRedirect(request.getContextPath() + "/lab-manager/incidents/" + incidentId + "?updated=1");
 		} catch (SQLException exception) {
 			throw new ServletException(exception);

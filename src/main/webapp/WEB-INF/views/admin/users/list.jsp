@@ -80,7 +80,7 @@
                             <c:if test="${param.success == 'imported'}">
                                 <div
                                     style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">
-                                    ✓ Đã nhập thành công ${param.count} tài khoản vào hệ thống!</div>
+									✓ Đã nhập thành công <c:out value="${param.count}"/> tài khoản vào hệ thống!</div>
                             </c:if>
 
                             <%-- THỐNG KÊ NGƯỜI DÙNG --%>

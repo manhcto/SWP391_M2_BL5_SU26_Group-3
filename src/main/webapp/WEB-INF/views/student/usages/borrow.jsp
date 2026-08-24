@@ -26,7 +26,8 @@
             <c:if test="${not empty message}"><p class="error-message"><c:out value="${message}"/></p></c:if>
             <article class="panel">
                 <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Thông tin thiết bị</h3></div></header>
-                <form method="post">
+				<form method="post">
+					<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="action" value="borrow">
                     <div class="form-grid">
                         <div class="form-group full-width"><label for="assetItemId">Sản phẩm cụ thể</label><select class="form-control" id="assetItemId" name="assetItemId" required><c:forEach items="${assetItems}" var="item"><option value="${item.assetItemId}"><c:out value="${item.itemCode}"/> · <c:out value="${item.assetName}"/><c:if test="${not empty item.serialNumber}"> · Serial <c:out value="${item.serialNumber}"/></c:if> · <c:out value="${app:label(item.condition)}"/></option></c:forEach></select><small>Mỗi lượt mượn gắn với một mã sản phẩm riêng để theo dõi khi trả và báo hỏng.</small></div>

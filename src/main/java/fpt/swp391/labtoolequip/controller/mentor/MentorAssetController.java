@@ -21,7 +21,7 @@ public class MentorAssetController extends HttpServlet {
 			String path = request.getPathInfo();
 			if (path != null && path.matches("/\\d+")) {
 				var item = dao.findById(Long.parseLong(path.substring(1))).orElse(null);
-				if (item == null) {
+				if (item == null || !"AVAILABLE".equals(item.getStatus())) {
 					response.sendError(HttpServletResponse.SC_NOT_FOUND);
 					return;
 				}
@@ -33,7 +33,8 @@ public class MentorAssetController extends HttpServlet {
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
-			var assetItems = dao.findAll(request.getParameter("keyword"), "", "", request.getParameter("category"));
+			var assetItems = dao.findAll(request.getParameter("keyword"), "AVAILABLE", "",
+					request.getParameter("category"));
 			request.setAttribute("assetItems", assetItems);
 			request.setAttribute("borrowableAssetCount",
 					assetItems.stream().filter(item -> Boolean.TRUE.equals(item.getBorrowable())).count());

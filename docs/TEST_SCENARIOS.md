@@ -3,7 +3,7 @@
 **Dự án:** LAB Asset Management System  
 **Phiên bản tài liệu:** 1.0  
 **Ngày lập:** 17/08/2026  
-**Căn cứ:** mã nguồn hiện tại, `README.md`, `database/schema.sql` và `database/mock_data.sql`
+**Căn cứ:** mã nguồn hiện tại, `README.md` và `database/lab_asset_management_full.sql`
 
 ## 1. Mục tiêu và phạm vi
 
@@ -37,7 +37,7 @@ Không viết Unit Test cho getter/setter thuần của model. Các câu SQL, tr
 
 1. JDK 17, SQL Server và Tomcat 10.1 (qua Cargo Maven plugin).
 2. Tạo database riêng `lab_asset_management_test`; tuyệt đối không dùng database production.
-3. Chạy lần lượt `database/schema.sql` và `database/mock_data.sql` trên database test.
+3. Chạy `database/lab_asset_management_full.sql` trên database test.
 4. Cấu hình `LAB_TIMEZONE=Asia/Ho_Chi_Minh` và URL ứng dụng `http://localhost:8080/labtoolequip`.
 5. Bổ sung tài khoản test có mật khẩu đã biết cho đủ bốn vai trò; tạo thêm một tài khoản `INACTIVE`.
 6. Mỗi đợt test phải reset database về cùng một snapshot để ca sau không phụ thuộc ca trước.
@@ -249,7 +249,7 @@ Lệnh `mvnw.cmd test` đã chạy thành công: **2 tests, 0 failures, 0 errors
 ## 7. Rủi ro/khuyết điểm mã nguồn mà bộ test phải bắt được
 
 1. `AuthorizationFilter` chỉ bảo vệ prefix `/lab-manager/`, trong khi maintenance dùng `/labmanager/maintenance`; ST-AUTH-03 và ST-MAINT-09 dự kiến FAIL cho đến khi route được đồng bộ.
-2. `DisposalRecordDAO.cancel` ghi status `CANCELLED`, nhưng constraint `CK_disposal_records_status` trong `schema.sql` không cho phép `CANCELLED`; ST-DISP-06 dự kiến FAIL.
+2. `DisposalRecordDAO.cancel` ghi status `CANCELLED`, nhưng constraint `CK_disposal_records_status` trong `lab_asset_management_full.sql` không cho phép `CANCELLED`; ST-DISP-06 dự kiến FAIL.
 3. Toggle status và change role của user được gọi bằng GET, không có CSRF token; ST-USER-10 dự kiến FAIL và đây là lỗi bảo mật P0.
 4. Luồng maintenance cập nhật record và asset bằng hai transaction tách rời, đồng thời bắt rồi bỏ qua lỗi cập nhật asset; ST-MAINT-08 có thể phát hiện trạng thái lệch.
 5. `MaintenanceDAO` chưa ràng buộc transition trạng thái trong câu UPDATE; ST-MAINT-07 có thể phát hiện việc nhảy trạng thái hoặc decision không hợp lệ.

@@ -1,8 +1,8 @@
 /*
   LAB Asset Management System - Microsoft SQL Server
-  Standalone database script for a fresh LAB Asset Management database.
-  This is the consolidated final schema and demo seed; do not run the
-  individual migration or mock-data scripts after this file.
+  Canonical standalone script for a fresh LAB Asset Management database.
+  It contains the complete schema, asset lifecycle, FE-11 allocation tables
+  and demo inventory. No additional schema, migration or seed file is needed.
 
   Rules represented here:
   - One mentor manages the lab.
@@ -247,6 +247,11 @@ BEGIN TRY
         returned_at datetime2(0) NULL,
         condition_before varchar(10) NOT NULL,
         condition_after varchar(10) NULL,
+        reported_condition_after varchar(10) NULL,
+        return_requested_at datetime2(0) NULL,
+        verified_condition_after varchar(10) NULL,
+        return_verified_at datetime2(0) NULL,
+        return_verified_by bigint NULL,
         status varchar(20) NOT NULL CONSTRAINT DF_asset_usages_status DEFAULT ('IN_USE'),
         note nvarchar(max) NULL,
         return_note nvarchar(max) NULL,
@@ -258,19 +263,20 @@ BEGIN TRY
             REFERENCES dbo.lab_usage_request_students(request_id, semester_id, student_id),
         CONSTRAINT FK_asset_usages_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT FK_asset_usages_creator FOREIGN KEY (created_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_asset_usages_return_verifier FOREIGN KEY (return_verified_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_asset_usages_quantity CHECK (quantity > 0),
         CONSTRAINT CK_asset_usages_asset_item_quantity CHECK (asset_item_id IS NULL OR quantity = 1),
         CONSTRAINT CK_asset_usages_condition_before CHECK (condition_before IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')),
         CONSTRAINT CK_asset_usages_condition_after CHECK (
             condition_after IS NULL OR condition_after IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')
         ),
-        CONSTRAINT CK_asset_usages_status CHECK (status IN ('IN_USE', 'MAINTENANCE', 'RETURNED')),
+        CONSTRAINT CK_asset_usages_status CHECK (status IN ('IN_USE', 'RETURN_PENDING', 'RETURNED')),
         CONSTRAINT CK_asset_usages_dates CHECK (
             due_at >= borrowed_at
             AND (returned_at IS NULL OR returned_at >= borrowed_at)
         ),
         CONSTRAINT CK_asset_usages_return CHECK (
-            (status IN ('IN_USE', 'MAINTENANCE') AND returned_at IS NULL)
+            (status IN ('IN_USE', 'RETURN_PENDING') AND returned_at IS NULL)
             OR (status = 'RETURNED' AND returned_at IS NOT NULL AND condition_after IS NOT NULL)
         )
     );
@@ -349,13 +355,24 @@ BEGIN TRY
         incident_type varchar(15) NOT NULL,
         description nvarchar(max) NOT NULL,
         severity varchar(10) NOT NULL,
-        status varchar(15) NOT NULL CONSTRAINT DF_incidents_status DEFAULT ('OPEN'),
+        status varchar(15) NOT NULL CONSTRAINT DF_incidents_status DEFAULT ('REPORTED'),
         occurred_at datetime2(0) NULL,
         reported_at datetime2(0) NOT NULL CONSTRAINT DF_incidents_reported_at DEFAULT (SYSUTCDATETIME()),
         investigation_note nvarchar(max) NULL,
         handling_result nvarchar(max) NULL,
 		reported_cause varchar(15) NOT NULL CONSTRAINT DF_incidents_reported_cause DEFAULT ('UNKNOWN'),
 		determined_cause varchar(15) NULL,
+        reviewed_by bigint NULL,
+        reviewed_at datetime2(0) NULL,
+        mentor_review_note nvarchar(max) NULL,
+        forwarded_at datetime2(0) NULL,
+        technical_cause varchar(30) NULL,
+        technical_severity varchar(10) NULL,
+        repairability varchar(20) NULL,
+        recommended_action varchar(30) NULL,
+        technical_note nvarchar(max) NULL,
+        technical_assessed_by bigint NULL,
+        technical_assessed_at datetime2(0) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_incidents_created_at DEFAULT (SYSUTCDATETIME()),
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_incidents_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_incidents PRIMARY KEY (incident_id),
@@ -363,10 +380,12 @@ BEGIN TRY
         CONSTRAINT FK_incidents_usage FOREIGN KEY (asset_usage_id) REFERENCES dbo.asset_usages(asset_usage_id),
         CONSTRAINT FK_incidents_inspection_item FOREIGN KEY (inspection_item_id) REFERENCES dbo.inspection_items(inspection_item_id),
         CONSTRAINT FK_incidents_reporter FOREIGN KEY (reported_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_incidents_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_incidents_technical_assessor FOREIGN KEY (technical_assessed_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_incidents_quantity CHECK (affected_quantity > 0),
         CONSTRAINT CK_incidents_type CHECK (incident_type IN ('DAMAGE', 'MISSING', 'LOSS', 'MALFUNCTION', 'OTHER')),
         CONSTRAINT CK_incidents_severity CHECK (severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
-        CONSTRAINT CK_incidents_status CHECK (status IN ('OPEN', 'INVESTIGATING', 'RESOLVED', 'CLOSED')),
+        CONSTRAINT CK_incidents_status CHECK (status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING', 'RESOLVED', 'CLOSED')),
 		CONSTRAINT CK_incidents_reported_cause CHECK (reported_cause IN ('INTERN', 'NATURAL', 'UNKNOWN')),
 		CONSTRAINT CK_incidents_determined_cause CHECK (determined_cause IS NULL OR determined_cause IN ('INTERN', 'NATURAL', 'UNKNOWN')),
         CONSTRAINT CK_incidents_dates CHECK (occurred_at IS NULL OR occurred_at <= reported_at)
@@ -380,7 +399,7 @@ BEGIN TRY
     CREATE TABLE dbo.responsibilities (
         responsibility_id bigint IDENTITY(1,1) NOT NULL,
         incident_id bigint NOT NULL,
-        student_id bigint NOT NULL,
+        student_id bigint NULL,
         determined_by bigint NOT NULL,
         conclusion nvarchar(max) NOT NULL,
         decision nvarchar(max) NULL,
@@ -389,6 +408,12 @@ BEGIN TRY
         reviewed_at datetime2(0) NULL,
         review_note nvarchar(max) NULL,
         resolution_note nvarchar(max) NULL,
+        responsibility_level varchar(15) NULL,
+        evidence_summary nvarchar(max) NULL,
+        responsibility_note nvarchar(max) NULL,
+        handling_recommendation nvarchar(max) NULL,
+        responsibility_assessed_by bigint NULL,
+        responsibility_assessed_at datetime2(0) NULL,
         determined_at datetime2(0) NOT NULL CONSTRAINT DF_responsibilities_determined_at DEFAULT (SYSUTCDATETIME()),
         resolved_at datetime2(0) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_responsibilities_created_at DEFAULT (SYSUTCDATETIME()),
@@ -399,6 +424,14 @@ BEGIN TRY
         CONSTRAINT FK_responsibilities_student FOREIGN KEY (student_id) REFERENCES dbo.student_profiles(student_id),
         CONSTRAINT FK_responsibilities_determiner FOREIGN KEY (determined_by) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_responsibilities_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_responsibilities_assessor FOREIGN KEY (responsibility_assessed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_responsibilities_level CHECK (
+            responsibility_level IS NULL OR responsibility_level IN ('UNDETERMINED', 'NONE', 'PARTIAL', 'FULL')
+        ),
+        CONSTRAINT CK_responsibilities_level_evidence CHECK (
+            responsibility_level NOT IN ('PARTIAL', 'FULL')
+            OR (student_id IS NOT NULL AND evidence_summary IS NOT NULL AND responsibility_note IS NOT NULL)
+        ),
         CONSTRAINT CK_responsibilities_status CHECK (
             status IN ('CONFIRMED', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'RESOLVED')
         ),
@@ -422,7 +455,9 @@ BEGIN TRY
     CREATE TABLE dbo.maintenance_records (
         maintenance_id bigint IDENTITY(1,1) NOT NULL,
         asset_id bigint NOT NULL,
+        asset_item_id bigint NULL,
         incident_id bigint NULL,
+        assessment_id bigint NULL,
         quantity int NOT NULL CONSTRAINT DF_maintenance_records_quantity DEFAULT (1),
         requested_by bigint NOT NULL,
         description nvarchar(max) NOT NULL,
@@ -434,6 +469,7 @@ BEGIN TRY
         repair_started_at datetime2(0) NULL,
         repair_completed_at datetime2(0) NULL,
         repair_result nvarchar(max) NULL,
+        repair_outcome varchar(10) NOT NULL CONSTRAINT DF_maintenance_records_repair_outcome DEFAULT ('PENDING'),
         estimated_cost decimal(15,0) NULL,
         actual_cost decimal(15,0) NULL,
         note nvarchar(max) NULL,
@@ -447,6 +483,9 @@ BEGIN TRY
         CONSTRAINT CK_maintenance_records_quantity CHECK (quantity > 0),
         CONSTRAINT CK_maintenance_records_status CHECK (
             status IN ('PENDING', 'APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED')
+        ),
+        CONSTRAINT CK_maintenance_records_repair_outcome CHECK (
+            repair_outcome IN ('PENDING', 'SUCCESS', 'FAILED')
         ),
         CONSTRAINT CK_maintenance_records_approval CHECK (
             (status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL)
@@ -476,11 +515,15 @@ BEGIN TRY
         quantity int NOT NULL CONSTRAINT DF_disposal_records_quantity DEFAULT (1),
         requested_by bigint NOT NULL,
         reason nvarchar(max) NOT NULL,
+        reason_code varchar(30) NULL,
+        technical_review_note nvarchar(max) NULL,
         requested_at datetime2(0) NOT NULL CONSTRAINT DF_disposal_records_requested_at DEFAULT (SYSUTCDATETIME()),
         status varchar(10) NOT NULL CONSTRAINT DF_disposal_records_status DEFAULT ('PENDING'),
         approved_by bigint NULL,
         approved_at datetime2(0) NULL,
         approval_note nvarchar(max) NULL,
+        disposal_method varchar(20) NULL,
+        completed_by bigint NULL,
         completed_at datetime2(0) NULL,
         completion_note nvarchar(max) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_disposal_records_created_at DEFAULT (SYSUTCDATETIME()),
@@ -490,6 +533,7 @@ BEGIN TRY
         CONSTRAINT FK_disposal_records_maintenance FOREIGN KEY (maintenance_id) REFERENCES dbo.maintenance_records(maintenance_id),
         CONSTRAINT FK_disposal_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_disposal_records_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_disposal_records_completer FOREIGN KEY (completed_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_disposal_records_quantity CHECK (quantity > 0),
         CONSTRAINT CK_disposal_records_asset_item_quantity CHECK (asset_item_id IS NULL OR quantity = 1),
         CONSTRAINT CK_disposal_records_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')),
@@ -502,7 +546,8 @@ BEGIN TRY
     CREATE INDEX IX_disposal_records_asset ON dbo.disposal_records (asset_id);
     CREATE INDEX IX_disposal_records_maintenance ON dbo.disposal_records (maintenance_id) WHERE maintenance_id IS NOT NULL;
     CREATE INDEX IX_disposal_records_status ON dbo.disposal_records (status);
-    CREATE UNIQUE INDEX UX_disposal_records_pending_asset ON dbo.disposal_records (asset_id) WHERE status = 'PENDING';
+    CREATE UNIQUE INDEX UX_disposal_records_open_quantity_asset ON dbo.disposal_records (asset_id)
+        WHERE asset_item_id IS NULL AND status IN ('PENDING', 'APPROVED');
 
     INSERT dbo.semesters (code, name, start_date, end_date, status)
     VALUES ('FA26', N'Fall 2026', '2026-08-01', '2026-12-31', 'ACTIVE');
@@ -798,6 +843,74 @@ END;
 GO
 
 /* asset_items is available only after the initial schema and seed above. */
+IF COL_LENGTH('dbo.incidents', 'reported_cause') IS NULL
+    ALTER TABLE dbo.incidents ADD reported_cause varchar(15) NOT NULL
+        CONSTRAINT DF_incidents_reported_cause DEFAULT ('UNKNOWN');
+IF COL_LENGTH('dbo.incidents', 'determined_cause') IS NULL
+    ALTER TABLE dbo.incidents ADD determined_cause varchar(15) NULL;
+IF COL_LENGTH('dbo.incidents', 'reviewed_by') IS NULL
+    ALTER TABLE dbo.incidents ADD reviewed_by bigint NULL;
+IF COL_LENGTH('dbo.incidents', 'reviewed_at') IS NULL
+    ALTER TABLE dbo.incidents ADD reviewed_at datetime2(0) NULL;
+IF COL_LENGTH('dbo.incidents', 'mentor_review_note') IS NULL
+    ALTER TABLE dbo.incidents ADD mentor_review_note nvarchar(max) NULL;
+IF COL_LENGTH('dbo.incidents', 'forwarded_at') IS NULL
+    ALTER TABLE dbo.incidents ADD forwarded_at datetime2(0) NULL;
+IF COL_LENGTH('dbo.incidents', 'technical_cause') IS NULL
+    ALTER TABLE dbo.incidents ADD technical_cause varchar(30) NULL;
+IF COL_LENGTH('dbo.incidents', 'technical_severity') IS NULL
+    ALTER TABLE dbo.incidents ADD technical_severity varchar(10) NULL;
+IF COL_LENGTH('dbo.incidents', 'repairability') IS NULL
+    ALTER TABLE dbo.incidents ADD repairability varchar(20) NULL;
+IF COL_LENGTH('dbo.incidents', 'recommended_action') IS NULL
+    ALTER TABLE dbo.incidents ADD recommended_action varchar(30) NULL;
+IF COL_LENGTH('dbo.incidents', 'technical_note') IS NULL
+    ALTER TABLE dbo.incidents ADD technical_note nvarchar(max) NULL;
+IF COL_LENGTH('dbo.incidents', 'technical_assessed_by') IS NULL
+    ALTER TABLE dbo.incidents ADD technical_assessed_by bigint NULL;
+IF COL_LENGTH('dbo.incidents', 'technical_assessed_at') IS NULL
+    ALTER TABLE dbo.incidents ADD technical_assessed_at datetime2(0) NULL;
+IF COL_LENGTH('dbo.responsibilities', 'responsibility_level') IS NULL
+    ALTER TABLE dbo.responsibilities ADD responsibility_level varchar(15) NULL;
+IF COL_LENGTH('dbo.responsibilities', 'evidence_summary') IS NULL
+    ALTER TABLE dbo.responsibilities ADD evidence_summary nvarchar(max) NULL;
+IF COL_LENGTH('dbo.responsibilities', 'responsibility_note') IS NULL
+    ALTER TABLE dbo.responsibilities ADD responsibility_note nvarchar(max) NULL;
+IF COL_LENGTH('dbo.responsibilities', 'handling_recommendation') IS NULL
+    ALTER TABLE dbo.responsibilities ADD handling_recommendation nvarchar(max) NULL;
+IF COL_LENGTH('dbo.responsibilities', 'responsibility_assessed_by') IS NULL
+    ALTER TABLE dbo.responsibilities ADD responsibility_assessed_by bigint NULL;
+IF COL_LENGTH('dbo.responsibilities', 'responsibility_assessed_at') IS NULL
+    ALTER TABLE dbo.responsibilities ADD responsibility_assessed_at datetime2(0) NULL;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_incidents_status')
+    ALTER TABLE dbo.incidents DROP CONSTRAINT CK_incidents_status;
+ALTER TABLE dbo.incidents ADD CONSTRAINT CK_incidents_status
+    CHECK (status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING', 'RESOLVED', 'CLOSED'));
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_incidents_reviewer')
+    ALTER TABLE dbo.incidents ADD CONSTRAINT FK_incidents_reviewer
+        FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_incidents_technical_assessor')
+    ALTER TABLE dbo.incidents ADD CONSTRAINT FK_incidents_technical_assessor
+        FOREIGN KEY (technical_assessed_by) REFERENCES dbo.users(user_id);
+IF EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('dbo.responsibilities') AND name = 'student_id' AND is_nullable = 0
+)
+    ALTER TABLE dbo.responsibilities ALTER COLUMN student_id bigint NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_responsibilities_assessor')
+    ALTER TABLE dbo.responsibilities ADD CONSTRAINT FK_responsibilities_assessor
+        FOREIGN KEY (responsibility_assessed_by) REFERENCES dbo.users(user_id);
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_responsibilities_level')
+    ALTER TABLE dbo.responsibilities ADD CONSTRAINT CK_responsibilities_level
+        CHECK (responsibility_level IS NULL OR responsibility_level IN ('UNDETERMINED', 'NONE', 'PARTIAL', 'FULL'));
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_responsibilities_level_evidence')
+    ALTER TABLE dbo.responsibilities ADD CONSTRAINT CK_responsibilities_level_evidence
+        CHECK (responsibility_level NOT IN ('PARTIAL', 'FULL')
+            OR (student_id IS NOT NULL AND evidence_summary IS NOT NULL AND responsibility_note IS NOT NULL));
+GO
+
 IF NOT EXISTS (
     SELECT 1 FROM sys.foreign_keys
     WHERE name = 'FK_incidents_asset_item'
@@ -851,7 +964,7 @@ IF NOT EXISTS (
       AND object_id = OBJECT_ID('dbo.asset_usages')
 )
     CREATE UNIQUE INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages (asset_item_id)
-        WHERE asset_item_id IS NOT NULL AND status IN ('IN_USE', 'MAINTENANCE');
+        WHERE asset_item_id IS NOT NULL AND status IN ('IN_USE', 'RETURN_PENDING');
 IF NOT EXISTS (
     SELECT 1 FROM sys.foreign_keys
     WHERE name = 'FK_disposal_records_asset_item'
@@ -869,16 +982,129 @@ IF NOT EXISTS (
         WHERE asset_item_id IS NOT NULL AND status IN ('PENDING', 'APPROVED');
 GO
 
-/* Reduce the demo inventory to two borrowable kits. */
+/* FE-08 exact-item maintenance upgrade. Historical parent-level rows remain readable. */
+IF COL_LENGTH('dbo.maintenance_records', 'asset_item_id') IS NULL
+    ALTER TABLE dbo.maintenance_records ADD asset_item_id bigint NULL;
+IF COL_LENGTH('dbo.maintenance_records', 'assessment_id') IS NULL
+    ALTER TABLE dbo.maintenance_records ADD assessment_id bigint NULL;
+IF COL_LENGTH('dbo.maintenance_records', 'repair_outcome') IS NULL
+    ALTER TABLE dbo.maintenance_records ADD repair_outcome varchar(10) NOT NULL
+        CONSTRAINT DF_maintenance_records_repair_outcome DEFAULT ('PENDING');
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE name = 'FK_maintenance_records_asset_item'
+      AND parent_object_id = OBJECT_ID('dbo.maintenance_records')
+)
+    ALTER TABLE dbo.maintenance_records
+        ADD CONSTRAINT FK_maintenance_records_asset_item FOREIGN KEY (asset_item_id, asset_id)
+        REFERENCES dbo.asset_items(asset_item_id, asset_id);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_maintenance_records_repair_outcome'
+      AND parent_object_id = OBJECT_ID('dbo.maintenance_records')
+)
+    ALTER TABLE dbo.maintenance_records ADD CONSTRAINT CK_maintenance_records_repair_outcome
+        CHECK (repair_outcome IN ('PENDING', 'SUCCESS', 'FAILED'));
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_maintenance_records_asset_item'
+      AND object_id = OBJECT_ID('dbo.maintenance_records')
+)
+    CREATE INDEX IX_maintenance_records_asset_item ON dbo.maintenance_records (asset_item_id, status)
+        WHERE asset_item_id IS NOT NULL;
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UX_maintenance_records_active_asset_item'
+      AND object_id = OBJECT_ID('dbo.maintenance_records')
+)
+    CREATE UNIQUE INDEX UX_maintenance_records_active_asset_item ON dbo.maintenance_records (asset_item_id)
+        WHERE asset_item_id IS NOT NULL AND status IN ('PENDING', 'APPROVED', 'IN_PROGRESS');
+GO
+
+/* Canonicalize the legacy asset usage identity column without rewriting data. */
+IF EXISTS (
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID('dbo.asset_usages')
+      AND name = 'intern_id'
+      AND is_computed = 0
+)
+AND EXISTS (
+    SELECT 1
+    FROM sys.columns
+    WHERE object_id = OBJECT_ID('dbo.asset_usages')
+      AND name = 'student_id'
+      AND is_computed = 1
+)
+BEGIN
+    ALTER TABLE dbo.asset_usages DROP COLUMN student_id;
+    EXEC sys.sp_rename 'dbo.asset_usages.intern_id', 'student_id', 'COLUMN';
+END;
+GO
+
+/* FE-04/FE-09 lifecycle upgrade for existing databases. */
+IF COL_LENGTH('dbo.asset_usages', 'reported_condition_after') IS NULL
+    ALTER TABLE dbo.asset_usages ADD reported_condition_after varchar(10) NULL;
+IF COL_LENGTH('dbo.asset_usages', 'return_requested_at') IS NULL
+    ALTER TABLE dbo.asset_usages ADD return_requested_at datetime2(0) NULL;
+IF COL_LENGTH('dbo.asset_usages', 'verified_condition_after') IS NULL
+    ALTER TABLE dbo.asset_usages ADD verified_condition_after varchar(10) NULL;
+IF COL_LENGTH('dbo.asset_usages', 'return_verified_at') IS NULL
+    ALTER TABLE dbo.asset_usages ADD return_verified_at datetime2(0) NULL;
+IF COL_LENGTH('dbo.asset_usages', 'return_verified_by') IS NULL
+    ALTER TABLE dbo.asset_usages ADD return_verified_by bigint NULL;
+IF COL_LENGTH('dbo.disposal_records', 'reason_code') IS NULL
+    ALTER TABLE dbo.disposal_records ADD reason_code varchar(30) NULL;
+IF COL_LENGTH('dbo.disposal_records', 'technical_review_note') IS NULL
+    ALTER TABLE dbo.disposal_records ADD technical_review_note nvarchar(max) NULL;
+IF COL_LENGTH('dbo.disposal_records', 'disposal_method') IS NULL
+    ALTER TABLE dbo.disposal_records ADD disposal_method varchar(20) NULL;
+IF COL_LENGTH('dbo.disposal_records', 'completed_by') IS NULL
+    ALTER TABLE dbo.disposal_records ADD completed_by bigint NULL;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name='UX_asset_usages_active_asset_item' AND object_id=OBJECT_ID('dbo.asset_usages'))
+    DROP INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_asset_usages_return')
+    ALTER TABLE dbo.asset_usages DROP CONSTRAINT CK_asset_usages_return;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name='CK_asset_usages_status')
+    ALTER TABLE dbo.asset_usages DROP CONSTRAINT CK_asset_usages_status;
+ALTER TABLE dbo.asset_usages ADD CONSTRAINT CK_asset_usages_status CHECK (status IN ('IN_USE','RETURN_PENDING','RETURNED'));
+ALTER TABLE dbo.asset_usages ADD CONSTRAINT CK_asset_usages_return CHECK (
+    (status IN ('IN_USE', 'RETURN_PENDING') AND returned_at IS NULL)
+    OR (status = 'RETURNED' AND returned_at IS NOT NULL
+        AND COALESCE(verified_condition_after, condition_after) IS NOT NULL)
+);
+CREATE UNIQUE INDEX UX_asset_usages_active_asset_item ON dbo.asset_usages(asset_item_id)
+    WHERE asset_item_id IS NOT NULL AND status IN ('IN_USE','RETURN_PENDING');
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_asset_usages_return_verifier')
+    ALTER TABLE dbo.asset_usages ADD CONSTRAINT FK_asset_usages_return_verifier FOREIGN KEY(return_verified_by) REFERENCES dbo.users(user_id);
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_disposal_records_completer')
+    ALTER TABLE dbo.disposal_records ADD CONSTRAINT FK_disposal_records_completer FOREIGN KEY(completed_by) REFERENCES dbo.users(user_id);
+GO
+
+/* Seed the canonical borrowable equipment inventory. */
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 
 DECLARE @kitCategoryId bigint;
+DECLARE @measurementCategoryId bigint;
+DECLARE @computerAccessoryCategoryId bigint;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị')
     INSERT dbo.asset_categories (category_name, description, status)
     VALUES (N'Kit thiết bị', N'Các bộ kit điện tử và cảm biến được phép cho intern mượn.', 'ACTIVE');
+IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Thiết bị đo lường')
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'Thiết bị đo lường', N'Thiết bị đo điện và điện tử được phép cho intern mượn.', 'ACTIVE');
+IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Phụ kiện máy tính')
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'Phụ kiện máy tính', N'Phụ kiện phục vụ học tập và thuyết trình được phép cho intern mượn.', 'ACTIVE');
 SELECT @kitCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị';
+SELECT @measurementCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Thiết bị đo lường';
+SELECT @computerAccessoryCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Phụ kiện máy tính';
 
 DECLARE @targets TABLE (
     asset_code varchar(50) NOT NULL PRIMARY KEY,
@@ -886,14 +1112,20 @@ DECLARE @targets TABLE (
     category_id bigint NOT NULL,
     total_quantity int NOT NULL,
     is_borrowable bit NOT NULL,
+    image_path nvarchar(500) NULL,
     storage_location nvarchar(150) NULL,
     description nvarchar(max) NULL
 );
 
-INSERT @targets (asset_code, asset_name, category_id, total_quantity, is_borrowable, storage_location, description)
+INSERT @targets (asset_code, asset_name, category_id, total_quantity, is_borrowable, image_path, storage_location, description)
 VALUES
-    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 3, 1, N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
-    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 3, 1, N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.');
+    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 3, 1, N'/assets/images/equipment/arduino-uno-kit.svg', N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
+    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 3, 1, N'/assets/images/equipment/raspberry-pi-kit.svg', N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.'),
+    ('ARDUINO-UNO-KIT', N'Bộ kit Arduino Uno', @kitCategoryId, 5, 1, N'/assets/images/equipment/arduino-uno-kit.svg', N'Tủ IoT-03', N'Bộ kit Arduino Uno gồm bo mạch, dây nối và cảm biến cơ bản.'),
+    ('RASPBERRY-PI-KIT', N'Bộ kit Raspberry Pi', @kitCategoryId, 5, 1, N'/assets/images/equipment/raspberry-pi-kit.svg', N'Tủ IoT-04', N'Bộ kit Raspberry Pi phục vụ thực hành lập trình nhúng.'),
+    ('DIGITAL-MULTIMETER', N'Đồng hồ vạn năng số', @measurementCategoryId, 5, 1, N'/assets/images/equipment/digital-multimeter.svg', N'Tủ đo lường-01', N'Đồng hồ vạn năng số dùng để đo điện áp, dòng điện và điện trở.'),
+    ('WIRELESS-MOUSE', N'Chuột không dây', @computerAccessoryCategoryId, 5, 1, N'/assets/images/equipment/wireless-mouse.svg', N'Tủ phụ kiện-01', N'Chuột không dây dùng cho thực hành và trình bày.'),
+    ('PRESENTATION-REMOTE', N'Bút trình chiếu không dây', @computerAccessoryCategoryId, 5, 1, N'/assets/images/equipment/presentation-remote.svg', N'Tủ phụ kiện-02', N'Bút trình chiếu không dây dùng trong các buổi báo cáo.');
 
 UPDATE a SET a.status = 'UNAVAILABLE', a.is_borrowable = 0, a.updated_at = SYSUTCDATETIME()
 FROM dbo.assets a WHERE NOT EXISTS (SELECT 1 FROM @targets t WHERE t.asset_code = a.asset_code);
@@ -921,13 +1153,18 @@ WHERE NOT EXISTS (SELECT 1 FROM dbo.assets a WHERE a.asset_code = t.asset_code);
     SELECT TOP (100) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS item_number
     FROM sys.all_objects a CROSS JOIN sys.all_objects b
 )
-INSERT dbo.asset_items (asset_id, item_code, condition, status, storage_location, note)
+INSERT dbo.asset_items (asset_id, item_code, serial_number, image_path, condition, status, is_borrowable, storage_location, note)
 SELECT a.asset_id, CONCAT(t.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)),
-       'GOOD', 'AVAILABLE', t.storage_location, N'Tạo từ bộ dữ liệu LAB chuẩn hóa'
+       CONCAT(t.asset_code, '-SN-', RIGHT(CONCAT('0000', n.item_number), 4)), t.image_path,
+       'GOOD', 'AVAILABLE', 1, t.storage_location, N'Tạo từ bộ dữ liệu LAB chuẩn hóa'
 FROM @targets t JOIN dbo.assets a ON a.asset_code = t.asset_code
 JOIN Numbers n ON n.item_number <= t.total_quantity
 WHERE NOT EXISTS (SELECT 1 FROM dbo.asset_items i
                   WHERE i.item_code = CONCAT(t.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)));
+
+UPDATE i SET i.serial_number = COALESCE(i.serial_number, CONCAT(t.asset_code, '-SN-', RIGHT(i.item_code, 4))),
+    i.image_path = t.image_path, i.is_borrowable = 1, i.updated_at = SYSUTCDATETIME()
+FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @targets t ON t.asset_code = a.asset_code;
 
 UPDATE i SET i.status = 'UNAVAILABLE', i.updated_at = SYSUTCDATETIME()
 FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @targets t ON t.asset_code = a.asset_code
@@ -1029,6 +1266,154 @@ BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
     THROW;
 END CATCH;
+GO
+
+/* FE-11: semester-based intern equipment allocation. */
+IF OBJECT_ID(N'dbo.equipment_activities', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_activities (
+        activity_id bigint IDENTITY(1,1) NOT NULL,
+        request_id bigint NOT NULL,
+        mentor_id bigint NOT NULL,
+        activity_name nvarchar(150) NOT NULL,
+        description nvarchar(500) NULL,
+        start_date date NOT NULL,
+        end_date date NOT NULL,
+        status varchar(20) NOT NULL CONSTRAINT DF_equipment_activities_status DEFAULT ('ACTIVE'),
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_activities_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_activities_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_equipment_activities PRIMARY KEY (activity_id),
+        CONSTRAINT UQ_equipment_activities_request_name UNIQUE (request_id, activity_name),
+        CONSTRAINT FK_equipment_activities_request FOREIGN KEY (request_id) REFERENCES dbo.lab_usage_requests(request_id),
+        CONSTRAINT FK_equipment_activities_mentor FOREIGN KEY (mentor_id) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_activities_status CHECK (status IN ('ACTIVE', 'CLOSED', 'CANCELLED')),
+        CONSTRAINT CK_equipment_activities_dates CHECK (start_date <= end_date)
+    );
+    CREATE INDEX IX_equipment_activities_mentor ON dbo.equipment_activities (mentor_id, status);
+    CREATE UNIQUE INDEX UX_equipment_activities_active_request ON dbo.equipment_activities (request_id)
+        WHERE status = 'ACTIVE';
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_groups', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_groups (
+        allocation_group_id bigint IDENTITY(1,1) NOT NULL,
+        activity_id bigint NOT NULL,
+        group_name nvarchar(100) NOT NULL,
+        leader_intern_id bigint NOT NULL,
+        CONSTRAINT PK_equipment_groups PRIMARY KEY (allocation_group_id),
+        CONSTRAINT UQ_equipment_groups_activity_name UNIQUE (activity_id, group_name),
+        CONSTRAINT FK_equipment_groups_activity FOREIGN KEY (activity_id) REFERENCES dbo.equipment_activities(activity_id) ON DELETE CASCADE,
+        CONSTRAINT FK_equipment_groups_leader FOREIGN KEY (leader_intern_id) REFERENCES dbo.student_profiles(student_id)
+    );
+    CREATE TABLE dbo.equipment_group_members (
+        allocation_group_id bigint NOT NULL,
+        intern_id bigint NOT NULL,
+        CONSTRAINT PK_equipment_group_members PRIMARY KEY (allocation_group_id, intern_id),
+        CONSTRAINT FK_equipment_group_members_group FOREIGN KEY (allocation_group_id) REFERENCES dbo.equipment_groups(allocation_group_id) ON DELETE CASCADE,
+        CONSTRAINT FK_equipment_group_members_intern FOREIGN KEY (intern_id) REFERENCES dbo.student_profiles(student_id)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocation_requests', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_allocation_requests (
+        allocation_request_id bigint IDENTITY(1,1) NOT NULL,
+        activity_id bigint NOT NULL,
+        allocation_group_id bigint NULL,
+        intern_id bigint NULL,
+        asset_id bigint NOT NULL,
+        requested_quantity int NOT NULL,
+        note nvarchar(500) NULL,
+        status varchar(25) NOT NULL CONSTRAINT DF_equipment_allocation_requests_status DEFAULT ('PENDING_APPROVAL'),
+        requested_by bigint NOT NULL,
+        reviewed_by bigint NULL,
+        reviewed_at datetime2(0) NULL,
+        review_note nvarchar(500) NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_allocation_requests_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_allocation_requests_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_equipment_allocation_requests PRIMARY KEY (allocation_request_id),
+        CONSTRAINT FK_equipment_allocation_requests_activity FOREIGN KEY (activity_id) REFERENCES dbo.equipment_activities(activity_id),
+        CONSTRAINT FK_equipment_allocation_requests_group FOREIGN KEY (allocation_group_id) REFERENCES dbo.equipment_groups(allocation_group_id),
+        CONSTRAINT FK_equipment_allocation_requests_intern FOREIGN KEY (intern_id) REFERENCES dbo.student_profiles(student_id),
+        CONSTRAINT FK_equipment_allocation_requests_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
+        CONSTRAINT FK_equipment_allocation_requests_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_equipment_allocation_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_allocation_requests_target CHECK (
+            (allocation_group_id IS NULL AND intern_id IS NULL)
+            OR (allocation_group_id IS NOT NULL AND intern_id IS NULL)
+            OR (allocation_group_id IS NULL AND intern_id IS NOT NULL)
+        ),
+        CONSTRAINT CK_equipment_allocation_requests_quantity CHECK (requested_quantity > 0),
+        CONSTRAINT CK_equipment_allocation_requests_status CHECK (status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED'))
+    );
+    CREATE INDEX IX_equipment_allocation_requests_status ON dbo.equipment_allocation_requests (status, activity_id);
+    CREATE UNIQUE INDEX UX_equipment_allocation_requests_activity_asset
+        ON dbo.equipment_allocation_requests (activity_id, asset_id);
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocation_requests', N'U') IS NOT NULL
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.equipment_allocation_requests') AND name = N'CK_equipment_allocation_requests_target')
+        ALTER TABLE dbo.equipment_allocation_requests DROP CONSTRAINT CK_equipment_allocation_requests_target;
+    ALTER TABLE dbo.equipment_allocation_requests ADD CONSTRAINT CK_equipment_allocation_requests_target CHECK ((allocation_group_id IS NULL AND intern_id IS NULL) OR (allocation_group_id IS NOT NULL AND intern_id IS NULL) OR (allocation_group_id IS NULL AND intern_id IS NOT NULL));
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_allocations (
+        allocation_id bigint IDENTITY(1,1) NOT NULL,
+        allocation_request_id bigint NOT NULL,
+        asset_item_id bigint NOT NULL,
+        status varchar(25) NOT NULL CONSTRAINT DF_equipment_allocations_status DEFAULT ('READY_FOR_HANDOVER'),
+        handed_over_by bigint NULL,
+        handed_over_at datetime2(0) NULL,
+        received_at datetime2(0) NULL,
+        recovered_by bigint NULL,
+        recovered_at datetime2(0) NULL,
+        return_condition varchar(10) NULL,
+        return_note nvarchar(500) NULL,
+        CONSTRAINT PK_equipment_allocations PRIMARY KEY (allocation_id),
+        CONSTRAINT FK_equipment_allocations_request FOREIGN KEY (allocation_request_id) REFERENCES dbo.equipment_allocation_requests(allocation_request_id),
+        CONSTRAINT FK_equipment_allocations_item FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id),
+        CONSTRAINT FK_equipment_allocations_handover FOREIGN KEY (handed_over_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_equipment_allocations_recovery FOREIGN KEY (recovered_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_allocations_status CHECK (status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED', 'RETURNED')),
+        CONSTRAINT CK_equipment_allocations_condition CHECK (return_condition IS NULL OR return_condition IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN'))
+    );
+    CREATE UNIQUE INDEX UX_equipment_allocations_active_item ON dbo.equipment_allocations (asset_item_id)
+        WHERE status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED');
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocation_issue_reports', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_allocation_issue_reports (
+        issue_report_id bigint IDENTITY(1,1) NOT NULL,
+        allocation_id bigint NOT NULL,
+        reported_by bigint NOT NULL,
+        issue_type varchar(20) NOT NULL,
+        description nvarchar(1000) NOT NULL,
+        image_path nvarchar(500) NULL,
+        status varchar(20) NOT NULL CONSTRAINT DF_equipment_issue_reports_status DEFAULT ('PENDING_MENTOR'),
+        mentor_note nvarchar(500) NULL,
+        incident_id bigint NULL,
+        reviewed_by bigint NULL,
+        reviewed_at datetime2(0) NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_issue_reports_created_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_equipment_allocation_issue_reports PRIMARY KEY (issue_report_id),
+        CONSTRAINT FK_equipment_issue_reports_allocation FOREIGN KEY (allocation_id) REFERENCES dbo.equipment_allocations(allocation_id),
+        CONSTRAINT FK_equipment_issue_reports_reporter FOREIGN KEY (reported_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_equipment_issue_reports_incident FOREIGN KEY (incident_id) REFERENCES dbo.incidents(incident_id),
+        CONSTRAINT FK_equipment_issue_reports_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_issue_reports_type CHECK (issue_type IN ('DAMAGE', 'LOSS', 'MISSING_COMPONENT')),
+        CONSTRAINT CK_equipment_issue_reports_status CHECK (status IN ('PENDING_MENTOR', 'VERIFIED', 'REJECTED'))
+    );
+END;
 GO
 
 SELECT 'FULL DATABASE SETUP COMPLETED' AS setup_status;

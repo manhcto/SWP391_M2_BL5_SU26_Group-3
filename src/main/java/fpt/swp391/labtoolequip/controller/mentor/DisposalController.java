@@ -67,7 +67,8 @@ public class DisposalController extends HttpServlet {
 				return;
 			}
 			long id = dao.create(AuthSession.userId(request), optionalId(request, "assetId"),
-					optionalId(request, "assetItemId"), request.getParameter("reason"));
+					optionalId(request, "assetItemId"), request.getParameter("reasonCode"),
+					request.getParameter("reason"));
 			response.sendRedirect(request.getContextPath() + "/mentor/disposals/" + id);
 		} catch (SQLException e) {
 			throw new ServletException(e);

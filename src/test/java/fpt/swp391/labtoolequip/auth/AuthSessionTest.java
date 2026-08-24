@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.auth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,5 +18,10 @@ class AuthSessionTest {
 	void sendsUnknownRoleToLogin() {
 		assertEquals("/app/login", AuthSession.dashboard("/app", "VISITOR"));
 		assertEquals("/app/login", AuthSession.dashboard("/app", null));
+	}
+
+	@Test
+	void authorizesInternForInternRoutes() {
+		assertTrue(AuthorizationFilter.isAuthorized(Permission.DASHBOARD_INTERN, "INTERN"));
 	}
 }

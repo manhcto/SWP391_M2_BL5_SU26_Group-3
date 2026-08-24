@@ -12,13 +12,14 @@
             <div class="login-welcome"><h1>Đăng nhập nội bộ Đại học FPT</h1><p>Vui lòng nhập thông tin đăng nhập.</p></div>
             <c:if test="${not empty message}"><p class="login-alert" role="alert"><c:out value="${message}"/></p></c:if>
             <form class="login-form" method="post" action="${pageContext.request.contextPath}/login">
+                <input type="hidden" name="csrfToken" value="${csrfToken}">
                 <label class="login-field" for="email"><span>Địa chỉ email</span><input id="email" type="email" name="email" value="<c:out value='${email}'/>" autocomplete="username" placeholder="Nhập địa chỉ email" required><span class="field-icon">✉</span></label>
                 <label class="login-field" for="password"><span>Mật khẩu</span><input id="password" type="password" name="password" autocomplete="current-password" placeholder="Nhập mật khẩu" required><button class="password-toggle" type="button" aria-label="Hiện mật khẩu">◉</button></label>
-                <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><a href="${pageContext.request.contextPath}/password-reset">Quên mật khẩu?</a></div>
+                <div class="login-options"><label><input type="checkbox" name="remember"> Ghi nhớ trong 30 ngày</label><a href="${pageContext.request.contextPath}/forgot-password">Quên mật khẩu?</a></div>
                 <button class="login-submit" type="submit">Đăng nhập</button>
             </form>
             <div class="login-divider"><span>hoặc</span></div>
-            <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Gmail</span></a>
+            <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Google</span></a>
         </div>
     </section>
     <aside class="login-visual" aria-label="Hệ thống quản lý tài sản phòng LAB"></aside>

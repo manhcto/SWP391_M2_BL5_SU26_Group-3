@@ -257,7 +257,8 @@ public class UserController extends HttpServlet {
 			errors.add("Trạng thái không hợp lệ.");
 		}
 
-		// Validate Email
+		// Mỗi tài khoản, gồm cả thực tập sinh, dùng một địa chỉ email hợp lệ và duy
+		// nhất.
 		if (user.getEmail().isEmpty()) {
 			errors.add("Email không được để trống.");
 		} else if (!user.getEmail().contains("@") || !user.getEmail().contains(".")) {

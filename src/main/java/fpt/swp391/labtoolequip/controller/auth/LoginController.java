@@ -1,6 +1,7 @@
 package fpt.swp391.labtoolequip.controller.auth;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.auth.Csrf;
 import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.dao.UserDAO;
 import fpt.swp391.labtoolequip.model.User;
@@ -18,6 +19,7 @@ import org.mindrot.jbcrypt.BCrypt;
 
 @WebServlet("/login")
 public class LoginController extends HttpServlet {
+	private static final AuthenticationThrottle THROTTLE = new AuthenticationThrottle();
 	private final UserDAO userDAO = new UserDAO();
 	private final SecureRandom random = new SecureRandom();
 
@@ -33,6 +35,7 @@ public class LoginController extends HttpServlet {
 			response.sendRedirect(AuthSession.dashboard(request.getContextPath(), role));
 			return;
 		}
+		request.setAttribute("csrfToken", Csrf.token(request));
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
 	}
 
@@ -43,6 +46,11 @@ public class LoginController extends HttpServlet {
 		String email = request.getParameter("email");
 		String password = request.getParameter("password");
 		request.setAttribute("email", email);
+		if (!THROTTLE.tryAcquire(request.getRemoteAddr())) {
+			request.setAttribute("message", "Email hoặc mật khẩu không chính xác.");
+			doGet(request, response);
+			return;
+		}
 		try {
 			Optional<User> found = userDAO.findByEmail(email);
 			if (found.isPresent() && "INTERN".equals(found.get().getRole())) {
@@ -56,6 +64,7 @@ public class LoginController extends HttpServlet {
 				doGet(request, response);
 				return;
 			}
+			THROTTLE.reset(request.getRemoteAddr());
 			AuthSession.login(request, found.get());
 			response.sendRedirect(AuthSession.mustChangePassword(request)
 					? request.getContextPath() + "/change-password"
