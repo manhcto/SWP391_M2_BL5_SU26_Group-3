@@ -21,6 +21,8 @@ public class AuthorizationFilter implements Filter {
 			throws IOException, ServletException {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
+		String csrfToken = Csrf.token(request);
+		request.setAttribute("csrfToken", csrfToken);
 		String path = request.getRequestURI().substring(request.getContextPath().length());
 		if ("/password-reset".equals(path))
 			response.setHeader("Cache-Control", "no-store");

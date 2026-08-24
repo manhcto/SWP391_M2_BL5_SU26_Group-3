@@ -59,6 +59,7 @@
                 </div>
 
                 <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance">
+                    <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                     <input type="hidden" name="action" value="${formMode == 'edit' ? 'updateSchedule' : 'createSchedule'}">
                     <c:if test="${formMode == 'edit'}">
                         <input type="hidden" name="scheduleId" value="${schedule.scheduleId}">

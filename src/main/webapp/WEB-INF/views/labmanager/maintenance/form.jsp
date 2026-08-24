@@ -70,6 +70,7 @@
                                                     <form method="post"
                                                         action="${pageContext.request.contextPath}/lab-manager/maintenance"
                                                         enctype="multipart/form-data" class="form-grid">
+                                                        <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                                                         <input type="hidden" name="action" value="updateProgress">
                                                         <input type="hidden" name="id" value="${record.maintenanceId}">
 
@@ -315,6 +316,7 @@
                                                         <form method="post"
                                                             action="${pageContext.request.contextPath}/lab-manager/maintenance"
                                                             enctype="multipart/form-data" class="form-grid">
+                                                            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="create">
 
                                                             <div class="form-group full-width">

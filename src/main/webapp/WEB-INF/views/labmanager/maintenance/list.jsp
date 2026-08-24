@@ -349,6 +349,7 @@
                             </c:when>
                             <c:otherwise>
                                 <form id="batchScheduleForm" method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="margin:0;">
+                                    <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                                     <%-- THANH THAO TÁC HÀNG LOẠT (BATCH ACTION BAR) --%>
                                     <div id="batchActionBar" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 16px; margin-bottom:14px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
                                         <div style="font-size:13.5px; font-weight:600; color:#166534; display:flex; align-items:center; gap:8px;">
@@ -637,6 +638,7 @@
                                                         <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance"
                                                               onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu bảo trì #MNT-${r.maintenanceId}? Thiết bị sẽ được trả về trạng thái Sẵn sàng.');"
                                                               style="display:inline;margin:0;">
+                                                            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="delete">
                                                             <input type="hidden" name="id" value="${r.maintenanceId}">
                                                             <button class="btn-secondary" type="submit" style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;font-weight:600;cursor:pointer;">
@@ -675,6 +677,7 @@
             <button type="button" onclick="document.getElementById('importScheduleModal').style.display='none'" style="background:none; border:none; font-size:20px; cursor:pointer; color:#94a3b8;">✕</button>
         </div>
         <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" enctype="multipart/form-data" style="margin:0;">
+            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
             <input type="hidden" name="action" value="importSchedules">
             <div style="padding:24px;">
                 <p style="margin:0 0 16px 0; font-size:13.5px; color:#64748b; line-height:1.5;">
