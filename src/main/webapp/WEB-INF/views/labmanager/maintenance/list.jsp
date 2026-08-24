@@ -393,8 +393,8 @@
                                                                     <input class="form-control" type="search"
                                                                         name="keyword"
                                                                         value="<c:out value='${keyword}'/>"
-                                                                        placeholder="Tìm theo tiêu đề, tên thiết bị, kỹ thuật viên..."
-                                                                        style="width:320px">
+                                                                        placeholder="Tìm theo mã lịch (#SCH-), tiêu đề, tên/mã thiết bị, cá thể, kỹ thuật viên..."
+                                                                        style="width:360px">
                                                                     <select class="form-control" name="status">
                                                                         <option value="">Tất cả trạng thái</option>
                                                                         <option value="PENDING"
@@ -803,8 +803,8 @@
                                                                             <input class="form-control" type="search"
                                                                                 name="keyword"
                                                                                 value="<c:out value='${keyword}'/>"
-                                                                                placeholder="Tìm theo mã phiếu, tên thiết bị, thợ sửa..."
-                                                                                style="width:300px">
+                                                                                placeholder="Tìm theo mã phiếu (#MNT-), tên/mã thiết bị, cá thể, kỹ thuật viên..."
+                                                                                style="width:360px">
                                                                             <select class="form-control" name="status">
                                                                                 <option value="">Tất cả trạng thái
                                                                                 </option>

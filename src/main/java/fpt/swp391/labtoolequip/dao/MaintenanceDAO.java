@@ -47,22 +47,30 @@ public class MaintenanceDAO {
 
 	public List<MaintenanceRecord> findAll(String keyword, String status) throws SQLException {
 		String search = keyword == null ? "" : keyword.trim();
-		String state = status == null ? "" : status.trim();
+		String clean = search.toUpperCase().replace("#MNT-", "").replace("MNT-", "").replace("#", "").trim();
 		String sql = SELECT + """
 				WHERE (? = '' OR CAST(m.maintenance_id AS varchar(30)) LIKE ?
 				    OR a.asset_code LIKE ? OR a.asset_name LIKE ?
-				    OR m.description LIKE ? OR requester.full_name LIKE ?)
+				    OR COALESCE(ai_direct.item_code, ai_incident.item_code) LIKE ?
+				    OR m.description LIKE ? OR requester.full_name LIKE ?
+				    OR m.note LIKE ? OR m.provider_phone LIKE ?)
 				  AND (? = '' OR m.status = ?)
 				ORDER BY m.requested_at DESC
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			String pattern = "%" + search + "%";
+			String idPattern = "%" + clean + "%";
 			int index = 1;
 			statement.setString(index++, search);
-			for (int count = 0; count < 5; count++) {
-				statement.setString(index++, pattern);
-			}
+			statement.setString(index++, idPattern);
+			statement.setString(index++, pattern);
+			statement.setString(index++, pattern);
+			statement.setString(index++, pattern);
+			statement.setString(index++, pattern);
+			statement.setString(index++, pattern);
+			statement.setString(index++, pattern);
+			statement.setString(index++, pattern);
 			statement.setString(index++, state);
 			statement.setString(index, state);
 			return read(statement);

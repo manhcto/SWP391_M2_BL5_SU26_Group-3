@@ -35,13 +35,30 @@ public class MaintenanceScheduleDAO {
 		}
 
 		if (keyword != null && !keyword.isBlank()) {
-			sql.append(
-					" AND (s.title LIKE ? OR a.asset_code LIKE ? OR a.asset_name LIKE ? OR s.provider_name LIKE ?) ");
-			String pattern = "%" + keyword.trim() + "%";
+			sql.append("""
+					AND (
+					    s.title LIKE ?
+					    OR a.asset_code LIKE ?
+					    OR a.asset_name LIKE ?
+					    OR s.item_code LIKE ?
+					    OR s.provider_name LIKE ?
+					    OR s.provider_phone LIKE ?
+					    OR s.note LIKE ?
+					    OR CAST(s.schedule_id AS NVARCHAR(20)) LIKE ?
+					)
+					""");
+			String clean = keyword.trim();
+			String idSearch = clean.toUpperCase().replace("#SCH-", "").replace("SCH-", "").replace("#", "");
+			String pattern = "%" + clean + "%";
+			String idPattern = "%" + idSearch + "%";
 			params.add(pattern);
 			params.add(pattern);
 			params.add(pattern);
 			params.add(pattern);
+			params.add(pattern);
+			params.add(pattern);
+			params.add(pattern);
+			params.add(idPattern);
 		}
 
 		sql.append("""
