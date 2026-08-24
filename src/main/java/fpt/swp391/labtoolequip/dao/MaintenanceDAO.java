@@ -108,6 +108,7 @@ public class MaintenanceDAO {
 				       COALESCE(ai.storage_location, a.storage_location) AS storage_location,
 				       CASE
 				           WHEN ai.status = 'IN_USE' OR EXISTS (SELECT 1 FROM dbo.asset_usages u WHERE u.asset_item_id = ai.asset_item_id AND u.status = 'IN_USE') THEN 'IN_USE'
+				           WHEN ai.status = 'UNAVAILABLE' THEN 'UNAVAILABLE'
 				           ELSE 'AVAILABLE'
 				       END AS status
 				FROM dbo.asset_items ai
@@ -128,6 +129,7 @@ public class MaintenanceDAO {
 				       a.storage_location,
 				       CASE
 				           WHEN (a.total_quantity - COALESCE((SELECT SUM(u.quantity) FROM dbo.asset_usages u WHERE u.asset_id = a.asset_id AND u.status = 'IN_USE'), 0)) <= 0 THEN 'IN_USE'
+				           WHEN a.status = 'UNAVAILABLE' THEN 'UNAVAILABLE'
 				           ELSE 'AVAILABLE'
 				       END AS status
 				FROM dbo.assets a
@@ -225,6 +227,25 @@ public class MaintenanceDAO {
 				} else {
 					if (!isIncidentMatchingAsset(connection, incidentId, assetId)) {
 						throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
+					}
+				}
+				// Kiểm tra thiết bị có đang UNAVAILABLE (đã sửa thất bại / hỏng chờ thanh lý)
+				// không
+				if (assetItemId != null) {
+					try (PreparedStatement itemCheckStmt = connection
+							.prepareStatement("SELECT status FROM dbo.asset_items WHERE asset_item_id = ?")) {
+						itemCheckStmt.setLong(1, assetItemId);
+						try (ResultSet rs = itemCheckStmt.executeQuery()) {
+							if (rs.next()) {
+								String st = rs.getString("status");
+								if ("UNAVAILABLE".equals(st) || "DISPOSED".equals(st)) {
+									throw new IllegalArgumentException(
+											"Thiết bị này đã ở trạng thái " + ("UNAVAILABLE".equals(st)
+													? "Không khả dụng (Đã hỏng chờ thanh lý)"
+													: "Đã thanh lý") + ", không thể lập phiếu bảo trì.");
+								}
+							}
+						}
 					}
 				}
 

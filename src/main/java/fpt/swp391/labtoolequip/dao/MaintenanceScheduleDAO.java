@@ -15,10 +15,12 @@ import java.util.Optional;
 
 public class MaintenanceScheduleDAO {
 	private static final String SELECT = """
-			SELECT s.*, a.asset_code, a.asset_name, a.storage_location, u.full_name AS creator_name
+			SELECT s.*, a.asset_code, a.asset_name, a.storage_location, u.full_name AS creator_name,
+			       COALESCE(ai.status, a.status) AS target_asset_status
 			FROM dbo.maintenance_schedules s
 			JOIN dbo.assets a ON a.asset_id = s.asset_id
 			JOIN dbo.users u ON u.user_id = s.created_by
+			LEFT JOIN dbo.asset_items ai ON ai.asset_id = s.asset_id AND (s.item_code IS NOT NULL AND ai.item_code = s.item_code)
 			""";
 
 	private final DBConnection db = new DBConnection();
@@ -422,6 +424,7 @@ public class MaintenanceScheduleDAO {
 		s.setAssetName(result.getString("asset_name"));
 		s.setStorageLocation(result.getString("storage_location"));
 		s.setCreatorName(result.getString("creator_name"));
+		s.setTargetAssetStatus(result.getString("target_asset_status"));
 		return s;
 	}
 

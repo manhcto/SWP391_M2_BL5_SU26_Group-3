@@ -667,38 +667,32 @@
                                                                                                             <c:when
                                                                                                                 test="${s.status == 'PENDING'}">
                                                                                                                 <div class="single-row-actions"
-                                                                                                                    style="display:inline-flex; gap:6px;">
-                                                                                                                    <%-- Nút
-                                                                                                                        tạo
-                                                                                                                        phiếu
-                                                                                                                        bảo
-                                                                                                                        trì
-                                                                                                                        nhanh
-                                                                                                                        từ
-                                                                                                                        lịch
-                                                                                                                        --%>
-                                                                                                                        <a class="btn-secondary"
-                                                                                                                            style="height:24px;padding:0 8px;font-size:11px;background:#e0f2fe;color:#0284c7;border-color:#bae6fd;font-weight:600;"
-                                                                                                                            href="${pageContext.request.contextPath}/lab-manager/maintenance/new?assetId=${s.assetId}&itemCode=${s.itemCode}&scheduleId=${s.scheduleId}&note=${s.providerName}&providerPhone=${s.providerPhone}&estimatedCost=${s.estimatedCost}&description=${s.title}"
-                                                                                                                            title="Tạo phiếu bảo trì cho thiết bị này">
-                                                                                                                            +
-                                                                                                                            Tạo
-                                                                                                                            phiếu
-                                                                                                                        </a>
-
-                                                                                                                        <%-- Chỉnh
-                                                                                                                            sửa
-                                                                                                                            lịch
-                                                                                                                            --%>
+                                                                                                                    style="display:inline-flex; gap:6px; align-items:center;">
+                                                                                                                    <c:choose>
+                                                                                                                        <c:when test="${s.targetAssetStatus == 'UNAVAILABLE'}">
+                                                                                                                            <span style="color:#dc2626;font-size:11px;font-weight:600;background:#fef2f2;border:1px solid #fecaca;padding:2px 8px;border-radius:4px;"
+                                                                                                                                  title="Thiết bị này đã bị hỏng không thể phục hồi (UNAVAILABLE), đang chờ thanh lý">Đã hỏng (Chờ thanh lý)</span>
+                                                                                                                        </c:when>
+                                                                                                                        <c:otherwise>
                                                                                                                             <a class="btn-secondary"
-                                                                                                                                style="height:24px;padding:0 8px;font-size:11px;"
-                                                                                                                                href="${pageContext.request.contextPath}/lab-manager/maintenance/schedules/${s.scheduleId}/edit">
-                                                                                                                                Sửa
+                                                                                                                                style="height:24px;padding:0 8px;font-size:11px;background:#e0f2fe;color:#0284c7;border-color:#bae6fd;font-weight:600;"
+                                                                                                                                href="${pageContext.request.contextPath}/lab-manager/maintenance/new?assetId=${s.assetId}&itemCode=${s.itemCode}&scheduleId=${s.scheduleId}&note=${s.providerName}&providerPhone=${s.providerPhone}&estimatedCost=${s.estimatedCost}&description=${s.title}"
+                                                                                                                                title="Tạo phiếu bảo trì cho thiết bị này">
+                                                                                                                                + Tạo phiếu
                                                                                                                             </a>
+                                                                                                                        </c:otherwise>
+                                                                                                                    </c:choose>
+                                                                                                                    <a class="btn-secondary"
+                                                                                                                        style="height:24px;padding:0 8px;font-size:11px;"
+                                                                                                                        href="${pageContext.request.contextPath}/lab-manager/maintenance/schedules/${s.scheduleId}/edit">
+                                                                                                                        Sửa
+                                                                                                                    </a>
                                                                                                                 </div>
                                                                                                                 <span
                                                                                                                     class="batch-mode-dash"
                                                                                                                     style="display:none; color:#cbd5e1; font-size:15px; font-weight:bold;">—</span>
+                                                                                                            </c:otherwise>
+                                                                                                        </c:choose>
                                                                                                             </c:when>
                                                                                                             <c:otherwise>
                                                                                                                 <span

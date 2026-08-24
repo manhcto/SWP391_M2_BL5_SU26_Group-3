@@ -182,4 +182,14 @@ public class MaintenanceSchedule {
 	public void setCreatorName(String creatorName) {
 		this.creatorName = creatorName;
 	}
+
+	private String targetAssetStatus;
+
+	public String getTargetAssetStatus() {
+		return targetAssetStatus;
+	}
+
+	public void setTargetAssetStatus(String targetAssetStatus) {
+		this.targetAssetStatus = targetAssetStatus;
+	}
 }

@@ -381,7 +381,7 @@
                                                                                     data-schedule-cost="${matchedSched.estimatedCost}"
                                                                                     data-schedule-provider="<c:out value='${matchedSched.providerName}'/>"
                                                                                     data-schedule-phone="<c:out value='${matchedSched.providerPhone}'/>"
-                                                                                    ${a.status=='IN_USE'
+                                                                                    ${(a.status=='IN_USE' or a.status=='UNAVAILABLE')
                                                                                     ? 'disabled style="color:#94a3b8;background:#f8fafc;"'
                                                                                     : '' } ${(not empty param.itemCode
                                                                                     and param.itemCode==a.itemCode) or
@@ -396,6 +396,10 @@
                                                                                         <c:when
                                                                                             test="${a.status == 'IN_USE'}">
                                                                                             — [Đang được mượn sử dụng -
+                                                                                            Không thể chọn]</c:when>
+                                                                                        <c:when
+                                                                                            test="${a.status == 'UNAVAILABLE'}">
+                                                                                            — [❌ Đã hỏng chờ thanh lý -
                                                                                             Không thể chọn]</c:when>
                                                                                         <c:when
                                                                                             test="${not empty a.storageLocation}">
