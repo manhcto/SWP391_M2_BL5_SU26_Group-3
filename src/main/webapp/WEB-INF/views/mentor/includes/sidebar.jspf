@@ -29,7 +29,7 @@
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
 <a class="nav-link${activeMenu == 'internLists' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/interns"><svg><use href="#i-clipboard"/></svg><span>Danh sách thực tập sinh</span></a>
         <a class="nav-link${activeMenu == 'assets' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/assets"><svg><use href="#i-box"/></svg><span>Thiết bị</span></a>
-        <a class="nav-link${activeMenu == 'allocations' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/allocations"><svg><use href="#i-clipboard"/></svg><span>Cấp phát Intern</span></a>
+        <a class="nav-link${activeMenu == 'allocations' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/allocations"><svg><use href="#i-clipboard"/></svg><span>Cấp phát thiết bị</span></a>
         <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/usages"><svg><use href="#i-calendar"/></svg><span>Sử dụng thiết bị</span></a>
         <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/inspections"><svg><use href="#i-inspect"/></svg><span>Kiểm tra</span></a>
         <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="${pageContext.request.contextPath}/mentor/incidents"><svg><use href="#i-alert"/></svg><span>Sự cố</span></a>
