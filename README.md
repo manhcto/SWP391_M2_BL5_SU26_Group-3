@@ -67,6 +67,14 @@ Hệ thống dùng xác thực hybrid: Intern đăng nhập bằng Google FPT đ
 9. Lab Manager điều tra kỹ thuật Incident. Sau kết luận kỹ thuật, Mentor có thể ghi Responsibility `UNDETERMINED/NONE/PARTIAL/FULL`; hệ thống không mặc định Intern có lỗi.
 10. Mentor tạo yêu cầu bảo trì hoặc thanh lý cho đúng `AssetItem`; Lab Manager duyệt/xử lý. Hoàn tất chỉ cập nhật Item mục tiêu, không thay đổi sibling hoặc hard-delete lịch sử.
 
+### Luồng cấp phát thiết bị cho lớp Intern (FE-11)
+
+1. Mentor chọn một danh sách Intern đã được Admin duyệt và tạo một yêu cầu cấp phát dùng xuyên suốt thời gian hoạt động của lớp.
+2. Trong một yêu cầu, Mentor thêm nhiều loại tài sản cố định hoặc bộ kit; mỗi dòng có loại tài sản, số lượng và ghi chú riêng. Dữ liệu lấy trực tiếp từ danh mục `Asset` đã có trong kho.
+3. Lab Manager kiểm tra tồn kho, điều chỉnh số lượng được duyệt cho từng dòng và gán các `AssetItem` cụ thể. Thiết bị được cấp chuyển sang trạng thái đang sử dụng để không xuất hiện trong luồng mượn thông thường.
+4. Tất cả Intern thuộc danh sách có thể xem thiết bị dùng chung của lớp. Intern báo hỏng, mất hoặc thiếu phụ kiện kèm ảnh; Mentor xác minh trước khi chuyển thành Incident cho Lab Manager xử lý.
+5. Cuối thời gian hoạt động, Lab Manager thu hồi thiết bị và đóng yêu cầu sau khi các tài sản đã được trả hoặc xử lý sự cố.
+
 ## Mô hình tài sản
 
 - **Tiện ích cố định:** bàn, ghế, tủ, bảng, TV hoặc máy chiếu dùng chung trong LAB. Các tài sản này vẫn được kiểm kê, ghi nhận sự cố, bảo trì và thanh lý nhưng không được mượn.
@@ -160,9 +168,7 @@ LAB_TIMEZONE=Asia/Ho_Chi_Minh
 
 ### Khởi tạo database local
 
-Khởi tạo database mới bằng hai file theo thứ tự:
-
-Chạy `database/lab_asset_management_full.sql` để tạo database, schema và dữ liệu demo.
+`database/lab_asset_management_full.sql` là script database duy nhất của dự án. Chạy file này trên database mới để tạo toàn bộ schema, lifecycle tài sản, FE-11 cấp phát thiết bị và dữ liệu demo.
 
 Các tài khoản Intern demo không có mật khẩu nội bộ; đăng nhập bằng tài khoản Google FPT tương ứng.
 
@@ -227,7 +233,7 @@ Chạy build và kiểm tra định dạng:
 
 ```text
 database/
-└── lab_asset_management_full.sql # Schema canonical, migration idempotent và dữ liệu demo
+└── lab_asset_management_full.sql       # Toàn bộ schema và dữ liệu demo
 src/
 ├── main/
 │   ├── java/fpt/swp391/labtoolequip/

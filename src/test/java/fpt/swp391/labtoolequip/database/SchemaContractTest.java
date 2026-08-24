@@ -30,4 +30,20 @@ class SchemaContractTest {
 		assertTrue(schema.contains("repair_outcome varchar(10) NOT NULL"));
 		assertTrue(schema.contains("UX_maintenance_records_active_asset_item"));
 	}
+
+	@Test
+	void consolidatedBootstrapContainsAllocationDisposalAndSeedContracts() throws IOException {
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_activities"));
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_allocation_requests"));
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_allocations"));
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_allocation_issue_reports"));
+		assertTrue(schema.contains("UX_equipment_activities_active_request"));
+		assertTrue(schema.contains("UX_equipment_allocation_requests_activity_asset"));
+		assertTrue(schema.contains("UX_equipment_allocations_active_item"));
+		assertTrue(schema.contains("reason_code varchar(30) NULL"));
+		assertTrue(schema.contains("'ARDUINO-UNO-KIT'"));
+		assertTrue(schema.contains("'PRESENTATION-REMOTE'"));
+	}
 }

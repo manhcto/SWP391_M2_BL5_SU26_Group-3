@@ -1,8 +1,8 @@
 /*
   LAB Asset Management System - Microsoft SQL Server
-  Standalone database script for a fresh LAB Asset Management database.
-  This is the consolidated final schema and demo seed; do not run the
-  individual migration or mock-data scripts after this file.
+  Canonical standalone script for a fresh LAB Asset Management database.
+  It contains the complete schema, asset lifecycle, FE-11 allocation tables
+  and demo inventory. No additional schema, migration or seed file is needed.
 
   Rules represented here:
   - One mentor manages the lab.
@@ -515,11 +515,15 @@ BEGIN TRY
         quantity int NOT NULL CONSTRAINT DF_disposal_records_quantity DEFAULT (1),
         requested_by bigint NOT NULL,
         reason nvarchar(max) NOT NULL,
+        reason_code varchar(30) NULL,
+        technical_review_note nvarchar(max) NULL,
         requested_at datetime2(0) NOT NULL CONSTRAINT DF_disposal_records_requested_at DEFAULT (SYSUTCDATETIME()),
         status varchar(10) NOT NULL CONSTRAINT DF_disposal_records_status DEFAULT ('PENDING'),
         approved_by bigint NULL,
         approved_at datetime2(0) NULL,
         approval_note nvarchar(max) NULL,
+        disposal_method varchar(20) NULL,
+        completed_by bigint NULL,
         completed_at datetime2(0) NULL,
         completion_note nvarchar(max) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_disposal_records_created_at DEFAULT (SYSUTCDATETIME()),
@@ -529,6 +533,7 @@ BEGIN TRY
         CONSTRAINT FK_disposal_records_maintenance FOREIGN KEY (maintenance_id) REFERENCES dbo.maintenance_records(maintenance_id),
         CONSTRAINT FK_disposal_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_disposal_records_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_disposal_records_completer FOREIGN KEY (completed_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_disposal_records_quantity CHECK (quantity > 0),
         CONSTRAINT CK_disposal_records_asset_item_quantity CHECK (asset_item_id IS NULL OR quantity = 1),
         CONSTRAINT CK_disposal_records_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')),
@@ -541,7 +546,8 @@ BEGIN TRY
     CREATE INDEX IX_disposal_records_asset ON dbo.disposal_records (asset_id);
     CREATE INDEX IX_disposal_records_maintenance ON dbo.disposal_records (maintenance_id) WHERE maintenance_id IS NOT NULL;
     CREATE INDEX IX_disposal_records_status ON dbo.disposal_records (status);
-    CREATE UNIQUE INDEX UX_disposal_records_pending_asset ON dbo.disposal_records (asset_id) WHERE status = 'PENDING';
+    CREATE UNIQUE INDEX UX_disposal_records_open_quantity_asset ON dbo.disposal_records (asset_id)
+        WHERE asset_item_id IS NULL AND status IN ('PENDING', 'APPROVED');
 
     INSERT dbo.semesters (code, name, start_date, end_date, status)
     VALUES ('FA26', N'Fall 2026', '2026-08-01', '2026-12-31', 'ACTIVE');
@@ -1079,16 +1085,26 @@ IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name='FK_disposal_records_co
     ALTER TABLE dbo.disposal_records ADD CONSTRAINT FK_disposal_records_completer FOREIGN KEY(completed_by) REFERENCES dbo.users(user_id);
 GO
 
-/* Reduce the demo inventory to two borrowable kits. */
+/* Seed the canonical borrowable equipment inventory. */
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
 
 DECLARE @kitCategoryId bigint;
+DECLARE @measurementCategoryId bigint;
+DECLARE @computerAccessoryCategoryId bigint;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị')
     INSERT dbo.asset_categories (category_name, description, status)
     VALUES (N'Kit thiết bị', N'Các bộ kit điện tử và cảm biến được phép cho intern mượn.', 'ACTIVE');
+IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Thiết bị đo lường')
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'Thiết bị đo lường', N'Thiết bị đo điện và điện tử được phép cho intern mượn.', 'ACTIVE');
+IF NOT EXISTS (SELECT 1 FROM dbo.asset_categories WHERE category_name = N'Phụ kiện máy tính')
+    INSERT dbo.asset_categories (category_name, description, status)
+    VALUES (N'Phụ kiện máy tính', N'Phụ kiện phục vụ học tập và thuyết trình được phép cho intern mượn.', 'ACTIVE');
 SELECT @kitCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Kit thiết bị';
+SELECT @measurementCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Thiết bị đo lường';
+SELECT @computerAccessoryCategoryId = category_id FROM dbo.asset_categories WHERE category_name = N'Phụ kiện máy tính';
 
 DECLARE @targets TABLE (
     asset_code varchar(50) NOT NULL PRIMARY KEY,
@@ -1096,14 +1112,20 @@ DECLARE @targets TABLE (
     category_id bigint NOT NULL,
     total_quantity int NOT NULL,
     is_borrowable bit NOT NULL,
+    image_path nvarchar(500) NULL,
     storage_location nvarchar(150) NULL,
     description nvarchar(max) NULL
 );
 
-INSERT @targets (asset_code, asset_name, category_id, total_quantity, is_borrowable, storage_location, description)
+INSERT @targets (asset_code, asset_name, category_id, total_quantity, is_borrowable, image_path, storage_location, description)
 VALUES
-    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 3, 1, N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
-    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 3, 1, N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.');
+    ('ARD-KIT-A01', N'Bộ kit Arduino A01', @kitCategoryId, 3, 1, N'/assets/images/equipment/arduino-uno-kit.svg', N'Tủ IoT-01', N'Kit Arduino dùng cho bài thực hành IoT.'),
+    ('SENSOR-KIT-S04', N'Bộ kit cảm biến S04', @kitCategoryId, 3, 1, N'/assets/images/equipment/raspberry-pi-kit.svg', N'Tủ IoT-02', N'Kit cảm biến dùng cho bài thực hành đo lường.'),
+    ('ARDUINO-UNO-KIT', N'Bộ kit Arduino Uno', @kitCategoryId, 5, 1, N'/assets/images/equipment/arduino-uno-kit.svg', N'Tủ IoT-03', N'Bộ kit Arduino Uno gồm bo mạch, dây nối và cảm biến cơ bản.'),
+    ('RASPBERRY-PI-KIT', N'Bộ kit Raspberry Pi', @kitCategoryId, 5, 1, N'/assets/images/equipment/raspberry-pi-kit.svg', N'Tủ IoT-04', N'Bộ kit Raspberry Pi phục vụ thực hành lập trình nhúng.'),
+    ('DIGITAL-MULTIMETER', N'Đồng hồ vạn năng số', @measurementCategoryId, 5, 1, N'/assets/images/equipment/digital-multimeter.svg', N'Tủ đo lường-01', N'Đồng hồ vạn năng số dùng để đo điện áp, dòng điện và điện trở.'),
+    ('WIRELESS-MOUSE', N'Chuột không dây', @computerAccessoryCategoryId, 5, 1, N'/assets/images/equipment/wireless-mouse.svg', N'Tủ phụ kiện-01', N'Chuột không dây dùng cho thực hành và trình bày.'),
+    ('PRESENTATION-REMOTE', N'Bút trình chiếu không dây', @computerAccessoryCategoryId, 5, 1, N'/assets/images/equipment/presentation-remote.svg', N'Tủ phụ kiện-02', N'Bút trình chiếu không dây dùng trong các buổi báo cáo.');
 
 UPDATE a SET a.status = 'UNAVAILABLE', a.is_borrowable = 0, a.updated_at = SYSUTCDATETIME()
 FROM dbo.assets a WHERE NOT EXISTS (SELECT 1 FROM @targets t WHERE t.asset_code = a.asset_code);
@@ -1131,13 +1153,18 @@ WHERE NOT EXISTS (SELECT 1 FROM dbo.assets a WHERE a.asset_code = t.asset_code);
     SELECT TOP (100) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS item_number
     FROM sys.all_objects a CROSS JOIN sys.all_objects b
 )
-INSERT dbo.asset_items (asset_id, item_code, condition, status, storage_location, note)
+INSERT dbo.asset_items (asset_id, item_code, serial_number, image_path, condition, status, is_borrowable, storage_location, note)
 SELECT a.asset_id, CONCAT(t.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)),
-       'GOOD', 'AVAILABLE', t.storage_location, N'Tạo từ bộ dữ liệu LAB chuẩn hóa'
+       CONCAT(t.asset_code, '-SN-', RIGHT(CONCAT('0000', n.item_number), 4)), t.image_path,
+       'GOOD', 'AVAILABLE', 1, t.storage_location, N'Tạo từ bộ dữ liệu LAB chuẩn hóa'
 FROM @targets t JOIN dbo.assets a ON a.asset_code = t.asset_code
 JOIN Numbers n ON n.item_number <= t.total_quantity
 WHERE NOT EXISTS (SELECT 1 FROM dbo.asset_items i
                   WHERE i.item_code = CONCAT(t.asset_code, '-', RIGHT(CONCAT('0000', n.item_number), 4)));
+
+UPDATE i SET i.serial_number = COALESCE(i.serial_number, CONCAT(t.asset_code, '-SN-', RIGHT(i.item_code, 4))),
+    i.image_path = t.image_path, i.is_borrowable = 1, i.updated_at = SYSUTCDATETIME()
+FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @targets t ON t.asset_code = a.asset_code;
 
 UPDATE i SET i.status = 'UNAVAILABLE', i.updated_at = SYSUTCDATETIME()
 FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @targets t ON t.asset_code = a.asset_code
@@ -1239,6 +1266,154 @@ BEGIN CATCH
     IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
     THROW;
 END CATCH;
+GO
+
+/* FE-11: semester-based intern equipment allocation. */
+IF OBJECT_ID(N'dbo.equipment_activities', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_activities (
+        activity_id bigint IDENTITY(1,1) NOT NULL,
+        request_id bigint NOT NULL,
+        mentor_id bigint NOT NULL,
+        activity_name nvarchar(150) NOT NULL,
+        description nvarchar(500) NULL,
+        start_date date NOT NULL,
+        end_date date NOT NULL,
+        status varchar(20) NOT NULL CONSTRAINT DF_equipment_activities_status DEFAULT ('ACTIVE'),
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_activities_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_activities_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_equipment_activities PRIMARY KEY (activity_id),
+        CONSTRAINT UQ_equipment_activities_request_name UNIQUE (request_id, activity_name),
+        CONSTRAINT FK_equipment_activities_request FOREIGN KEY (request_id) REFERENCES dbo.lab_usage_requests(request_id),
+        CONSTRAINT FK_equipment_activities_mentor FOREIGN KEY (mentor_id) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_activities_status CHECK (status IN ('ACTIVE', 'CLOSED', 'CANCELLED')),
+        CONSTRAINT CK_equipment_activities_dates CHECK (start_date <= end_date)
+    );
+    CREATE INDEX IX_equipment_activities_mentor ON dbo.equipment_activities (mentor_id, status);
+    CREATE UNIQUE INDEX UX_equipment_activities_active_request ON dbo.equipment_activities (request_id)
+        WHERE status = 'ACTIVE';
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_groups', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_groups (
+        allocation_group_id bigint IDENTITY(1,1) NOT NULL,
+        activity_id bigint NOT NULL,
+        group_name nvarchar(100) NOT NULL,
+        leader_intern_id bigint NOT NULL,
+        CONSTRAINT PK_equipment_groups PRIMARY KEY (allocation_group_id),
+        CONSTRAINT UQ_equipment_groups_activity_name UNIQUE (activity_id, group_name),
+        CONSTRAINT FK_equipment_groups_activity FOREIGN KEY (activity_id) REFERENCES dbo.equipment_activities(activity_id) ON DELETE CASCADE,
+        CONSTRAINT FK_equipment_groups_leader FOREIGN KEY (leader_intern_id) REFERENCES dbo.student_profiles(student_id)
+    );
+    CREATE TABLE dbo.equipment_group_members (
+        allocation_group_id bigint NOT NULL,
+        intern_id bigint NOT NULL,
+        CONSTRAINT PK_equipment_group_members PRIMARY KEY (allocation_group_id, intern_id),
+        CONSTRAINT FK_equipment_group_members_group FOREIGN KEY (allocation_group_id) REFERENCES dbo.equipment_groups(allocation_group_id) ON DELETE CASCADE,
+        CONSTRAINT FK_equipment_group_members_intern FOREIGN KEY (intern_id) REFERENCES dbo.student_profiles(student_id)
+    );
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocation_requests', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_allocation_requests (
+        allocation_request_id bigint IDENTITY(1,1) NOT NULL,
+        activity_id bigint NOT NULL,
+        allocation_group_id bigint NULL,
+        intern_id bigint NULL,
+        asset_id bigint NOT NULL,
+        requested_quantity int NOT NULL,
+        note nvarchar(500) NULL,
+        status varchar(25) NOT NULL CONSTRAINT DF_equipment_allocation_requests_status DEFAULT ('PENDING_APPROVAL'),
+        requested_by bigint NOT NULL,
+        reviewed_by bigint NULL,
+        reviewed_at datetime2(0) NULL,
+        review_note nvarchar(500) NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_allocation_requests_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_allocation_requests_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_equipment_allocation_requests PRIMARY KEY (allocation_request_id),
+        CONSTRAINT FK_equipment_allocation_requests_activity FOREIGN KEY (activity_id) REFERENCES dbo.equipment_activities(activity_id),
+        CONSTRAINT FK_equipment_allocation_requests_group FOREIGN KEY (allocation_group_id) REFERENCES dbo.equipment_groups(allocation_group_id),
+        CONSTRAINT FK_equipment_allocation_requests_intern FOREIGN KEY (intern_id) REFERENCES dbo.student_profiles(student_id),
+        CONSTRAINT FK_equipment_allocation_requests_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
+        CONSTRAINT FK_equipment_allocation_requests_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_equipment_allocation_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_allocation_requests_target CHECK (
+            (allocation_group_id IS NULL AND intern_id IS NULL)
+            OR (allocation_group_id IS NOT NULL AND intern_id IS NULL)
+            OR (allocation_group_id IS NULL AND intern_id IS NOT NULL)
+        ),
+        CONSTRAINT CK_equipment_allocation_requests_quantity CHECK (requested_quantity > 0),
+        CONSTRAINT CK_equipment_allocation_requests_status CHECK (status IN ('PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED'))
+    );
+    CREATE INDEX IX_equipment_allocation_requests_status ON dbo.equipment_allocation_requests (status, activity_id);
+    CREATE UNIQUE INDEX UX_equipment_allocation_requests_activity_asset
+        ON dbo.equipment_allocation_requests (activity_id, asset_id);
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocation_requests', N'U') IS NOT NULL
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.equipment_allocation_requests') AND name = N'CK_equipment_allocation_requests_target')
+        ALTER TABLE dbo.equipment_allocation_requests DROP CONSTRAINT CK_equipment_allocation_requests_target;
+    ALTER TABLE dbo.equipment_allocation_requests ADD CONSTRAINT CK_equipment_allocation_requests_target CHECK ((allocation_group_id IS NULL AND intern_id IS NULL) OR (allocation_group_id IS NOT NULL AND intern_id IS NULL) OR (allocation_group_id IS NULL AND intern_id IS NOT NULL));
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_allocations (
+        allocation_id bigint IDENTITY(1,1) NOT NULL,
+        allocation_request_id bigint NOT NULL,
+        asset_item_id bigint NOT NULL,
+        status varchar(25) NOT NULL CONSTRAINT DF_equipment_allocations_status DEFAULT ('READY_FOR_HANDOVER'),
+        handed_over_by bigint NULL,
+        handed_over_at datetime2(0) NULL,
+        received_at datetime2(0) NULL,
+        recovered_by bigint NULL,
+        recovered_at datetime2(0) NULL,
+        return_condition varchar(10) NULL,
+        return_note nvarchar(500) NULL,
+        CONSTRAINT PK_equipment_allocations PRIMARY KEY (allocation_id),
+        CONSTRAINT FK_equipment_allocations_request FOREIGN KEY (allocation_request_id) REFERENCES dbo.equipment_allocation_requests(allocation_request_id),
+        CONSTRAINT FK_equipment_allocations_item FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id),
+        CONSTRAINT FK_equipment_allocations_handover FOREIGN KEY (handed_over_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_equipment_allocations_recovery FOREIGN KEY (recovered_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_allocations_status CHECK (status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED', 'RETURNED')),
+        CONSTRAINT CK_equipment_allocations_condition CHECK (return_condition IS NULL OR return_condition IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN'))
+    );
+    CREATE UNIQUE INDEX UX_equipment_allocations_active_item ON dbo.equipment_allocations (asset_item_id)
+        WHERE status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED');
+END;
+GO
+
+IF OBJECT_ID(N'dbo.equipment_allocation_issue_reports', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.equipment_allocation_issue_reports (
+        issue_report_id bigint IDENTITY(1,1) NOT NULL,
+        allocation_id bigint NOT NULL,
+        reported_by bigint NOT NULL,
+        issue_type varchar(20) NOT NULL,
+        description nvarchar(1000) NOT NULL,
+        image_path nvarchar(500) NULL,
+        status varchar(20) NOT NULL CONSTRAINT DF_equipment_issue_reports_status DEFAULT ('PENDING_MENTOR'),
+        mentor_note nvarchar(500) NULL,
+        incident_id bigint NULL,
+        reviewed_by bigint NULL,
+        reviewed_at datetime2(0) NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_equipment_issue_reports_created_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_equipment_allocation_issue_reports PRIMARY KEY (issue_report_id),
+        CONSTRAINT FK_equipment_issue_reports_allocation FOREIGN KEY (allocation_id) REFERENCES dbo.equipment_allocations(allocation_id),
+        CONSTRAINT FK_equipment_issue_reports_reporter FOREIGN KEY (reported_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT FK_equipment_issue_reports_incident FOREIGN KEY (incident_id) REFERENCES dbo.incidents(incident_id),
+        CONSTRAINT FK_equipment_issue_reports_reviewer FOREIGN KEY (reviewed_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_equipment_issue_reports_type CHECK (issue_type IN ('DAMAGE', 'LOSS', 'MISSING_COMPONENT')),
+        CONSTRAINT CK_equipment_issue_reports_status CHECK (status IN ('PENDING_MENTOR', 'VERIFIED', 'REJECTED'))
+    );
+END;
 GO
 
 SELECT 'FULL DATABASE SETUP COMPLETED' AS setup_status;

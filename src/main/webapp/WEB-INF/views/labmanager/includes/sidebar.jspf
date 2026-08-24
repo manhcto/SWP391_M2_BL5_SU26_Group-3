@@ -27,6 +27,7 @@
     <nav class="side-nav" aria-label="Điều hướng quản lý phòng LAB">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
         <a class="nav-link${activeMenu == 'assets' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/assets"><svg><use href="#i-box"/></svg><span>Thiết bị</span></a>
+        <a class="nav-link${activeMenu == 'allocations' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/allocations"><svg><use href="#i-clipboard"/></svg><span>Duyệt cấp phát</span></a>
         <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/usages"><svg><use href="#i-calendar"/></svg><span>Sử dụng thiết bị</span></a>
         <a class="nav-link${activeMenu == 'inspections' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/inspections"><svg><use href="#i-inspect"/></svg><span>Kiểm tra</span></a>
         <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="${pageContext.request.contextPath}/lab-manager/incidents"><svg><use href="#i-alert"/></svg><span>Sự cố</span></a>

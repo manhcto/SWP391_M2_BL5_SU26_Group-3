@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bảng điều khiển quản lý phòng LAB | LAB Asset</title>
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css?v=dashboard-20260824">
 </head>
 <body class="lab-manager-page">
 <c:set var="activeMenu" value="dashboard" scope="request"/>
@@ -24,11 +24,8 @@
                 <div class="stat-card stat-blue"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong><c:out value="${assetCount}"/></strong><span>Tài sản phòng LAB</span><small><c:out value="${availableAssetCount}"/> thiết bị đang sẵn sàng</small></div></div>
                 <div class="stat-card stat-gold"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong><c:out value="${maintenanceAssetCount}"/></strong><span>Thiết bị đang bảo trì</span><small>Theo tình trạng tài sản hiện tại</small></div></div>
                 <a class="stat-card stat-green" href="${pageContext.request.contextPath}/lab-manager/usages"><div class="stat-icon"><svg><use href="#i-calendar"/></svg></div><div><strong><c:out value="${activeUsageCount}"/></strong><span>Lượt sử dụng đang mở</span><small>Thiết bị chưa được trả</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/inspections"><div class="stat-icon"><svg><use href="#i-inspect"/></svg></div><div><strong><c:out value="${inspectionCount}"/></strong><span>Kiểm tra và kiểm kê</span><small>Tất cả đợt kiểm tra đã ghi nhận</small></div></a>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/lab-manager/incidents"><div class="stat-icon"><svg><use href="#i-alert"/></svg></div><div><strong><c:out value="${incidentCount}"/></strong><span>Sự cố lớn</span><small>Cần Lab Manager theo dõi xử lý</small></div></a>
                 <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/lab-manager/maintenance"><div class="stat-icon"><svg><use href="#i-wrench"/></svg></div><div><strong><c:out value="${openMaintenanceCount}"/></strong><span>Phiếu bảo trì đang mở</span><small>Chưa hoàn tất hoặc từ chối</small></div></a>
                 <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/lab-manager/disposals"><div class="stat-icon"><svg><use href="#i-trash"/></svg></div><div><strong><c:out value="${pendingDisposalCount}"/></strong><span>Yêu cầu thanh lý chờ xử lý</span><small>Cần xác nhận trước khi hoàn tất</small></div></a>
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/lab-manager/responsibilities"><div class="stat-icon"><svg><use href="#i-list"/></svg></div><div><strong><c:out value="${responsibilityCount}"/></strong><span>Trách nhiệm</span><small>Hồ sơ cần xác nhận hoặc cập nhật quyết định</small></div></a>
             </div>
             <section class="analytics-grid lab-analytics" aria-label="Báo cáo vận hành phòng LAB">
                 <article class="panel analytics-panel">

@@ -1,7 +1,7 @@
 package fpt.swp391.labtoolequip.controller.labmanager;
 
+import fpt.swp391.labtoolequip.common.AssetImageStorage;
 import fpt.swp391.labtoolequip.dao.AssetItemDAO;
-import fpt.swp391.labtoolequip.common.AssetItemExcelReader;
 import fpt.swp391.labtoolequip.model.AssetItem;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -15,13 +15,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @WebServlet("/lab-manager/assets/*")
-@MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = 6 * 1024 * 1024)
+@MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = 25 * 1024 * 1024)
 public class AssetController extends HttpServlet {
 	private final AssetItemDAO dao = new AssetItemDAO();
 
@@ -31,10 +27,6 @@ public class AssetController extends HttpServlet {
 		try {
 			setRoleContext(request);
 			String path = request.getPathInfo();
-			if ("/new/template".equals(path)) {
-				downloadTemplate(response);
-				return;
-			}
 			if ("/new".equals(path)) {
 				prepareForm(request);
 				forward(request, response, "form.jsp");
@@ -75,22 +67,13 @@ public class AssetController extends HttpServlet {
 				return;
 			}
 			if ("/new".equals(path)) {
-				if ("import".equals(request.getParameter("action"))) {
-					importItems(request, response);
-					return;
-				}
-				int quantity = parseQuantity(request.getParameter("quantity"));
-				dao.createBundle(request.getParameter("assetCode"), request.getParameter("assetName"),
-						Long.parseLong(request.getParameter("categoryId")),
-						parseBorrowable(request.getParameter("assetType")), request.getParameter("description"),
-						readItems(request, quantity));
+				createBundle(request);
 				response.sendRedirect(request.getAttribute("assetBasePath") + "?created=1");
 				return;
 			}
 			if (path != null && path.matches("/\\d+")) {
 				long id = Long.parseLong(path.substring(1));
-				AssetItem item = readItem(request, id);
-				dao.updateItem(item);
+				updateItem(request, id);
 				response.sendRedirect(request.getAttribute("assetBasePath") + "/" + id + "?updated=1");
 				return;
 			}
@@ -142,41 +125,6 @@ public class AssetController extends HttpServlet {
 		forward(request, response, "detail.jsp");
 	}
 
-	private void importItems(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException, SQLException {
-		try {
-			AssetItemExcelReader.ImportData imported = AssetItemExcelReader.read(request.getPart("assetFile"));
-			if (imported.items().isEmpty()) {
-				throw new IOException("Vui lòng chọn một file Excel có dữ liệu sản phẩm.");
-			}
-			request.setAttribute("importedItems", imported.items());
-			request.setAttribute("quantity", imported.items().size());
-			request.setAttribute("message", "Đã nạp " + imported.items().size()
-					+ " sản phẩm từ Excel. Kiểm tra thông tin rồi bấm Tạo sản phẩm.");
-		} catch (IOException exception) {
-			request.setAttribute("message", exception.getMessage());
-		}
-		prepareForm(request);
-		request.getRequestDispatcher("/WEB-INF/views/labmanager/assets/form.jsp").forward(request, response);
-	}
-
-	private void downloadTemplate(HttpServletResponse response) throws IOException {
-		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-		response.setHeader("Content-Disposition", "attachment; filename=asset-items-template.xlsx");
-		try (Workbook workbook = new XSSFWorkbook()) {
-			Sheet sheet = workbook.createSheet("Asset Items");
-			Row header = sheet.createRow(0);
-			header.createCell(0).setCellValue("Serial");
-			header.createCell(1).setCellValue("Image Path");
-			header.createCell(2).setCellValue("Condition");
-			header.createCell(3).setCellValue("Status");
-			header.createCell(4).setCellValue("Purchase Date");
-			header.createCell(5).setCellValue("Warranty Until");
-			header.createCell(6).setCellValue("Note");
-			workbook.write(response.getOutputStream());
-		}
-	}
-
 	private void prepareForm(HttpServletRequest request) throws SQLException {
 		request.setAttribute("categories", dao.findCategories());
 		if (request.getAttribute("quantity") == null)
@@ -221,9 +169,34 @@ public class AssetController extends HttpServlet {
 		throw new IllegalArgumentException("Vui lòng chọn dạng tài sản.");
 	}
 
-	private List<AssetItem> readItems(HttpServletRequest request, int quantity) {
+	private void createBundle(HttpServletRequest request) throws IOException, SQLException, ServletException {
+		List<String> uploadedImages = new ArrayList<>();
+		try {
+			int quantity = parseQuantity(request.getParameter("quantity"));
+			dao.createBundle(request.getParameter("assetCode"), request.getParameter("assetName"),
+					Long.parseLong(request.getParameter("categoryId")), parseBorrowable(request.getParameter("assetType")),
+					request.getParameter("description"), readItems(request, quantity, uploadedImages));
+		} catch (IOException | SQLException | RuntimeException exception) {
+			uploadedImages.forEach(AssetImageStorage::delete);
+			throw exception;
+		}
+	}
+
+	private void updateItem(HttpServletRequest request, long id) throws IOException, SQLException, ServletException {
+		String uploadedImage = null;
+		try {
+			uploadedImage = AssetImageStorage.save(request.getPart("itemImageFile"));
+			AssetItem item = readItem(request, id, uploadedImage);
+			dao.updateItem(item);
+		} catch (IOException | SQLException | RuntimeException exception) {
+			AssetImageStorage.delete(uploadedImage);
+			throw exception;
+		}
+	}
+
+	private List<AssetItem> readItems(HttpServletRequest request, int quantity, List<String> uploadedImages)
+			throws IOException, ServletException {
 		String[] serials = request.getParameterValues("itemSerialNumber");
-		String[] images = request.getParameterValues("itemImagePath");
 		String[] conditions = request.getParameterValues("itemCondition");
 		String[] statuses = request.getParameterValues("itemStatus");
 		String[] purchases = request.getParameterValues("itemPurchaseDate");
@@ -231,9 +204,11 @@ public class AssetController extends HttpServlet {
 		String[] notes = request.getParameterValues("itemNote");
 		List<AssetItem> items = new ArrayList<>();
 		for (int index = 0; index < quantity; index++) {
+			String imagePath = AssetImageStorage.save(request.getPart("itemImageFile" + index));
+			uploadedImages.add(imagePath);
 			AssetItem item = new AssetItem();
 			item.setSerialNumber(value(serials, index));
-			item.setImagePath(value(images, index));
+			item.setImagePath(imagePath);
 			item.setCondition(defaultValue(value(conditions, index), "GOOD"));
 			item.setStatus(defaultValue(value(statuses, index), "AVAILABLE"));
 			item.setPurchaseDate(parseDate(value(purchases, index), "Ngày mua"));
@@ -244,11 +219,11 @@ public class AssetController extends HttpServlet {
 		return items;
 	}
 
-	private AssetItem readItem(HttpServletRequest request, long id) {
+	private AssetItem readItem(HttpServletRequest request, long id, String uploadedImage) {
 		AssetItem item = new AssetItem();
 		item.setAssetItemId(id);
 		item.setSerialNumber(request.getParameter("serialNumber"));
-		item.setImagePath(request.getParameter("imagePath"));
+		item.setImagePath(uploadedImage == null ? request.getParameter("imagePath") : uploadedImage);
 		item.setCondition(defaultValue(request.getParameter("condition"), "GOOD"));
 		item.setStatus(defaultValue(request.getParameter("status"), "AVAILABLE"));
 		item.setPurchaseDate(parseDate(request.getParameter("purchaseDate"), "Ngày mua"));

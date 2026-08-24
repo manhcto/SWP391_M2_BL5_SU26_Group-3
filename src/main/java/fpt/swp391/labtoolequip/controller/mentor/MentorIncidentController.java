@@ -7,6 +7,7 @@ import fpt.swp391.labtoolequip.auth.Permission;
 import fpt.swp391.labtoolequip.dao.AssetUsageDAO;
 import fpt.swp391.labtoolequip.dao.AssetItemDAO;
 import fpt.swp391.labtoolequip.dao.IncidentDAO;
+import fpt.swp391.labtoolequip.model.AssetUsage;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @WebServlet("/mentor/incidents/*")
 public class MentorIncidentController extends HttpServlet {
@@ -113,14 +115,22 @@ public class MentorIncidentController extends HttpServlet {
 	private void showForm(HttpServletRequest request, HttpServletResponse response)
 			throws SQLException, ServletException, IOException {
 		request.setAttribute("csrfToken", Csrf.token(request));
-		var usages = usageDAO.findForMentor(AuthSession.userId(request), "", "");
-		request.setAttribute("usages", usages);
+		List<AssetUsage> usages = usageDAO.findIncidentReportableForMentor(AuthSession.userId(request));
+		request.setAttribute("priorityUsages",
+				usages.stream().filter(MentorIncidentController::shouldPrioritizeReturnedDamage).toList());
+		request.setAttribute("otherUsages",
+				usages.stream().filter(usage -> !shouldPrioritizeReturnedDamage(usage)).toList());
 		String usageId = request.getParameter("usageId");
 		if (usageId != null && usageId.matches("\\d+")
 				&& usages.stream().anyMatch(usage -> usage.getAssetUsageId().toString().equals(usageId)))
 			request.setAttribute("preselectedTarget", "usage:" + usageId);
 		request.setAttribute("assetItems", assetItemDAO.findReportableItems());
 		forward(request, response, "form.jsp");
+	}
+
+	static boolean shouldPrioritizeReturnedDamage(AssetUsage usage) {
+		return "RETURNED".equals(usage.getStatus())
+				&& ("DAMAGED".equals(usage.getConditionAfter()) || "BROKEN".equals(usage.getConditionAfter()));
 	}
 
 	private void showDetail(HttpServletRequest request, HttpServletResponse response, long incidentId)

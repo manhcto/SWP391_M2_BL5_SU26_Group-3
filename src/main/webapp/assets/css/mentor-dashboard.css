@@ -132,17 +132,9 @@ a { color: inherit; text-decoration: none; }
 .report-alert-list span { color: #5e6965; font-size: 10px; }
 .report-alert-list strong { display: grid; min-width: 25px; height: 25px; place-items: center; border-radius: 7px; color: #a54a33; background: #fcece5; font-size: 11px; }
 
-/* Role breakdowns replace duplicate role-count cards. */
-.admin-page .stats-grid .stat-card:nth-child(4),
-.admin-page .stats-grid .stat-card:nth-child(5),
-.admin-page .stats-grid .stat-card:nth-child(6),
-.lab-manager-page .stats-grid .stat-card:nth-child(4),
-.lab-manager-page .stats-grid .stat-card:nth-child(5),
-.lab-manager-page .stats-grid .stat-card:nth-child(8),
+/* The dashboard markup contains only the role-specific KPI cards. */
 .intern-dashboard-page .stats-grid .stat-card:nth-child(4),
 .intern-dashboard-page .stats-grid .stat-card:nth-child(5) { display: none; }
-
-.mentor-page .content-heading + .stats-grid { display: none; }
 .stat-green .stat-icon { color: #188255; background: #e9f5ee; } .stat-green small { color: #398a65; }
 .stat-gold .stat-icon { color: #b27b16; background: #faf2df; } .stat-gold small { color: #a6741d; }
 .stat-blue .stat-icon { color: #2869b5; background: #eaf1fa; } .stat-blue small { color: #398a65; }

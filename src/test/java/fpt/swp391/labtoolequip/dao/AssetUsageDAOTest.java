@@ -6,9 +6,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.AssetItem;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import org.junit.jupiter.api.Test;
 
 class AssetUsageDAOTest {
+	@Test
+	void setsTheDueTimeToTheEndOfTheBorrowDay() {
+		ZonedDateTime borrowedAt = ZonedDateTime.of(2026, 8, 21, 14, 30, 0, 0,
+				ZoneId.of("Asia/Ho_Chi_Minh"));
+
+		assertEquals(Instant.parse("2026-08-21T10:40:00Z"), AssetUsageDAO.dueAtEndOfBorrowDay(borrowedAt));
+	}
+
 	@Test
 	void acceptsAvailableBorrowableAsset() {
 		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowable(asset("AVAILABLE", true, "GOOD")));

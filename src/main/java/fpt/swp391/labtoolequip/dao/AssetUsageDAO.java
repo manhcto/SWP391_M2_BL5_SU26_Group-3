@@ -14,6 +14,7 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -22,10 +23,12 @@ import java.util.Optional;
 import util.AppConfig;
 
 public class AssetUsageDAO {
+	private static final LocalTime DAILY_RETURN_DEADLINE = LocalTime.of(17, 40);
 	private static final String SELECT_USAGE = """
 			SELECT au.*, a.asset_code, a.asset_name,
 			       CASE WHEN au.asset_item_id IS NULL THEN NULL
-			            ELSE COALESCE(NULLIF(ai.serial_number, ''), CONCAT(a.asset_code, ' / item #', ai.asset_item_id))
+			            ELSE COALESCE(NULLIF(ai.item_code, ''), NULLIF(ai.serial_number, ''),
+			                         CONCAT(a.asset_code, ' / item #', ai.asset_item_id))
 			       END AS asset_item_tag,
 			       u.full_name AS intern_name
 			FROM dbo.asset_usages au
@@ -241,6 +244,29 @@ public class AssetUsageDAO {
 			}
 			return items;
 		}
+	}
+
+	public List<AssetUsage> findIncidentReportableForMentor(long mentorId) throws SQLException {
+		String sql = SELECT_USAGE + """
+				WHERE au.status IN ('IN_USE', 'RETURNED')
+				  AND EXISTS (
+					SELECT 1 FROM dbo.lab_usage_requests request
+					WHERE request.request_id = au.request_id AND request.semester_id = au.semester_id
+					  AND request.mentor_id = ? AND request.status = 'APPROVED'
+				  )
+				ORDER BY CASE WHEN au.status = 'RETURNED' AND au.condition_after IN ('DAMAGED', 'BROKEN') THEN 0
+				              WHEN au.status = 'IN_USE' THEN 1 ELSE 2 END,
+				         COALESCE(au.returned_at, au.borrowed_at) DESC, au.asset_usage_id DESC
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, mentorId);
+			return readUsages(statement);
+		}
+	}
+
+	public long borrowItem(long userId, long assetItemId, String note) throws SQLException {
+		return borrow(userId, null, assetItemId, 1, note);
 	}
 
 	public long borrow(long userId, long assetId, int quantity, String note) throws SQLException {
@@ -669,7 +695,7 @@ public class AssetUsageDAO {
 				 due_at, condition_before, status, note, created_by) OUTPUT INSERTED.asset_usage_id
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN_USE', ?, ?)
 				""";
-		Instant due = ZonedDateTime.of(membership.endDate(), java.time.LocalTime.of(23, 59, 59), labZone).toInstant();
+		Instant due = dueAtEndOfBorrowDay(borrowedAt);
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, membership.requestId());
 			statement.setLong(2, membership.semesterId());
@@ -787,6 +813,10 @@ public class AssetUsageDAO {
 	}
 
 	private record ReturnTarget(long assetId, Long assetItemId) {
+	}
+
+	static Instant dueAtEndOfBorrowDay(ZonedDateTime borrowedAt) {
+		return borrowedAt.toLocalDate().atTime(DAILY_RETURN_DEADLINE).atZone(borrowedAt.getZone()).toInstant();
 	}
 
 	private record Membership(long requestId, long semesterId, long internId, LocalDate endDate) {

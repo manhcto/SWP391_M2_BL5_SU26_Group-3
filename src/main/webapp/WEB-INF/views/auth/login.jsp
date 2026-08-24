@@ -19,7 +19,7 @@
                 <button class="login-submit" type="submit">Đăng nhập</button>
             </form>
             <div class="login-divider"><span>hoặc</span></div>
-            <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Gmail</span></a>
+            <a class="google-button" href="${pageContext.request.contextPath}/oauth2/google"><span class="google-mark">G</span><span>Đăng nhập bằng Google</span></a>
         </div>
     </section>
     <aside class="login-visual" aria-label="Hệ thống quản lý tài sản phòng LAB"></aside>

@@ -62,8 +62,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Email (Gmail / @fpt.edu.vn) *</label>
-                                <input class="form-control" type="email" name="email" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: anhnm@fpt.edu.vn hoặc sinhvien@gmail.com">
+								<label>Email <span class="lock-badge">🔒 Cố định</span></label>
+                                <input class="form-control readonly-field" type="email" value="<c:out value='${user.email}'/>" readonly disabled>
                             </div>
 
                             <c:if test="${user.role == 'INTERN' || not empty user.studentCode}">
@@ -152,8 +152,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label id="emailLabel">Email (Gmail / @fpt.edu.vn) *</label>
-                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: anhnm@fpt.edu.vn hoặc sinhvien@gmail.com">
+                                <label id="emailLabel">Email đăng nhập *</label>
+                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: ten@gmail.com">
                             </div>
 
                             <div class="form-group" id="majorGroup">
@@ -211,8 +211,8 @@
         if (lmNotice) lmNotice.style.display = (roleSelect.value === 'LAB_MANAGER') ? 'block' : 'none';
 
         if (isIntern) {
-            if (emailLabel) emailLabel.innerHTML = 'Email (Gmail / @fpt.edu.vn) * <span style="color:#0284c7; font-weight:normal;">(Dùng đăng nhập qua Google)</span>';
-            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnm@fpt.edu.vn hoặc sinhvien@gmail.com';
+            if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập * <span style="color:#0284c7; font-weight:normal;">(Đăng nhập qua Google)</span>';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: ten@gmail.com';
         } else if (roleSelect.value === 'MENTOR') {
             if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
             if (emailInput) emailInput.placeholder = 'Ví dụ: mentor@gmail.com hoặc mentor@fpt.edu.vn';
