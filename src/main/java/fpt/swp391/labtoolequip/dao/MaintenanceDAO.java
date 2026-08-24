@@ -47,6 +47,7 @@ public class MaintenanceDAO {
 
 	public List<MaintenanceRecord> findAll(String keyword, String status) throws SQLException {
 		String search = keyword == null ? "" : keyword.trim();
+		String state = status == null ? "" : status.trim();
 		String clean = search.toUpperCase().replace("#MNT-", "").replace("MNT-", "").replace("#", "").trim();
 		String sql = SELECT + """
 				WHERE (? = '' OR CAST(m.maintenance_id AS varchar(30)) LIKE ?
