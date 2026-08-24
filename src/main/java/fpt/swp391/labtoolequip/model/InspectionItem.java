@@ -17,7 +17,7 @@ public class InspectionItem {
 	private String assetCode;
 	private String assetName;
 	private String trackingMode;
-	private String assetItemCode;
+	private String itemCode;
 	private String serialNumber;
 	private String assetItemStatus;
 
@@ -151,12 +151,20 @@ public class InspectionItem {
 		this.trackingMode = trackingMode;
 	}
 
+	public String getItemCode() {
+		return itemCode;
+	}
+
+	public void setItemCode(String itemCode) {
+		this.itemCode = itemCode;
+	}
+
 	public String getAssetItemCode() {
-		return assetItemCode;
+		return itemCode;
 	}
 
 	public void setAssetItemCode(String assetItemCode) {
-		this.assetItemCode = assetItemCode;
+		this.itemCode = assetItemCode;
 	}
 
 	public String getSerialNumber() {
@@ -183,9 +191,11 @@ public class InspectionItem {
 		if (discrepancyType != null && !discrepancyType.isBlank()) {
 			return true;
 		}
+
 		if (expectedQuantity != null && actualQuantity != null && !expectedQuantity.equals(actualQuantity)) {
 			return true;
 		}
+
 		return expectedCondition != null && actualCondition != null && !expectedCondition.equals(actualCondition);
 	}
 }

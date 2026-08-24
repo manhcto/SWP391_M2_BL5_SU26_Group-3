@@ -18,6 +18,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import util.AppConfig;
@@ -213,7 +215,7 @@ public class AssetUsageDAO {
 				       ai.condition, ai.status, ai.is_borrowable
 				FROM dbo.asset_items ai
 				JOIN dbo.assets a ON a.asset_id = ai.asset_id
-				WHERE a.tracking_mode = 'SERIALIZED' AND a.status = 'AVAILABLE' AND a.is_borrowable = 1
+				WHERE a.status = 'AVAILABLE' AND a.is_borrowable = 1
 				  AND ai.status = 'AVAILABLE' AND ai.is_borrowable = 1
 				  AND ai.condition IN ('GOOD', 'FAIR')
 				  AND NOT EXISTS (
@@ -223,6 +225,11 @@ public class AssetUsageDAO {
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
 					WHERE d.asset_item_id = ai.asset_item_id AND d.status IN ('PENDING', 'APPROVED')
+				  )
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.equipment_allocations allocation
+					WHERE allocation.asset_item_id = ai.asset_item_id
+					  AND allocation.status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED')
 				  )
 				ORDER BY a.asset_name, ai.asset_item_id
 				""";
@@ -283,6 +290,7 @@ public class AssetUsageDAO {
 		if (borrowTime.isAfter(ZonedDateTime.now(labZone))) {
 			throw new IllegalArgumentException("Ngày và giờ mượn không được ở tương lai.");
 		}
+		validateBorrowTime(borrowTime);
 		if (assetItemId != null) {
 			if (assetId != null) {
 				throw new IllegalArgumentException("Chỉ chọn một thiết bị theo mã riêng hoặc theo số lượng.");
@@ -336,6 +344,9 @@ public class AssetUsageDAO {
 				if (hasActiveUsageForItem(connection, assetItemId)) {
 					throw new IllegalStateException("Thiết bị theo mã riêng đang được sử dụng.");
 				}
+				if (hasActiveAllocationForItem(connection, assetItemId)) {
+					throw new IllegalStateException("Thiết bị đang được cấp phát cho một hoạt động khác.");
+				}
 				markAssetItemInUse(connection, assetItemId);
 				long id = insertUsage(connection, userId, asset.getAssetId(), assetItemId, 1, item.getCondition(), note,
 						membership, borrowedAt);
@@ -355,20 +366,32 @@ public class AssetUsageDAO {
 	}
 
 	static void validateBorrowRequest(String trackingMode, Long assetId, Long assetItemId, int quantity) {
-		if ("SERIALIZED".equals(trackingMode)) {
-			if (assetId != null || assetItemId == null || quantity != 1) {
+		if (assetItemId != null) {
+			if (assetId != null || quantity != 1) {
 				throw new IllegalArgumentException("Thiết bị theo mã riêng phải chọn đúng một mã thiết bị.");
+			}
+			if (!"SERIALIZED".equals(trackingMode) && !"QUANTITY".equals(trackingMode)) {
+				throw new IllegalStateException("Kiểu theo dõi thiết bị không hợp lệ.");
 			}
 			return;
 		}
 		if ("QUANTITY".equals(trackingMode)) {
-			if (assetId == null || assetItemId != null) {
+			if (assetId == null) {
 				throw new IllegalArgumentException("Thiết bị theo số lượng không dùng mã thiết bị riêng.");
 			}
 			validateQuantity(quantity);
 			return;
 		}
+		if ("SERIALIZED".equals(trackingMode)) {
+			throw new IllegalArgumentException("Thiết bị theo mã riêng phải chọn đúng một mã thiết bị.");
+		}
 		throw new IllegalStateException("Kiểu theo dõi thiết bị không hợp lệ.");
+	}
+
+	static void validateBorrowTime(ZonedDateTime borrowedAt) {
+		if (!borrowedAt.toLocalTime().isBefore(DAILY_RETURN_DEADLINE)) {
+			throw new IllegalArgumentException("Chỉ có thể mượn thiết bị trước 17:40 để trả trong ngày.");
+		}
 	}
 
 	static void validateBorrowable(Asset asset) {
@@ -436,38 +459,76 @@ public class AssetUsageDAO {
 	}
 
 	public void confirmReturn(long usageId, long mentorId, String verifiedCondition, String note) throws SQLException {
-		if (verifiedCondition == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(verifiedCondition))
-			throw new IllegalArgumentException("Vui lòng chọn tình trạng xác minh hợp lệ.");
+		validateReturnConfirmations(List.of(new ReturnConfirmation(usageId, verifiedCondition, note)));
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
 				ReturnTarget target = lockPendingReturnForMentor(connection, usageId, mentorId);
-				if (target.assetItemId() != null)
-					lockAssetItem(connection, target.assetItemId());
-				try (PreparedStatement statement = connection.prepareStatement("""
-						UPDATE dbo.asset_usages SET status='RETURNED', returned_at=SYSUTCDATETIME(),
-						verified_condition_after=?, condition_after=?, return_verified_at=SYSUTCDATETIME(),
-						return_verified_by=?, return_note=COALESCE(?, return_note), updated_at=SYSUTCDATETIME()
-						WHERE asset_usage_id=? AND status='RETURN_PENDING'
-						""")) {
-					statement.setString(1, verifiedCondition);
-					statement.setString(2, verifiedCondition);
-					statement.setLong(3, mentorId);
-					statement.setString(4, blankToNull(note));
-					statement.setLong(5, usageId);
-					if (statement.executeUpdate() != 1)
-						throw new IllegalStateException("Yêu cầu trả đã được xử lý.");
-				}
-				if (target.assetItemId() != null)
-					updateReturnedAssetItem(connection, target.assetItemId(), verifiedCondition);
-				else if (requiresQuarantine(verifiedCondition))
-					updateReturnedQuantityAsset(connection, target.assetId(), verifiedCondition);
+				confirmLockedReturn(connection, usageId, mentorId, verifiedCondition, note, target);
 				connection.commit();
 			} catch (SQLException | RuntimeException exception) {
 				connection.rollback();
 				throw exception;
 			}
 		}
+	}
+
+	public void bulkConfirmReturns(long mentorId, List<ReturnConfirmation> confirmations) throws SQLException {
+		validateReturnConfirmations(confirmations);
+		List<ReturnConfirmation> ordered = confirmations.stream()
+				.sorted(Comparator.comparingLong(ReturnConfirmation::usageId)).toList();
+		try (Connection connection = db.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				for (ReturnConfirmation confirmation : ordered) {
+					ReturnTarget target = lockPendingReturnForMentor(connection, confirmation.usageId(), mentorId);
+					if (target.assetItemId() == null)
+						throw new IllegalStateException("Xác nhận hàng loạt chỉ áp dụng cho sản phẩm có mã riêng.");
+					confirmLockedReturn(connection, confirmation.usageId(), mentorId, confirmation.verifiedCondition(),
+							confirmation.note(), target);
+				}
+				connection.commit();
+			} catch (SQLException | RuntimeException exception) {
+				connection.rollback();
+				throw exception;
+			}
+		}
+	}
+
+	static void validateReturnConfirmations(List<ReturnConfirmation> confirmations) {
+		if (confirmations == null || confirmations.isEmpty())
+			throw new IllegalArgumentException("Vui lòng chọn ít nhất một yêu cầu trả.");
+		HashSet<Long> ids = new HashSet<>();
+		for (ReturnConfirmation confirmation : confirmations) {
+			if (confirmation == null || confirmation.usageId() <= 0 || !ids.add(confirmation.usageId()))
+				throw new IllegalArgumentException("Danh sách yêu cầu trả không hợp lệ.");
+			if (!List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(confirmation.verifiedCondition()))
+				throw new IllegalArgumentException("Vui lòng chọn tình trạng xác minh hợp lệ.");
+		}
+	}
+
+	private void confirmLockedReturn(Connection connection, long usageId, long mentorId, String verifiedCondition,
+			String note, ReturnTarget target) throws SQLException {
+		if (target.assetItemId() != null)
+			lockAssetItem(connection, target.assetItemId());
+		try (PreparedStatement statement = connection.prepareStatement("""
+				UPDATE dbo.asset_usages SET status='RETURNED', returned_at=SYSUTCDATETIME(),
+				verified_condition_after=?, condition_after=?, return_verified_at=SYSUTCDATETIME(),
+				return_verified_by=?, return_note=COALESCE(?, return_note), updated_at=SYSUTCDATETIME()
+				WHERE asset_usage_id=? AND status='RETURN_PENDING'
+				""")) {
+			statement.setString(1, verifiedCondition);
+			statement.setString(2, verifiedCondition);
+			statement.setLong(3, mentorId);
+			statement.setString(4, blankToNull(note));
+			statement.setLong(5, usageId);
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Yêu cầu trả đã được xử lý.");
+		}
+		if (target.assetItemId() != null)
+			updateReturnedAssetItem(connection, target.assetItemId(), verifiedCondition);
+		else if (requiresQuarantine(verifiedCondition))
+			updateReturnedQuantityAsset(connection, target.assetId(), verifiedCondition);
 	}
 
 	private ReturnTarget lockPendingReturnForMentor(Connection connection, long usageId, long mentorId)
@@ -813,6 +874,21 @@ public class AssetUsageDAO {
 	}
 
 	private record ReturnTarget(long assetId, Long assetItemId) {
+	}
+
+	private boolean hasActiveAllocationForItem(Connection connection, long assetItemId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT 1 FROM dbo.equipment_allocations
+				WHERE asset_item_id = ? AND status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED')
+				""")) {
+			statement.setLong(1, assetItemId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
+	public record ReturnConfirmation(long usageId, String verifiedCondition, String note) {
 	}
 
 	static Instant dueAtEndOfBorrowDay(ZonedDateTime borrowedAt) {

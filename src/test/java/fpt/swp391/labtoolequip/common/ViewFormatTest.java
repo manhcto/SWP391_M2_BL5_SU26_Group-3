@@ -22,5 +22,8 @@ class ViewFormatTest {
 	void translatesStoredCodesWithoutChangingThem() {
 		assertEquals("Đang sử dụng", ViewFormat.label("IN_USE"));
 		assertEquals("Quản lý phòng LAB", ViewFormat.label("LAB_MANAGER"));
+		assertEquals("Rác thải điện tử", ViewFormat.label("E_WASTE"));
+		assertEquals("Phế liệu", ViewFormat.label("SCRAP"));
+		assertEquals("Trả nhà cung cấp", ViewFormat.label("RETURN_TO_VENDOR"));
 	}
 }

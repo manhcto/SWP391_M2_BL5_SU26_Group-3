@@ -1,5 +1,5 @@
 .allocation-page { max-width: 1240px; }
-.allocation-page .content-heading { margin-bottom: 16px; }
+.allocation-page .content-heading { align-items: center; margin-bottom: 16px; }
 .allocation-eyebrow { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 4px; color: #6d42aa; background: #f3ecff; font-size: 10px; font-weight: 750; letter-spacing: .04em; }
 .allocation-create-panel { overflow: visible; }
 .allocation-create-panel .panel-header { min-height: 58px; padding: 0 18px; border-bottom-color: #ebe2f8; }
@@ -24,6 +24,24 @@
 .allocation-form-footer .primary-button { min-width: 142px; height: 36px; }
 .allocation-page .allocation-table-panel .panel-header { min-height: 48px; }
 .allocation-page .allocation-table-panel .panel-title h3 { font-size: 13px; }
+.allocation-page .filter-bar > .filter-group:first-child { flex: 1 1 720px; }
+.allocation-page .filter-bar input[type="search"] { width: 220px; }
+.allocation-page .allocation-table-panel + .allocation-table-panel { margin-top: 16px; }
+.allocation-page .allocation-table-panel th,
+.allocation-page .allocation-table-panel td { vertical-align: middle; }
+.allocation-panel-heading { padding: 16px 20px 8px; }
+.allocation-panel-heading h3 { margin: 0; color: #382747; font-size: 14px; line-height: 1.4; }
+.allocation-requests-panel th:nth-child(3),
+.allocation-requests-panel td:nth-child(3),
+.allocation-requests-panel th:nth-child(4),
+.allocation-requests-panel td:nth-child(4),
+.allocation-issues-panel th:nth-child(5),
+.allocation-issues-panel td:nth-child(5) { text-align: center; }
+.allocation-requests-panel th:last-child,
+.allocation-requests-panel td:last-child,
+.allocation-issues-panel th:last-child,
+.allocation-issues-panel td:last-child { text-align: right; }
+.allocation-issues-panel td:last-child > .filter-group { justify-content: flex-end; }
 .allocation-page .empty-table { padding: 24px; color: #81758d; font-size: 11px; text-align: center; }
 .allocation-page .content-heading .primary-button { height: 34px; text-decoration: none; }
 .allocation-row-actions { display: flex; justify-content: flex-end; gap: 6px; white-space: nowrap; }

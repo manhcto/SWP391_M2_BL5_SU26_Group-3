@@ -21,6 +21,7 @@ public class AuthorizationFilter implements Filter {
 			throws IOException, ServletException {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
+		Csrf.token(request);
 		String path = request.getRequestURI().substring(request.getContextPath().length());
 		if ("/password-reset".equals(path))
 			response.setHeader("Cache-Control", "no-store");
@@ -66,7 +67,7 @@ public class AuthorizationFilter implements Filter {
 			return "LAB_MANAGER";
 		if (path.startsWith("/mentor/"))
 			return "MENTOR";
-		if (path.startsWith("/intern/") || path.startsWith("/student/"))
+		if (path.startsWith("/intern/"))
 			return "INTERN";
 		return null;
 	}

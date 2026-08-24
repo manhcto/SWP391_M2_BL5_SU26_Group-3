@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -47,7 +49,7 @@ class AssetUsageDAOIntegrationTest {
 		long userId = userId("intern@gmail.com");
 		long assetId = createAsset("AVAILABLE", true, "GOOD", 1);
 
-		long usageId = dao.borrow(userId, assetId, 1, "JUnit integration trace");
+		long usageId = dao.borrow(userId, assetId, null, 1, "JUnit integration trace", validBorrowTime());
 
 		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement("""
 				SELECT au.asset_id, ip.user_id, au.request_id, au.semester_id, au.status, au.note
@@ -72,7 +74,7 @@ class AssetUsageDAOIntegrationTest {
 		long userId = createUnapprovedIntern();
 		long assetId = createAsset("AVAILABLE", true, "GOOD", 1);
 
-		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, assetId, 1, null));
+		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, assetId, null, 1, null, validBorrowTime()));
 		assertEquals(0, usageCount(assetId));
 	}
 
@@ -81,7 +83,8 @@ class AssetUsageDAOIntegrationTest {
 		long userId = userId("intern@gmail.com");
 		long maintenanceId = createAsset("MAINTENANCE", true, "DAMAGED", 1);
 
-		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, maintenanceId, 1, null));
+		assertThrows(IllegalStateException.class,
+				() -> dao.borrow(userId, maintenanceId, null, 1, null, validBorrowTime()));
 		assertEquals(0, usageCount(maintenanceId));
 		List<Long> visibleAssetIds = dao.findBorrowableAssets().stream().map(asset -> asset.getAssetId()).toList();
 		assertTrue(!visibleAssetIds.contains(maintenanceId));
@@ -92,7 +95,7 @@ class AssetUsageDAOIntegrationTest {
 		long userId = userId("intern@gmail.com");
 		long fixedId = createAsset("AVAILABLE", false, "GOOD", 1);
 
-		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, fixedId, 1, null));
+		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, fixedId, null, 1, null, validBorrowTime()));
 		assertEquals(0, usageCount(fixedId));
 		List<Long> visibleAssetIds = dao.findBorrowableAssets().stream().map(asset -> asset.getAssetId()).toList();
 		assertTrue(!visibleAssetIds.contains(fixedId));
@@ -103,7 +106,8 @@ class AssetUsageDAOIntegrationTest {
 		long userId = userId("intern@gmail.com");
 		long disposedId = createAsset("DISPOSED", false, "BROKEN", 1);
 
-		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, disposedId, 1, null));
+		assertThrows(IllegalStateException.class,
+				() -> dao.borrow(userId, disposedId, null, 1, null, validBorrowTime()));
 		assertEquals(0, usageCount(disposedId));
 		List<Long> visibleAssetIds = dao.findBorrowableAssets().stream().map(asset -> asset.getAssetId()).toList();
 		assertTrue(!visibleAssetIds.contains(disposedId));
@@ -118,8 +122,9 @@ class AssetUsageDAOIntegrationTest {
 
 		ExecutorService executor = Executors.newFixedThreadPool(2);
 		try {
-			Future<Boolean> first = executor.submit(() -> borrowAfter(start, firstUser, assetId));
-			Future<Boolean> second = executor.submit(() -> borrowAfter(start, secondUser, assetId));
+			LocalDateTime borrowedAt = validBorrowTime();
+			Future<Boolean> first = executor.submit(() -> borrowAfter(start, firstUser, assetId, borrowedAt));
+			Future<Boolean> second = executor.submit(() -> borrowAfter(start, secondUser, assetId, borrowedAt));
 			start.countDown();
 
 			assertEquals(1, (first.get() ? 1 : 0) + (second.get() ? 1 : 0));
@@ -129,14 +134,22 @@ class AssetUsageDAOIntegrationTest {
 		}
 	}
 
-	private boolean borrowAfter(CountDownLatch start, long userId, long assetId) throws Exception {
+	private boolean borrowAfter(CountDownLatch start, long userId, long assetId, LocalDateTime borrowedAt)
+			throws Exception {
 		start.await();
 		try {
-			dao.borrow(userId, assetId, 1, "Concurrent test");
+			dao.borrow(userId, assetId, null, 1, "Concurrent test", borrowedAt);
 			return true;
 		} catch (IllegalStateException exception) {
 			return false;
 		}
+	}
+
+	private LocalDateTime validBorrowTime() {
+		LocalDateTime now = LocalDateTime.now();
+		return now.toLocalTime().isBefore(LocalTime.of(17, 40))
+				? now.minusMinutes(1)
+				: now.withHour(14).withMinute(0).withSecond(0).withNano(0);
 	}
 
 	private long createAsset(String status, boolean borrowable, String condition, int quantity) throws SQLException {

@@ -10,6 +10,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 @WebServlet("/mentor/usages/*")
 public class AssetUsageController extends HttpServlet {
@@ -48,7 +50,23 @@ public class AssetUsageController extends HttpServlet {
 			return;
 		}
 		try {
-			if (!"confirmReturn".equals(request.getParameter("action"))) {
+			String action = request.getParameter("action");
+			if ("bulkConfirmReturn".equals(action)) {
+				List<AssetUsageDAO.ReturnConfirmation> confirmations = new ArrayList<>();
+				String[] selected = request.getParameterValues("selectedUsageId");
+				if (selected != null) {
+					for (String rawId : selected) {
+						long id = Long.parseLong(rawId);
+						confirmations.add(new AssetUsageDAO.ReturnConfirmation(id,
+								request.getParameter("verifiedCondition_" + id), request.getParameter("note_" + id)));
+					}
+				}
+				dao.bulkConfirmReturns(AuthSession.userId(request), confirmations);
+				response.sendRedirect(request.getContextPath() + "/mentor/usages?status=RETURN_PENDING&confirmed="
+						+ confirmations.size());
+				return;
+			}
+			if (!"confirmReturn".equals(action)) {
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 				return;
 			}

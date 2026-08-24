@@ -124,7 +124,12 @@ public class MentorIncidentController extends HttpServlet {
 		if (usageId != null && usageId.matches("\\d+")
 				&& usages.stream().anyMatch(usage -> usage.getAssetUsageId().toString().equals(usageId)))
 			request.setAttribute("preselectedTarget", "usage:" + usageId);
-		request.setAttribute("assetItems", assetItemDAO.findReportableItems());
+		var reportableItems = assetItemDAO.findReportableItems();
+		request.setAttribute("assetItems", reportableItems);
+		String itemId = request.getParameter("itemId");
+		if (itemId != null && itemId.matches("\\d+")
+				&& reportableItems.stream().anyMatch(item -> item.getAssetItemId().toString().equals(itemId)))
+			request.setAttribute("preselectedTarget", "item:" + itemId);
 		forward(request, response, "form.jsp");
 	}
 

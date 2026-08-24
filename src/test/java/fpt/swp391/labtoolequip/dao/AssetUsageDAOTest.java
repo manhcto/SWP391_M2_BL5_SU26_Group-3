@@ -9,6 +9,7 @@ import fpt.swp391.labtoolequip.model.AssetItem;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AssetUsageDAOTest {
@@ -17,6 +18,14 @@ class AssetUsageDAOTest {
 		ZonedDateTime borrowedAt = ZonedDateTime.of(2026, 8, 21, 14, 30, 0, 0, ZoneId.of("Asia/Ho_Chi_Minh"));
 
 		assertEquals(Instant.parse("2026-08-21T10:40:00Z"), AssetUsageDAO.dueAtEndOfBorrowDay(borrowedAt));
+	}
+
+	@Test
+	void onlyAllowsBorrowingBeforeTheDailyReturnDeadline() {
+		ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowTime(ZonedDateTime.of(2026, 8, 21, 17, 39, 59, 0, zone)));
+		assertThrows(IllegalArgumentException.class,
+				() -> AssetUsageDAO.validateBorrowTime(ZonedDateTime.of(2026, 8, 21, 17, 40, 0, 0, zone)));
 	}
 
 	@Test
@@ -46,6 +55,7 @@ class AssetUsageDAOTest {
 	@Test
 	void keepsSerializedAndQuantityBorrowInputsSeparate() {
 		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowRequest("SERIALIZED", null, 10L, 1));
+		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowRequest("QUANTITY", null, 10L, 1));
 		assertThrows(IllegalArgumentException.class,
 				() -> AssetUsageDAO.validateBorrowRequest("SERIALIZED", 1L, null, 1));
 		assertThrows(IllegalArgumentException.class,
@@ -66,6 +76,20 @@ class AssetUsageDAOTest {
 		assertEquals(true, AssetUsageDAO.requiresQuarantine("DAMAGED"));
 		assertEquals(true, AssetUsageDAO.requiresQuarantine("BROKEN"));
 		assertEquals(false, AssetUsageDAO.requiresQuarantine("GOOD"));
+	}
+
+	@Test
+	void validatesAtomicBulkReturnInput() {
+		assertDoesNotThrow(() -> AssetUsageDAO
+				.validateReturnConfirmations(List.of(new AssetUsageDAO.ReturnConfirmation(1, "GOOD", null),
+						new AssetUsageDAO.ReturnConfirmation(2, "BROKEN", "Vỡ vỏ"))));
+		assertThrows(IllegalArgumentException.class, () -> AssetUsageDAO.validateReturnConfirmations(List.of()));
+		assertThrows(IllegalArgumentException.class,
+				() -> AssetUsageDAO
+						.validateReturnConfirmations(List.of(new AssetUsageDAO.ReturnConfirmation(1, "GOOD", null),
+								new AssetUsageDAO.ReturnConfirmation(1, "FAIR", null))));
+		assertThrows(IllegalArgumentException.class, () -> AssetUsageDAO
+				.validateReturnConfirmations(List.of(new AssetUsageDAO.ReturnConfirmation(1, "UNKNOWN", null))));
 	}
 
 	private Asset asset(String status, boolean borrowable, String condition) {
