@@ -236,11 +236,11 @@ public class AdminInternListController extends HttpServlet {
 			String email = trim(intern.getEmail()).toLowerCase(Locale.ROOT);
 			if (code.isBlank() || trim(intern.getFullName()).isBlank() || trim(intern.getCohort()).isBlank()
 					|| !EMAIL.matcher(email).matches()) {
-				errors.add("Mỗi thực tập sinh phải có mã, họ tên, Gmail và khóa hợp lệ.");
+				errors.add("Mỗi thực tập sinh phải có mã, họ tên, email và khóa hợp lệ.");
 				break;
 			}
 			if (!codes.add(code) || !emails.add(email)) {
-				errors.add("Mã thực tập sinh và Gmail không được trùng trong cùng danh sách.");
+				errors.add("Mã thực tập sinh và email không được trùng trong cùng danh sách.");
 				break;
 			}
 			intern.setStudentCode(code);

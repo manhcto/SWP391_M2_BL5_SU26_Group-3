@@ -213,7 +213,7 @@ public class AssetUsageDAO {
 				       ai.condition, ai.status, ai.is_borrowable
 				FROM dbo.asset_items ai
 				JOIN dbo.assets a ON a.asset_id = ai.asset_id
-				WHERE a.tracking_mode = 'SERIALIZED' AND a.status = 'AVAILABLE' AND a.is_borrowable = 1
+				WHERE a.status = 'AVAILABLE' AND a.is_borrowable = 1
 				  AND ai.status = 'AVAILABLE' AND ai.is_borrowable = 1
 				  AND ai.condition IN ('GOOD', 'FAIR')
 				  AND NOT EXISTS (
@@ -223,6 +223,11 @@ public class AssetUsageDAO {
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
 					WHERE d.asset_item_id = ai.asset_item_id AND d.status IN ('PENDING', 'APPROVED')
+				  )
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.equipment_allocations allocation
+					WHERE allocation.asset_item_id = ai.asset_item_id
+					  AND allocation.status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED')
 				  )
 				ORDER BY a.asset_name, ai.asset_item_id
 				""";
@@ -283,6 +288,7 @@ public class AssetUsageDAO {
 		if (borrowTime.isAfter(ZonedDateTime.now(labZone))) {
 			throw new IllegalArgumentException("Ngày và giờ mượn không được ở tương lai.");
 		}
+		validateBorrowTime(borrowTime);
 		if (assetItemId != null) {
 			if (assetId != null) {
 				throw new IllegalArgumentException("Chỉ chọn một thiết bị theo mã riêng hoặc theo số lượng.");
@@ -336,6 +342,9 @@ public class AssetUsageDAO {
 				if (hasActiveUsageForItem(connection, assetItemId)) {
 					throw new IllegalStateException("Thiết bị theo mã riêng đang được sử dụng.");
 				}
+				if (hasActiveAllocationForItem(connection, assetItemId)) {
+					throw new IllegalStateException("Thiết bị đang được cấp phát cho một hoạt động khác.");
+				}
 				markAssetItemInUse(connection, assetItemId);
 				long id = insertUsage(connection, userId, asset.getAssetId(), assetItemId, 1, item.getCondition(), note,
 						membership, borrowedAt);
@@ -355,20 +364,32 @@ public class AssetUsageDAO {
 	}
 
 	static void validateBorrowRequest(String trackingMode, Long assetId, Long assetItemId, int quantity) {
-		if ("SERIALIZED".equals(trackingMode)) {
-			if (assetId != null || assetItemId == null || quantity != 1) {
+		if (assetItemId != null) {
+			if (assetId != null || quantity != 1) {
 				throw new IllegalArgumentException("Thiết bị theo mã riêng phải chọn đúng một mã thiết bị.");
+			}
+			if (!"SERIALIZED".equals(trackingMode) && !"QUANTITY".equals(trackingMode)) {
+				throw new IllegalStateException("Kiểu theo dõi thiết bị không hợp lệ.");
 			}
 			return;
 		}
 		if ("QUANTITY".equals(trackingMode)) {
-			if (assetId == null || assetItemId != null) {
+			if (assetId == null) {
 				throw new IllegalArgumentException("Thiết bị theo số lượng không dùng mã thiết bị riêng.");
 			}
 			validateQuantity(quantity);
 			return;
 		}
+		if ("SERIALIZED".equals(trackingMode)) {
+			throw new IllegalArgumentException("Thiết bị theo mã riêng phải chọn đúng một mã thiết bị.");
+		}
 		throw new IllegalStateException("Kiểu theo dõi thiết bị không hợp lệ.");
+	}
+
+	static void validateBorrowTime(ZonedDateTime borrowedAt) {
+		if (!borrowedAt.toLocalTime().isBefore(DAILY_RETURN_DEADLINE)) {
+			throw new IllegalArgumentException("Chỉ có thể mượn thiết bị trước 17:40 để trả trong ngày.");
+		}
 	}
 
 	static void validateBorrowable(Asset asset) {
@@ -813,6 +834,18 @@ public class AssetUsageDAO {
 	}
 
 	private record ReturnTarget(long assetId, Long assetItemId) {
+	}
+
+	private boolean hasActiveAllocationForItem(Connection connection, long assetItemId) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement("""
+				SELECT 1 FROM dbo.equipment_allocations
+				WHERE asset_item_id = ? AND status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED')
+				""")) {
+			statement.setLong(1, assetItemId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
 	}
 
 	static Instant dueAtEndOfBorrowDay(ZonedDateTime borrowedAt) {

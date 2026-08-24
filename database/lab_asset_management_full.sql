@@ -5,9 +5,9 @@
   and demo inventory. No additional schema, migration or seed file is needed.
 
   Rules represented here:
-  - One mentor manages the lab.
-  - One intern list is submitted per semester.
-  - The list contains intern code, name, Gmail and cohort.
+  - Multiple mentors can manage their own intern lists.
+  - Each mentor submits at most one intern list per semester.
+  - The list contains intern code, name, email and cohort.
   - There are no lab slots or schedules.
   - The list can be edited/deleted while PENDING and is immutable after approval.
   - Demo accounts use password: 123
@@ -129,7 +129,7 @@ BEGIN TRY
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_lab_usage_requests_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_lab_usage_requests PRIMARY KEY (request_id),
         CONSTRAINT UQ_lab_usage_requests_id_semester UNIQUE (request_id, semester_id),
-        CONSTRAINT UQ_lab_usage_requests_semester UNIQUE (semester_id),
+        CONSTRAINT UQ_lab_usage_requests_semester_mentor UNIQUE (semester_id, mentor_id),
         CONSTRAINT FK_lab_usage_requests_semester FOREIGN KEY (semester_id) REFERENCES dbo.semesters(semester_id),
         CONSTRAINT FK_lab_usage_requests_mentor FOREIGN KEY (mentor_id) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_lab_usage_requests_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
@@ -322,6 +322,7 @@ BEGIN TRY
         inspection_item_id bigint IDENTITY(1,1) NOT NULL,
         inspection_id bigint NOT NULL,
         asset_id bigint NOT NULL,
+        asset_item_id bigint NULL,
         expected_quantity int NOT NULL CONSTRAINT DF_inspection_items_expected_quantity DEFAULT (0),
         actual_quantity int NOT NULL CONSTRAINT DF_inspection_items_actual_quantity DEFAULT (0),
         expected_condition varchar(10) NULL,
@@ -330,7 +331,6 @@ BEGIN TRY
         discrepancy_note nvarchar(max) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_inspection_items_created_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_inspection_items PRIMARY KEY (inspection_item_id),
-        CONSTRAINT UQ_inspection_items_asset UNIQUE (inspection_id, asset_id),
         CONSTRAINT FK_inspection_items_inspection FOREIGN KEY (inspection_id) REFERENCES dbo.inspection_records(inspection_id),
         CONSTRAINT FK_inspection_items_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT CK_inspection_items_quantity CHECK (expected_quantity >= 0 AND actual_quantity >= 0),
@@ -452,12 +452,39 @@ BEGIN TRY
     CREATE INDEX IX_responsibilities_student ON dbo.responsibilities (student_id);
     CREATE INDEX IX_responsibilities_status ON dbo.responsibilities (status);
 
+    CREATE TABLE dbo.maintenance_schedules (
+        schedule_id bigint IDENTITY(1,1) NOT NULL,
+        title nvarchar(200) NOT NULL,
+        asset_id bigint NOT NULL,
+        item_code varchar(80) NULL,
+        scheduled_date date NOT NULL,
+        estimated_cost decimal(15,0) NULL,
+        provider_name nvarchar(150) NULL,
+        provider_phone varchar(30) NULL,
+        note nvarchar(max) NULL,
+        status varchar(15) NOT NULL CONSTRAINT DF_maintenance_schedules_status DEFAULT ('PENDING'),
+        created_by bigint NOT NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_schedules_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_schedules_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_maintenance_schedules PRIMARY KEY (schedule_id),
+        CONSTRAINT FK_maintenance_schedules_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
+        CONSTRAINT FK_maintenance_schedules_creator FOREIGN KEY (created_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_maintenance_schedules_status CHECK (status IN ('PENDING', 'COMPLETED', 'CANCELLED')),
+        CONSTRAINT CK_maintenance_schedules_cost CHECK (estimated_cost IS NULL OR estimated_cost >= 0)
+    );
+
+    CREATE INDEX IX_maintenance_schedules_status_date
+        ON dbo.maintenance_schedules (status, scheduled_date);
+    CREATE INDEX IX_maintenance_schedules_asset
+        ON dbo.maintenance_schedules (asset_id, item_code);
+
     CREATE TABLE dbo.maintenance_records (
         maintenance_id bigint IDENTITY(1,1) NOT NULL,
         asset_id bigint NOT NULL,
         asset_item_id bigint NULL,
         incident_id bigint NULL,
         assessment_id bigint NULL,
+        schedule_id bigint NULL,
         quantity int NOT NULL CONSTRAINT DF_maintenance_records_quantity DEFAULT (1),
         requested_by bigint NOT NULL,
         description nvarchar(max) NOT NULL,
@@ -478,6 +505,7 @@ BEGIN TRY
         CONSTRAINT PK_maintenance_records PRIMARY KEY (maintenance_id),
         CONSTRAINT FK_maintenance_records_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT FK_maintenance_records_incident FOREIGN KEY (incident_id) REFERENCES dbo.incidents(incident_id),
+        CONSTRAINT FK_maintenance_records_schedule FOREIGN KEY (schedule_id) REFERENCES dbo.maintenance_schedules(schedule_id),
         CONSTRAINT FK_maintenance_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
         CONSTRAINT FK_maintenance_records_approver FOREIGN KEY (approved_by) REFERENCES dbo.users(user_id),
         CONSTRAINT CK_maintenance_records_quantity CHECK (quantity > 0),
@@ -506,6 +534,7 @@ BEGIN TRY
     CREATE INDEX IX_maintenance_records_asset ON dbo.maintenance_records (asset_id);
     CREATE INDEX IX_maintenance_records_incident ON dbo.maintenance_records (incident_id) WHERE incident_id IS NOT NULL;
     CREATE INDEX IX_maintenance_records_status ON dbo.maintenance_records (status);
+    CREATE INDEX IX_maintenance_records_schedule ON dbo.maintenance_records (schedule_id) WHERE schedule_id IS NOT NULL;
 
     CREATE TABLE dbo.disposal_records (
         disposal_id bigint IDENTITY(1,1) NOT NULL,
@@ -726,6 +755,23 @@ GO
    and responsibility test data.
    ======================================================================== */
 
+/* Allow each Mentor to own one intern list in the same semester. */
+IF EXISTS (
+    SELECT 1 FROM sys.key_constraints
+    WHERE name = 'UQ_lab_usage_requests_semester'
+      AND parent_object_id = OBJECT_ID(N'dbo.lab_usage_requests')
+)
+    ALTER TABLE dbo.lab_usage_requests DROP CONSTRAINT UQ_lab_usage_requests_semester;
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.key_constraints
+    WHERE name = 'UQ_lab_usage_requests_semester_mentor'
+      AND parent_object_id = OBJECT_ID(N'dbo.lab_usage_requests')
+)
+    ALTER TABLE dbo.lab_usage_requests
+        ADD CONSTRAINT UQ_lab_usage_requests_semester_mentor UNIQUE (semester_id, mentor_id);
+GO
+
 /* Major lookup migration */
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
@@ -840,6 +886,23 @@ BEGIN
     JOIN Numbers n ON n.item_number <= a.total_quantity
     WHERE NOT EXISTS (SELECT 1 FROM dbo.asset_items i WHERE i.asset_id = a.asset_id);
 END;
+GO
+
+/* FE-05 checks each physical AssetItem. Legacy parent-level rows remain readable. */
+IF COL_LENGTH('dbo.inspection_items', 'asset_item_id') IS NULL
+    ALTER TABLE dbo.inspection_items ADD asset_item_id bigint NULL;
+
+IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE parent_object_id = OBJECT_ID(N'dbo.inspection_items') AND name = N'UQ_inspection_items_asset')
+    ALTER TABLE dbo.inspection_items DROP CONSTRAINT UQ_inspection_items_asset;
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id = OBJECT_ID(N'dbo.inspection_items') AND name = N'FK_inspection_items_asset_item')
+    ALTER TABLE dbo.inspection_items ADD CONSTRAINT FK_inspection_items_asset_item
+        FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id);
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.inspection_items') AND name = N'UX_inspection_items_asset_item')
+    CREATE UNIQUE INDEX UX_inspection_items_asset_item
+        ON dbo.inspection_items (inspection_id, asset_item_id)
+        WHERE asset_item_id IS NOT NULL;
 GO
 
 /* asset_items is available only after the initial schema and seed above. */
@@ -982,6 +1045,48 @@ IF NOT EXISTS (
         WHERE asset_item_id IS NOT NULL AND status IN ('PENDING', 'APPROVED');
 GO
 
+/* Maintenance schedule upgrade for existing databases. */
+IF OBJECT_ID('dbo.maintenance_schedules', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.maintenance_schedules (
+        schedule_id bigint IDENTITY(1,1) NOT NULL,
+        title nvarchar(200) NOT NULL,
+        asset_id bigint NOT NULL,
+        item_code varchar(80) NULL,
+        scheduled_date date NOT NULL,
+        estimated_cost decimal(15,0) NULL,
+        provider_name nvarchar(150) NULL,
+        provider_phone varchar(30) NULL,
+        note nvarchar(max) NULL,
+        status varchar(15) NOT NULL CONSTRAINT DF_maintenance_schedules_status DEFAULT ('PENDING'),
+        created_by bigint NOT NULL,
+        created_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_schedules_created_at DEFAULT (SYSUTCDATETIME()),
+        updated_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_schedules_updated_at DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT PK_maintenance_schedules PRIMARY KEY (schedule_id),
+        CONSTRAINT FK_maintenance_schedules_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
+        CONSTRAINT FK_maintenance_schedules_creator FOREIGN KEY (created_by) REFERENCES dbo.users(user_id),
+        CONSTRAINT CK_maintenance_schedules_status CHECK (status IN ('PENDING', 'COMPLETED', 'CANCELLED')),
+        CONSTRAINT CK_maintenance_schedules_cost CHECK (estimated_cost IS NULL OR estimated_cost >= 0)
+    );
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_maintenance_schedules_status_date'
+      AND object_id = OBJECT_ID('dbo.maintenance_schedules')
+)
+    CREATE INDEX IX_maintenance_schedules_status_date
+        ON dbo.maintenance_schedules (status, scheduled_date);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_maintenance_schedules_asset'
+      AND object_id = OBJECT_ID('dbo.maintenance_schedules')
+)
+    CREATE INDEX IX_maintenance_schedules_asset
+        ON dbo.maintenance_schedules (asset_id, item_code);
+GO
+
 /* FE-08 exact-item maintenance upgrade. Historical parent-level rows remain readable. */
 IF COL_LENGTH('dbo.maintenance_records', 'asset_item_id') IS NULL
     ALTER TABLE dbo.maintenance_records ADD asset_item_id bigint NULL;
@@ -990,6 +1095,8 @@ IF COL_LENGTH('dbo.maintenance_records', 'assessment_id') IS NULL
 IF COL_LENGTH('dbo.maintenance_records', 'repair_outcome') IS NULL
     ALTER TABLE dbo.maintenance_records ADD repair_outcome varchar(10) NOT NULL
         CONSTRAINT DF_maintenance_records_repair_outcome DEFAULT ('PENDING');
+IF COL_LENGTH('dbo.maintenance_records', 'schedule_id') IS NULL
+    ALTER TABLE dbo.maintenance_records ADD schedule_id bigint NULL;
 GO
 
 IF NOT EXISTS (
@@ -1001,12 +1108,27 @@ IF NOT EXISTS (
         ADD CONSTRAINT FK_maintenance_records_asset_item FOREIGN KEY (asset_item_id, asset_id)
         REFERENCES dbo.asset_items(asset_item_id, asset_id);
 IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE name = 'FK_maintenance_records_schedule'
+      AND parent_object_id = OBJECT_ID('dbo.maintenance_records')
+)
+    ALTER TABLE dbo.maintenance_records
+        ADD CONSTRAINT FK_maintenance_records_schedule FOREIGN KEY (schedule_id)
+        REFERENCES dbo.maintenance_schedules(schedule_id);
+IF NOT EXISTS (
     SELECT 1 FROM sys.check_constraints
     WHERE name = 'CK_maintenance_records_repair_outcome'
       AND parent_object_id = OBJECT_ID('dbo.maintenance_records')
 )
     ALTER TABLE dbo.maintenance_records ADD CONSTRAINT CK_maintenance_records_repair_outcome
         CHECK (repair_outcome IN ('PENDING', 'SUCCESS', 'FAILED'));
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_maintenance_records_schedule'
+      AND object_id = OBJECT_ID('dbo.maintenance_records')
+)
+    CREATE INDEX IX_maintenance_records_schedule ON dbo.maintenance_records (schedule_id)
+        WHERE schedule_id IS NOT NULL;
 IF NOT EXISTS (
     SELECT 1 FROM sys.indexes
     WHERE name = 'IX_maintenance_records_asset_item'

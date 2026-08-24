@@ -6,6 +6,7 @@ public class InspectionItem {
 	private Long inspectionItemId;
 	private Long inspectionId;
 	private Long assetId;
+	private Long assetItemId;
 	private Integer expectedQuantity;
 	private Integer actualQuantity;
 	private String expectedCondition;
@@ -15,6 +16,8 @@ public class InspectionItem {
 	private LocalDateTime createdAt;
 	private String assetCode;
 	private String assetName;
+	private String itemCode;
+	private String serialNumber;
 
 	public InspectionItem() {
 	}
@@ -56,6 +59,14 @@ public class InspectionItem {
 
 	public void setAssetId(Long assetId) {
 		this.assetId = assetId;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
 	}
 
 	public Integer getExpectedQuantity() {
@@ -128,6 +139,22 @@ public class InspectionItem {
 
 	public void setAssetName(String assetName) {
 		this.assetName = assetName;
+	}
+
+	public String getItemCode() {
+		return itemCode;
+	}
+
+	public void setItemCode(String itemCode) {
+		this.itemCode = itemCode;
+	}
+
+	public String getSerialNumber() {
+		return serialNumber;
+	}
+
+	public void setSerialNumber(String serialNumber) {
+		this.serialNumber = serialNumber;
 	}
 
 	public boolean isAbnormal() {

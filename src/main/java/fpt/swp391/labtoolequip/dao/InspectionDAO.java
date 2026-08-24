@@ -2,7 +2,7 @@ package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
 import fpt.swp391.labtoolequip.common.ViewFormat;
-import fpt.swp391.labtoolequip.model.Asset;
+import fpt.swp391.labtoolequip.model.AssetItem;
 import fpt.swp391.labtoolequip.model.InspectionItem;
 import fpt.swp391.labtoolequip.model.InspectionRecord;
 import fpt.swp391.labtoolequip.model.Semester;
@@ -84,9 +84,10 @@ public class InspectionDAO {
 
 	public List<InspectionItem> findItems(long inspectionId) throws SQLException {
 		String sql = """
-				SELECT ii.*, a.asset_code, a.asset_name
+				SELECT ii.*, a.asset_code, a.asset_name, ai.item_code, ai.serial_number
 				FROM dbo.inspection_items ii
 				JOIN dbo.assets a ON a.asset_id = ii.asset_id
+				LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = ii.asset_item_id
 				WHERE ii.inspection_id = ?
 				ORDER BY a.asset_name
 				""";
@@ -117,29 +118,32 @@ public class InspectionDAO {
 		}
 	}
 
-	public List<Asset> findInspectableAssets() throws SQLException {
+	public List<AssetItem> findInspectableItems() throws SQLException {
 		String sql = """
-				SELECT asset_id, asset_code, asset_name, total_quantity, condition, status, storage_location
-				FROM dbo.assets
-				WHERE status <> 'DISPOSED'
-				ORDER BY asset_name
+				SELECT ai.asset_item_id, ai.asset_id, a.asset_code, a.asset_name,
+				       ai.item_code, ai.serial_number, ai.condition, ai.status
+				FROM dbo.asset_items ai
+				JOIN dbo.assets a ON a.asset_id = ai.asset_id
+				WHERE a.status <> 'DISPOSED' AND ai.status <> 'DISPOSED'
+				ORDER BY a.asset_name, ai.item_code
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql);
 				ResultSet result = statement.executeQuery()) {
-			List<Asset> assets = new ArrayList<>();
+			List<AssetItem> items = new ArrayList<>();
 			while (result.next()) {
-				Asset asset = new Asset();
-				asset.setAssetId(result.getLong("asset_id"));
-				asset.setAssetCode(result.getString("asset_code"));
-				asset.setAssetName(result.getString("asset_name"));
-				asset.setTotalQuantity(result.getInt("total_quantity"));
-				asset.setCondition(result.getString("condition"));
-				asset.setStatus(result.getString("status"));
-				asset.setStorageLocation(result.getString("storage_location"));
-				assets.add(asset);
+				AssetItem item = new AssetItem();
+				item.setAssetItemId(result.getLong("asset_item_id"));
+				item.setAssetId(result.getLong("asset_id"));
+				item.setAssetCode(result.getString("asset_code"));
+				item.setAssetName(result.getString("asset_name"));
+				item.setItemCode(result.getString("item_code"));
+				item.setSerialNumber(result.getString("serial_number"));
+				item.setCondition(result.getString("condition"));
+				item.setStatus(result.getString("status"));
+				items.add(item);
 			}
-			return assets;
+			return items;
 		}
 	}
 
@@ -243,11 +247,11 @@ public class InspectionDAO {
 		if (items.isEmpty()) {
 			throw new IllegalArgumentException("Vui lòng chọn ít nhất một thiết bị để kiểm tra.");
 		}
-		Set<Long> assets = new HashSet<>();
+		Set<Long> assetItems = new HashSet<>();
 		for (InspectionItem item : items) {
-			if (item.getAssetId() == null || !assets.add(item.getAssetId())) {
+			if (item.getAssetId() == null || item.getAssetItemId() == null || !assetItems.add(item.getAssetItemId())) {
 				throw new IllegalArgumentException(
-						"Một thiết bị không được xuất hiện hai lần trong cùng đợt kiểm tra.");
+						"Một sản phẩm không được xuất hiện hai lần trong cùng đợt kiểm tra.");
 			}
 			if (item.getExpectedQuantity() == null || item.getActualQuantity() == null || item.getExpectedQuantity() < 0
 					|| item.getActualQuantity() < 0) {
@@ -264,15 +268,22 @@ public class InspectionDAO {
 
 	private void validateAssets(Connection connection, List<InspectionItem> items) throws SQLException {
 		for (InspectionItem item : items) {
-			try (PreparedStatement statement = connection
-					.prepareStatement("SELECT status FROM dbo.assets WITH (UPDLOCK, HOLDLOCK) WHERE asset_id = ?")) {
-				statement.setLong(1, item.getAssetId());
+			try (PreparedStatement statement = connection.prepareStatement("""
+					SELECT ai.status, a.status AS asset_status
+					FROM dbo.asset_items ai WITH (UPDLOCK, HOLDLOCK)
+					JOIN dbo.assets a ON a.asset_id = ai.asset_id
+					WHERE ai.asset_item_id = ? AND ai.asset_id = ?
+					""")) {
+				statement.setLong(1, item.getAssetItemId());
+				statement.setLong(2, item.getAssetId());
 				try (ResultSet result = statement.executeQuery()) {
 					if (!result.next()) {
-						throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
+						throw new IllegalArgumentException(
+								"Sản phẩm đã chọn không tồn tại hoặc không thuộc thiết bị này.");
 					}
-					if ("DISPOSED".equals(result.getString("status"))) {
-						throw new IllegalStateException("Không thể chọn thiết bị đã thanh lý làm đối tượng kiểm tra.");
+					if ("DISPOSED".equals(result.getString("status"))
+							|| "DISPOSED".equals(result.getString("asset_status"))) {
+						throw new IllegalStateException("Không thể chọn sản phẩm đã thanh lý làm đối tượng kiểm tra.");
 					}
 				}
 			}
@@ -282,20 +293,21 @@ public class InspectionDAO {
 	private void insertItems(Connection connection, long inspectionId, List<InspectionItem> items) throws SQLException {
 		String sql = """
 				INSERT dbo.inspection_items
-				    (inspection_id, asset_id, expected_quantity, actual_quantity, expected_condition,
+				    (inspection_id, asset_id, asset_item_id, expected_quantity, actual_quantity, expected_condition,
 				     actual_condition, discrepancy_type, discrepancy_note)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			for (InspectionItem item : items) {
 				statement.setLong(1, inspectionId);
 				statement.setLong(2, item.getAssetId());
-				statement.setInt(3, item.getExpectedQuantity());
-				statement.setInt(4, item.getActualQuantity());
-				statement.setString(5, blankToNull(item.getExpectedCondition()));
-				statement.setString(6, blankToNull(item.getActualCondition()));
-				statement.setString(7, blankToNull(item.getDiscrepancyType()));
-				statement.setString(8, blankToNull(item.getDiscrepancyNote()));
+				statement.setLong(3, item.getAssetItemId());
+				statement.setInt(4, item.getExpectedQuantity());
+				statement.setInt(5, item.getActualQuantity());
+				statement.setString(6, blankToNull(item.getExpectedCondition()));
+				statement.setString(7, blankToNull(item.getActualCondition()));
+				statement.setString(8, blankToNull(item.getDiscrepancyType()));
+				statement.setString(9, blankToNull(item.getDiscrepancyNote()));
 				statement.addBatch();
 			}
 			statement.executeBatch();
@@ -358,6 +370,7 @@ public class InspectionDAO {
 				item.setInspectionItemId(result.getLong("inspection_item_id"));
 				item.setInspectionId(result.getLong("inspection_id"));
 				item.setAssetId(result.getLong("asset_id"));
+				item.setAssetItemId(nullableLong(result, "asset_item_id"));
 				item.setExpectedQuantity(result.getInt("expected_quantity"));
 				item.setActualQuantity(result.getInt("actual_quantity"));
 				item.setExpectedCondition(result.getString("expected_condition"));
@@ -367,6 +380,8 @@ public class InspectionDAO {
 				item.setCreatedAt(ViewFormat.fromUtc(result.getTimestamp("created_at")));
 				item.setAssetCode(result.getString("asset_code"));
 				item.setAssetName(result.getString("asset_name"));
+				item.setItemCode(result.getString("item_code"));
+				item.setSerialNumber(result.getString("serial_number"));
 				items.add(item);
 			}
 			return items;
@@ -403,5 +418,10 @@ public class InspectionDAO {
 
 	private String blankToNull(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
+	}
+
+	private Long nullableLong(ResultSet result, String column) throws SQLException {
+		long value = result.getLong(column);
+		return result.wasNull() ? null : value;
 	}
 }

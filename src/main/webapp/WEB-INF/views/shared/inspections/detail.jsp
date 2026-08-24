@@ -23,14 +23,15 @@
                 <div class="detail-item"><dt>Kết quả</dt><dd><c:choose><c:when test="${empty inspection.result}">-</c:when><c:otherwise><span class="status ${inspection.result == 'NORMAL' ? 'returned' : 'open'}"><c:out value="${app:label(inspection.result)}"/></span></c:otherwise></c:choose></dd></div>
                 <div class="detail-item wide"><dt>Ghi chú</dt><dd><c:out value="${inspection.note}" default="-"/></dd></div>
             </div></article>
-            <h3 class="section-title">Thiết bị kiểm tra</h3>
-            <article class="panel"><div class="table-scroll inspection-table-scroll"><table class="inspection-table inspection-detail-table"><thead><tr><th>Mã / Tên thiết bị</th><th>Số lượng dự kiến</th><th>Số lượng thực tế</th><th>Tình trạng dự kiến</th><th>Tình trạng thực tế</th><th>Loại chênh lệch</th><th>Ghi chú chênh lệch</th><th>Sự cố</th></tr></thead><tbody>
+            <h3 class="section-title">Sản phẩm đã kiểm tra</h3>
+            <article class="panel"><div class="table-scroll inspection-table-scroll"><table class="inspection-table inspection-detail-table"><thead><tr><th>Mã sản phẩm / Thiết bị</th><th>Serial</th><th>Dự kiến</th><th>Thực tế</th><th>Tình trạng dự kiến</th><th>Tình trạng thực tế</th><th>Loại chênh lệch</th><th>Ghi chú chênh lệch</th><th>Sự cố</th></tr></thead><tbody>
                 <c:forEach var="item" items="${items}"><tr>
-                    <td class="asset-cell"><strong><c:out value="${item.assetCode}"/></strong><small><c:out value="${item.assetName}"/></small></td>
+                    <td class="asset-cell"><strong><c:out value="${empty item.itemCode ? item.assetCode : item.itemCode}"/></strong><small><c:out value="${item.assetName}"/></small></td>
+                    <td><c:out value="${empty item.serialNumber ? 'Chưa nhập' : item.serialNumber}"/></td>
                     <td><c:out value="${item.expectedQuantity}"/></td><td><c:out value="${item.actualQuantity}"/></td>
                     <td><c:out value="${app:label(item.expectedCondition)}"/></td><td><c:out value="${app:label(item.actualCondition)}"/></td>
                     <td><c:out value="${item.discrepancyType}" default="-"/></td><td class="wrap-cell"><c:out value="${item.discrepancyNote}" default="-"/></td>
-                    <td><c:if test="${inspection.status == 'COMPLETED' && item.abnormal}"><a class="btn-action" href="#">Báo cáo sự cố</a></c:if></td>
+                    <td><c:if test="${roleBase == '/mentor' && inspection.status == 'COMPLETED' && item.abnormal && not empty item.assetItemId}"><a class="btn-action" href="${pageContext.request.contextPath}/mentor/incidents/new?itemId=${item.assetItemId}">Báo cáo sự cố</a></c:if></td>
                 </tr></c:forEach>
             </tbody></table></div></article>
         </section>

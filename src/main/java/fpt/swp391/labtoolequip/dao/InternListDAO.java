@@ -184,6 +184,24 @@ public class InternListDAO {
 		}
 	}
 
+	public boolean existsForMentorAndSemester(long mentorId, long semesterId, Long exceptRequestId)
+			throws SQLException {
+		String sql = """
+				SELECT 1 FROM dbo.lab_usage_requests
+				WHERE mentor_id = ? AND semester_id = ? AND (? IS NULL OR request_id <> ?)
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, mentorId);
+			statement.setLong(2, semesterId);
+			setNullableLong(statement, 3, exceptRequestId);
+			setNullableLong(statement, 4, exceptRequestId);
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
 	public long create(InternList request) throws SQLException {
 		String sql = """
 				INSERT dbo.lab_usage_requests (semester_id, mentor_id, group_name, status, request_note)
@@ -584,7 +602,7 @@ public class InternListDAO {
 		}
 
 		if (studentId != null && !intern.getStudentCode().equalsIgnoreCase(existingCode)) {
-			throw new SQLException("Gmail " + intern.getEmail() + " không khớp mã thực tập sinh hiện có.");
+			throw new SQLException("Email " + intern.getEmail() + " không khớp mã thực tập sinh hiện có.");
 		}
 		ensureInternCodeAvailable(connection, intern.getStudentCode(), userId);
 

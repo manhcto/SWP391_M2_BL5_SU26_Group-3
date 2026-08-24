@@ -29,7 +29,12 @@ public class AssetItemDAO {
 			  AND i.condition IN ('GOOD', 'FAIR')
 			  AND NOT EXISTS (
 				SELECT 1 FROM dbo.asset_usages usage
-				WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'MAINTENANCE')
+				WHERE usage.asset_item_id = i.asset_item_id AND usage.status IN ('IN_USE', 'RETURN_PENDING')
+			  )
+			  AND NOT EXISTS (
+				SELECT 1 FROM dbo.equipment_allocations allocation
+				WHERE allocation.asset_item_id = i.asset_item_id
+				  AND allocation.status IN ('READY_FOR_HANDOVER', 'ACTIVE', 'ISSUE_REPORTED')
 			  )
 			  AND NOT EXISTS (
 				SELECT 1 FROM dbo.disposal_records disposal

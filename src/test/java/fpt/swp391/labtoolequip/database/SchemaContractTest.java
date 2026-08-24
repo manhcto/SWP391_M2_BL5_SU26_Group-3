@@ -46,4 +46,22 @@ class SchemaContractTest {
 		assertTrue(schema.contains("'ARDUINO-UNO-KIT'"));
 		assertTrue(schema.contains("'PRESENTATION-REMOTE'"));
 	}
+
+	@Test
+	void eachMentorCanOwnOneInternListPerSemester() throws IOException {
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("CONSTRAINT UQ_lab_usage_requests_semester_mentor UNIQUE (semester_id, mentor_id)"));
+		assertFalse(schema.contains("CONSTRAINT UQ_lab_usage_requests_semester UNIQUE (semester_id)"));
+	}
+
+	@Test
+	void inspectionsTrackConcreteAssetItems() throws IOException {
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("ALTER TABLE dbo.inspection_items ADD asset_item_id bigint NULL"));
+		assertTrue(schema.contains("CONSTRAINT FK_inspection_items_asset_item"));
+		assertTrue(schema.contains("CREATE UNIQUE INDEX UX_inspection_items_asset_item"));
+		assertFalse(schema.contains("CONSTRAINT UQ_inspection_items_asset UNIQUE"));
+	}
 }

@@ -2,7 +2,7 @@ package fpt.swp391.labtoolequip.controller;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
 import fpt.swp391.labtoolequip.dao.InspectionDAO;
-import fpt.swp391.labtoolequip.model.Asset;
+import fpt.swp391.labtoolequip.model.AssetItem;
 import fpt.swp391.labtoolequip.model.InspectionItem;
 import fpt.swp391.labtoolequip.model.InspectionRecord;
 import jakarta.servlet.ServletException;
@@ -131,13 +131,13 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 
 	private void showForm(HttpServletRequest request, HttpServletResponse response, InspectionRecord inspection,
 			List<InspectionItem> items) throws SQLException, ServletException, IOException {
-		List<Asset> assets = dao.findInspectableAssets();
-		Map<Long, InspectionItem> itemByAsset = items.stream()
-				.collect(Collectors.toMap(InspectionItem::getAssetId, item -> item, (first, second) -> first));
+		List<AssetItem> assetItems = dao.findInspectableItems();
+		Map<Long, InspectionItem> inspectionByAssetItem = items.stream().filter(item -> item.getAssetItemId() != null)
+				.collect(Collectors.toMap(InspectionItem::getAssetItemId, item -> item, (first, second) -> first));
 		request.setAttribute("inspection", inspection);
 		request.setAttribute("items", items);
-		request.setAttribute("itemByAsset", itemByAsset);
-		request.setAttribute("assets", assets);
+		request.setAttribute("inspectionByAssetItem", inspectionByAssetItem);
+		request.setAttribute("assetItems", assetItems);
 		request.setAttribute("semesters", dao.findSemesters());
 		forward(request, response, "form.jsp");
 	}
@@ -157,10 +157,10 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 	}
 
 	private List<InspectionItem> itemsFrom(HttpServletRequest request, String scope) {
-		Set<Long> selected = selectedAssets(request, scope);
+		Set<Long> selected = selectedAssetItems(request, scope);
 		List<InspectionItem> items = new ArrayList<>();
-		for (Long assetId : selected) {
-			items.add(itemFrom(request, assetId));
+		for (Long assetItemId : selected) {
+			items.add(itemFrom(request, assetItemId));
 		}
 		return items;
 	}
@@ -173,8 +173,8 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 		}
 	}
 
-	private Set<Long> selectedAssets(HttpServletRequest request, String scope) {
-		String parameter = "WHOLE_LAB".equals(scope) ? "assetId" : "selectedAssetId";
+	private Set<Long> selectedAssetItems(HttpServletRequest request, String scope) {
+		String parameter = "WHOLE_LAB".equals(scope) ? "assetItemId" : "selectedAssetItemId";
 		String[] values = request.getParameterValues(parameter);
 		if (values == null) {
 			return Set.of();
@@ -183,25 +183,26 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 				.collect(Collectors.toCollection(java.util.LinkedHashSet::new));
 	}
 
-	private InspectionItem itemFrom(HttpServletRequest request, Long assetId) {
+	private InspectionItem itemFrom(HttpServletRequest request, Long assetItemId) {
 		InspectionItem item = new InspectionItem();
-		item.setAssetId(assetId);
-		item.setExpectedQuantity(intValue(request, "expectedQuantity", assetId));
-		item.setActualQuantity(intValue(request, "actualQuantity", assetId));
-		item.setExpectedCondition(value(request, "expectedCondition", assetId));
-		item.setActualCondition(value(request, "actualCondition", assetId));
-		item.setDiscrepancyType(value(request, "discrepancyType", assetId));
-		item.setDiscrepancyNote(value(request, "discrepancyNote", assetId));
+		item.setAssetItemId(assetItemId);
+		item.setAssetId(Long.parseLong(value(request, "assetId", assetItemId)));
+		item.setExpectedQuantity(intValue(request, "expectedQuantity", assetItemId));
+		item.setActualQuantity(intValue(request, "actualQuantity", assetItemId));
+		item.setExpectedCondition(value(request, "expectedCondition", assetItemId));
+		item.setActualCondition(value(request, "actualCondition", assetItemId));
+		item.setDiscrepancyType(value(request, "discrepancyType", assetItemId));
+		item.setDiscrepancyNote(value(request, "discrepancyNote", assetItemId));
 		return item;
 	}
 
-	private int intValue(HttpServletRequest request, String prefix, Long assetId) {
-		String value = request.getParameter(prefix + "_" + assetId);
+	private int intValue(HttpServletRequest request, String prefix, Long assetItemId) {
+		String value = request.getParameter(prefix + "_" + assetItemId);
 		return value == null || value.isBlank() ? 0 : Integer.parseInt(value);
 	}
 
-	private String value(HttpServletRequest request, String prefix, Long assetId) {
-		return request.getParameter(prefix + "_" + assetId);
+	private String value(HttpServletRequest request, String prefix, Long assetItemId) {
+		return request.getParameter(prefix + "_" + assetItemId);
 	}
 
 	private long idFrom(String path) {

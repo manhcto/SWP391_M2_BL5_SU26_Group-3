@@ -17,11 +17,18 @@ public class CloudinaryUtil {
 			if (url != null && !url.isBlank()) {
 				cloudinary = new Cloudinary(url);
 			} else {
-				Map<String, String> config = new HashMap<>();
-				config.put("cloud_name", AppConfig.get("CLOUDINARY_CLOUD_NAME", "kjqpzrnx"));
-				config.put("api_key", AppConfig.get("CLOUDINARY_API_KEY", "155419591454881"));
-				config.put("api_secret", AppConfig.get("CLOUDINARY_API_SECRET", "JvQk543OC0Ibu17HmuAxOo90g1M"));
-				cloudinary = new Cloudinary(config);
+				String cloudName = AppConfig.get("CLOUDINARY_CLOUD_NAME");
+				String apiKey = AppConfig.get("CLOUDINARY_API_KEY");
+				String apiSecret = AppConfig.get("CLOUDINARY_API_SECRET");
+				if (isBlank(cloudName) || isBlank(apiKey) || isBlank(apiSecret)) {
+					System.err.println("WARNING: Cloudinary is not configured; image upload is disabled.");
+				} else {
+					Map<String, String> config = new HashMap<>();
+					config.put("cloud_name", cloudName);
+					config.put("api_key", apiKey);
+					config.put("api_secret", apiSecret);
+					cloudinary = new Cloudinary(config);
+				}
 			}
 		} catch (Exception e) {
 			System.err.println("WARNING: Failed to initialize Cloudinary client: " + e.getMessage());
@@ -29,6 +36,10 @@ public class CloudinaryUtil {
 	}
 
 	private CloudinaryUtil() {
+	}
+
+	private static boolean isBlank(String value) {
+		return value == null || value.isBlank();
 	}
 
 	/**

@@ -20,6 +20,14 @@ class AssetUsageDAOTest {
 	}
 
 	@Test
+	void onlyAllowsBorrowingBeforeTheDailyReturnDeadline() {
+		ZoneId zone = ZoneId.of("Asia/Ho_Chi_Minh");
+		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowTime(ZonedDateTime.of(2026, 8, 21, 17, 39, 59, 0, zone)));
+		assertThrows(IllegalArgumentException.class,
+				() -> AssetUsageDAO.validateBorrowTime(ZonedDateTime.of(2026, 8, 21, 17, 40, 0, 0, zone)));
+	}
+
+	@Test
 	void acceptsAvailableBorrowableAsset() {
 		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowable(asset("AVAILABLE", true, "GOOD")));
 	}
@@ -46,6 +54,7 @@ class AssetUsageDAOTest {
 	@Test
 	void keepsSerializedAndQuantityBorrowInputsSeparate() {
 		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowRequest("SERIALIZED", null, 10L, 1));
+		assertDoesNotThrow(() -> AssetUsageDAO.validateBorrowRequest("QUANTITY", null, 10L, 1));
 		assertThrows(IllegalArgumentException.class,
 				() -> AssetUsageDAO.validateBorrowRequest("SERIALIZED", 1L, null, 1));
 		assertThrows(IllegalArgumentException.class,
