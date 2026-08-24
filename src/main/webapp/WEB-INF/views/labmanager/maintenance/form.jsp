@@ -68,7 +68,7 @@
                                             <%-- CHẾ ĐỘ 1: CẬP NHẬT TIẾN ĐỘ & KẾT QUẢ SỬA CHỮA --%>
                                                 <c:when test="${formMode == 'edit'}">
                                                     <form method="post"
-                                                        action="${pageContext.request.contextPath}/lab-manager/maintenance"
+                                                        action="${pageContext.request.contextPath}/lab-manager/maintenance?csrfToken=${sessionScope.csrfToken}"
                                                         enctype="multipart/form-data" class="form-grid">
                                                         <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                                                         <input type="hidden" name="action" value="updateProgress">
@@ -314,7 +314,7 @@
                                                 <%-- CHẾ ĐỘ 2: TẠO MỚI PHIẾU BẢO TRÌ (TRỰC TIẾP APPROVED) --%>
                                                     <c:otherwise>
                                                         <form method="post"
-                                                            action="${pageContext.request.contextPath}/lab-manager/maintenance"
+                                                            action="${pageContext.request.contextPath}/lab-manager/maintenance?csrfToken=${sessionScope.csrfToken}"
                                                             enctype="multipart/form-data" class="form-grid">
                                                             <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                                                             <input type="hidden" name="action" value="create">
