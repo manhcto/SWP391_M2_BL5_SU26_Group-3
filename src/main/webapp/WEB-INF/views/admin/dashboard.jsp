@@ -30,6 +30,23 @@
                 <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><div class="stat-icon"><svg><use href="#i-clipboard"/></svg></div><div><strong><c:out value="${pendingInternListCount}"/></strong><span>Danh sách chờ duyệt</span><small>Phê duyệt hoặc từ chối danh sách do người hướng dẫn gửi</small></div></a>
                 <a class="stat-card stat-red" href="${pageContext.request.contextPath}/password-reset"><div class="stat-icon"><svg><use href="#i-users"/></svg></div><div><strong><c:out value="${pendingPasswordResetCount}"/></strong><span>Yêu cầu đặt lại mật khẩu</span><small>Người dùng đang chờ cấp mật khẩu tạm thời</small></div></a>
             </div>
+            <section class="analytics-grid" aria-label="Báo cáo thống kê tài khoản">
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-users"/></svg></span><h3>Tỷ lệ tài khoản hoạt động</h3></div><strong class="report-value"><c:out value="${activeAccountPercent}"/>%</strong></header>
+                    <div class="ring-report">
+                        <div class="percentage-ring green" style="--value: ${activeAccountPercent}%"><strong><c:out value="${activeAccountPercent}"/>%</strong><span>hoạt động</span></div>
+                        <p><c:out value="${activeAccountCount}"/> trong <c:out value="${accountCount}"/> tài khoản có thể truy cập hệ thống.</p>
+                    </div>
+                </article>
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-grid"/></svg></span><h3>Phân bổ theo vai trò</h3></div></header>
+                    <div class="bar-report">
+                        <div><span>Thực tập sinh</span><b><i class="bar-fill blue" style="--bar: ${internPercent}%"></i></b><strong><c:out value="${internCount}"/></strong></div>
+                        <div><span>Người hướng dẫn</span><b><i class="bar-fill green" style="--bar: ${mentorPercent}%"></i></b><strong><c:out value="${mentorCount}"/></strong></div>
+                        <div><span>Quản lý phòng LAB</span><b><i class="bar-fill purple" style="--bar: ${labManagerPercent}%"></i></b><strong><c:out value="${labManagerCount}"/></strong></div>
+                    </div>
+                </article>
+            </section>
             <section class="dashboard-grid">
                 <article class="panel">
                     <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-clipboard"/></svg></span><h3>Danh sách thực tập sinh chờ duyệt</h3></div><a href="${pageContext.request.contextPath}/admin/interns?status=PENDING">Xem tất cả</a></header>
@@ -41,7 +58,6 @@
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users"><span class="mentor-action-icon"><svg><use href="#i-users"/></svg></span><span><strong>Quản lý người dùng</strong><small>Xem tài khoản và trạng thái truy cập</small></span></a>
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/users/add"><span class="mentor-action-icon"><svg><use href="#i-plus"/></svg></span><span><strong>Thêm người dùng</strong><small>Tạo tài khoản cho vai trò hệ thống</small></span></a>
                         <a class="mentor-action" href="${pageContext.request.contextPath}/admin/interns?status=PENDING"><span class="mentor-action-icon gold"><svg><use href="#i-clipboard"/></svg></span><span><strong>Duyệt danh sách thực tập sinh</strong><small>Xem các danh sách đang chờ quyết định</small></span></a>
-                        <a class="mentor-action" href="${pageContext.request.contextPath}/password-reset"><span class="mentor-action-icon"><svg><use href="#i-users"/></svg></span><span><strong>Đặt lại mật khẩu</strong><small><c:out value="${pendingPasswordResetCount}"/> yêu cầu đang chờ xử lý</small></span></a>
                     </div>
                 </article>
             </section>

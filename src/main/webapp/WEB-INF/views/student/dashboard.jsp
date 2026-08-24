@@ -29,28 +29,54 @@
             </div>
 
             <section class="stats-grid" aria-label="Tổng quan hoạt động của tôi tại phòng LAB">
-                <a class="stat-card stat-blue" href="${pageContext.request.contextPath}/intern/usages">
+                <div class="stat-card stat-blue">
                     <div class="stat-icon"><svg><use href="#i-box"/></svg></div>
                     <div><strong><c:out value="${activeUsageCount}"/></strong><span>Thiết bị đang mượn</span><small>Thiết bị đang được sử dụng</small></div>
-                </a>
-                <a class="stat-card stat-green" href="${pageContext.request.contextPath}/intern/usages">
+                </div>
+                <div class="stat-card stat-green">
                     <div class="stat-icon"><svg><use href="#i-calendar"/></svg></div>
                     <div><strong><c:out value="${returnedUsageCount}"/></strong><span>Thiết bị đã trả</span><small>Các lượt trả đã hoàn tất</small></div>
-                </a>
-                <a class="stat-card stat-gold" href="${pageContext.request.contextPath}/intern/responsibilities">
+                </div>
+                <div class="stat-card stat-gold">
                     <div class="stat-icon"><svg><use href="#i-list"/></svg></div>
                     <div><strong><c:out value="${responsibilityCount}"/></strong><span>Trách nhiệm</span><small>Kết luận và quyết định của người hướng dẫn</small></div>
-                </a>
+                </div>
                 <div class="stat-card stat-purple">
                     <div class="stat-icon"><svg><use href="#i-alert"/></svg></div>
                     <div><strong><c:out value="${reportedIncidentCount}"/></strong><span>Sự cố đã báo cáo</span><small>Các sự cố lớn bạn đã gửi để xử lý</small></div>
                 </div>
-                <a class="stat-card stat-purple" href="${pageContext.request.contextPath}/intern/usages">
+                <div class="stat-card stat-purple">
                     <div class="stat-icon"><svg><use href="#i-grid"/></svg></div>
                     <div><strong><c:out value="${totalUsageCount}"/></strong><span>Tổng lượt sử dụng</span><small>Tất cả lịch sử mượn</small></div>
-                </a>
+                </div>
             </section>
 
+            <section class="stats-grid dashboard-kpi-grid" aria-label="Chỉ số cần theo dõi">
+                <div class="stat-card stat-gold"><div class="stat-icon"><svg><use href="#i-calendar"/></svg></div><div><strong><c:out value="${dueSoonUsageCount}"/></strong><span>Sắp đến hạn trả</span><small>Trong 3 ngày tới</small></div></div>
+                <div class="stat-card stat-purple"><div class="stat-icon"><svg><use href="#i-alert"/></svg></div><div><strong><c:out value="${overdueUsageCount}"/></strong><span>Đã quá hạn trả</span><small>Cần hoàn trả thiết bị sớm</small></div></div>
+                <div class="stat-card stat-green"><div class="stat-icon"><svg><use href="#i-box"/></svg></div><div><strong><c:out value="${newAvailableAssetCount}"/></strong><span>Thiết bị mới sẵn sàng</span><small>Được thêm trong 30 ngày gần đây</small></div></div>
+            </section>
+            <section class="analytics-grid intern-analytics" aria-label="Báo cáo sử dụng thiết bị cá nhân">
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-calendar"/></svg></span><h3>Tiến độ mượn và trả</h3></div></header>
+                    <div class="bar-report">
+                        <div><span>Đang sử dụng</span><b><i class="bar-fill blue" style="--bar: ${activeUsageCount + returnedUsageCount == 0 ? 0 : activeUsageCount * 100 / (activeUsageCount + returnedUsageCount)}%"></i></b><strong><c:out value="${activeUsageCount}"/></strong></div>
+                        <div><span>Đã trả</span><b><i class="bar-fill green" style="--bar: ${activeUsageCount + returnedUsageCount == 0 ? 0 : returnedUsageCount * 100 / (activeUsageCount + returnedUsageCount)}%"></i></b><strong><c:out value="${returnedUsageCount}"/></strong></div>
+                        <div><span>Đến hạn trong 3 ngày</span><b><i class="bar-fill gold" style="--bar: ${activeUsageCount == 0 ? 0 : dueSoonUsageCount * 100 / activeUsageCount}%"></i></b><strong><c:out value="${dueSoonUsageCount}"/></strong></div>
+                    </div>
+                </article>
+                <article class="panel analytics-panel">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-calendar"/></svg></span><h3>Tỷ lệ trả đúng hạn</h3></div><strong class="report-value"><c:out value="${returnedOnTimePercent}"/>%</strong></header>
+                    <div class="ring-report">
+                        <div class="percentage-ring green" style="--value: ${returnedOnTimePercent}%"><strong><c:out value="${returnedOnTimePercent}"/>%</strong><span>đúng hạn</span></div>
+                        <p>Được tính trên những lượt thiết bị bạn đã trả.</p>
+                    </div>
+                </article>
+                <article class="panel analytics-panel report-alerts">
+                    <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Thiết bị mới sẵn sàng</h3></div><strong class="report-value"><c:out value="${newAvailableAssetCount}"/></strong></header>
+                    <div class="progress-report"><p>Thiết bị được thêm trong 30 ngày gần đây và đang có thể mượn.</p></div>
+                </article>
+            </section>
             <section class="dashboard-grid intern-dashboard-grid">
                 <article class="panel">
                     <header class="panel-header">
