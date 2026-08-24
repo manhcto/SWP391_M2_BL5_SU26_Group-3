@@ -62,6 +62,11 @@
                                     style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">
                                     ✓ Người dùng đã được thêm mới thành công!</div>
                             </c:if>
+                            <c:if test="${param.success == 'lm_replaced'}">
+                                <div
+                                    style="padding: 14px 18px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 16px; font-size: 13px; font-weight: 500; line-height: 1.5;">
+                                    ✓ Đã tạo tài khoản Quản lý phòng LAB mới thành công. Tài khoản Quản lý cũ (<b><c:out value="${param.old_lm}"/></b>) đã được tự động chuyển sang trạng thái <b>Khóa (INACTIVE)</b> để đảm bảo an toàn.</div>
+                            </c:if>
                             <c:if test="${param.success == 'role_updated'}">
                                 <div
                                     style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">
@@ -75,7 +80,29 @@
                             <c:if test="${param.success == 'imported'}">
                                 <div
                                     style="padding: 12px 16px; background: #e5f3eb; color: #188255; border-radius: 6px; margin-bottom: 16px; font-size: 12px; font-weight: 600;">
-                                    ✓ Đã nhập thành công ${param.count} tài khoản vào hệ thống!</div>
+									✓ Đã nhập thành công <c:out value="${param.count}"/> tài khoản vào hệ thống!</div>
+                            </c:if>
+
+                            <%-- THỐNG KÊ NGƯỜI DÙNG --%>
+                            <c:if test="${not empty summary}">
+                            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px;">
+                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">👥 Tổng người dùng</div>
+                                    <div style="font-size:28px; font-weight:700; color:#1e293b; margin-top:4px;">${summary.totalUsers()}</div>
+                                </div>
+                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">🎓 Thực tập sinh</div>
+                                    <div style="font-size:28px; font-weight:700; color:#2563eb; margin-top:4px;">${summary.internCount()}</div>
+                                </div>
+                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">👨‍🏫 Người hướng dẫn</div>
+                                    <div style="font-size:28px; font-weight:700; color:#0d9488; margin-top:4px;">${summary.mentorCount()}</div>
+                                </div>
+                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
+                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">🛠️ Quản lý phòng LAB</div>
+                                    <div style="font-size:28px; font-weight:700; color:#d97706; margin-top:4px;">${summary.labManagerCount()}</div>
+                                </div>
+                            </div>
                             </c:if>
 
                             <div class="filter-bar">
@@ -85,13 +112,10 @@
                                         value="<c:out value='${keyword}'/>" placeholder="Tìm theo tên, mã sinh viên hoặc email..."
                                         style="width: 240px;">
                                     <select class="form-control" name="role">
-                                        <option value="">Tất cả vai trò (3)</option>
-                                        <option value="INTERN" ${selectedRole=='INTERN' ? 'selected' : '' }>Thực tập sinh
-                                        </option>
-                                        <option value="MENTOR" ${selectedRole=='MENTOR' ? 'selected' : '' }>Người hướng dẫn (2)
-                                        </option>
-                                        <option value="LAB_MANAGER" ${selectedRole=='LAB_MANAGER' ? 'selected' : '' }>
-                                            Quản lý phòng LAB (3)</option>
+                                        <option value="">Tất cả vai trò</option>
+                                        <option value="INTERN" ${selectedRole=='INTERN' ? 'selected' : '' }>Thực tập sinh</option>
+                                        <option value="MENTOR" ${selectedRole=='MENTOR' ? 'selected' : '' }>Người hướng dẫn</option>
+                                        <option value="LAB_MANAGER" ${selectedRole=='LAB_MANAGER' ? 'selected' : '' }>Quản lý phòng LAB</option>
                                     </select>
                                     <select class="form-control" name="status">
                                         <option value="">Tất cả trạng thái</option>
@@ -133,9 +157,10 @@
                                                     <tr>
                                                         <th>Mã người dùng</th>
                                                         <th>Họ và tên</th>
-                                                        <th>Email (@fpt.edu.vn)</th>
+                                                        <th>Email</th>
                                                         <th>Vai trò</th>
-                                                        <th>Mã sinh viên / Phạm vi</th>
+                                                        <th>Mã sinh viên</th>
+                                                        <th>Chuyên ngành</th>
                                                         <th>Trạng thái</th>
                                                         <th style="text-align: right;">Thao tác</th>
                                                     </tr>
@@ -173,9 +198,15 @@
                                                             <td>
                                                                 <c:choose>
                                                                     <c:when test="${not empty u.studentCode}">
-                                                                        <c:out value="${u.studentCode}" /> ·
-                                                                        <c:out value="${u.major}"
-                                                                            default="Engineering" />
+                                                                        <c:out value="${u.studentCode}" />
+                                                                    </c:when>
+                                                                    <c:otherwise>---</c:otherwise>
+                                                                </c:choose>
+                                                            </td>
+                                                            <td>
+                                                                <c:choose>
+                                                                    <c:when test="${not empty u.major}">
+                                                                        <c:out value="${u.major}" />
                                                                     </c:when>
                                                                     <c:otherwise>---</c:otherwise>
                                                                 </c:choose>

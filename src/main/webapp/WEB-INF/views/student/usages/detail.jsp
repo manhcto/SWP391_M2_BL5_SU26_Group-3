@@ -22,9 +22,11 @@
             <div class="topbar-actions"><a class="btn-secondary" href="${pageContext.request.contextPath}/intern/usages">Quay lại lịch sử</a></div>
         </header>
         <section class="content-area">
-            <div class="content-heading"><div><p class="eyebrow">CỔNG THỰC TẬP SINH</p><h2><c:out value="${usage.assetName}"/></h2></div><span class="status ${usage.status == 'RETURNED' ? 'returned' : 'in-use'}"><c:out value="${app:label(usage.status)}"/></span></div>
+            <div class="content-heading"><div><p class="eyebrow">CỔNG THỰC TẬP SINH</p><h2><c:out value="${usage.assetName}"/></h2></div><span class="status ${usage.status == 'RETURNED' ? 'returned' : (usage.status == 'MAINTENANCE' ? 'maintenance' : 'in-use')}"><c:out value="${app:label(usage.status)}"/></span></div>
             <dl class="panel detail-grid">
                 <div class="detail-item"><dt>Mã thiết bị</dt><dd><c:out value="${usage.assetCode}"/></dd></div>
+                <div class="detail-item"><dt>Mã sản phẩm</dt><dd><c:out value="${empty usage.itemCode ? 'Theo thiết bị chung' : usage.itemCode}"/></dd></div>
+                <div class="detail-item"><dt>Serial</dt><dd><c:out value="${empty usage.itemSerialNumber ? 'Chưa nhập' : usage.itemSerialNumber}"/></dd></div>
                 <div class="detail-item"><dt>Số lượng</dt><dd><c:out value="${usage.quantity}"/></dd></div>
                 <div class="detail-item"><dt>Trạng thái</dt><dd><c:out value="${app:label(usage.status)}"/></dd></div>
                 <div class="detail-item"><dt>Mượn lúc</dt><dd><c:out value="${app:dateTime(usage.borrowedAt)}"/></dd></div>
@@ -33,10 +35,11 @@
             <c:if test="${usage.status == 'IN_USE'}">
                 <article class="panel">
                     <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-calendar"/></svg></span><h3>Trả thiết bị này</h3></div></header>
-                    <form method="post" action="${pageContext.request.contextPath}/intern/usages">
+					<form method="post" action="${pageContext.request.contextPath}/intern/usages">
+						<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                         <input type="hidden" name="action" value="return"><input type="hidden" name="usageId" value="${usage.assetUsageId}">
                         <div class="form-grid">
-                            <div class="form-group"><label for="conditionAfter">Tình trạng sau khi sử dụng</label><select class="form-control" id="conditionAfter" name="conditionAfter" required><option>Tốt</option><option>Khá</option><option>Hư hỏng</option><option>Không hoạt động</option></select></div>
+                            <div class="form-group"><label for="conditionAfter">Tình trạng sau khi sử dụng</label><select class="form-control" id="conditionAfter" name="conditionAfter" required><option value="GOOD">Tốt</option><option value="FAIR">Khá — Mentor có thể tự xử lý</option><option value="DAMAGED">Hư hỏng — cần báo cáo</option><option value="BROKEN">Không hoạt động — cần báo cáo</option></select><small>Nếu chỉ lỗi nhẹ như lỏng giắc cắm, chọn Khá; không tạo báo cáo Lab Manager.</small></div>
                             <div class="form-group full-width"><label for="note">Ghi chú trả thiết bị</label><textarea class="form-control" id="note" name="note"></textarea></div>
                             <div class="form-group full-width form-actions"><button class="primary-button" type="submit">Xác nhận trả</button></div>
                         </div>

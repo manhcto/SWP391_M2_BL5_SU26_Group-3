@@ -3,6 +3,7 @@ package fpt.swp391.labtoolequip.controller.auth;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import fpt.swp391.labtoolequip.common.ViewFormat;
 import fpt.swp391.labtoolequip.model.User;
 import org.junit.jupiter.api.Test;
 
@@ -20,5 +21,34 @@ class LoginControllerTest {
 
 		user.setStatus("INACTIVE");
 		assertFalse(LoginController.validPassword(user, "123"));
+	}
+
+	@Test
+	void rejectsInternAndExpiredTemporaryPasswordForInternalLogin() {
+		User user = new User();
+		user.setStatus("ACTIVE");
+		user.setPasswordHash(PASSWORD_HASH);
+		user.setRole("INTERN");
+		assertFalse(LoginController.validInternalPassword(user, "123"));
+
+		user.setRole("MENTOR");
+		user.setMustChangePassword(true);
+		user.setPasswordExpiresAt(ViewFormat.now().minusMinutes(1));
+		assertFalse(LoginController.validInternalPassword(user, "123"));
+
+		user.setPasswordExpiresAt(ViewFormat.now().plusMinutes(1));
+		assertTrue(LoginController.validInternalPassword(user, "123"));
+	}
+
+	@Test
+	void generatesDifferentUrlSafeOAuthStates() {
+		LoginController controller = new LoginController();
+
+		String firstState = controller.newState();
+		String secondState = controller.newState();
+
+		assertTrue(firstState.matches("[A-Za-z0-9_-]{43}"));
+		assertTrue(secondState.matches("[A-Za-z0-9_-]{43}"));
+		assertFalse(firstState.equals(secondState));
 	}
 }

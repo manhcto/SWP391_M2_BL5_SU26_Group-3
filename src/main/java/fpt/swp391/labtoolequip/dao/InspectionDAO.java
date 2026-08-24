@@ -84,11 +84,13 @@ public class InspectionDAO {
 
 	public List<InspectionItem> findItems(long inspectionId) throws SQLException {
 		String sql = """
-				SELECT ii.*, a.asset_code, a.asset_name, a.tracking_mode
+				SELECT ii.*, a.asset_code, a.asset_name, a.tracking_mode,
+				       ai.item_code AS asset_item_code, ai.serial_number, ai.status AS asset_item_status
 				FROM dbo.inspection_items ii
 				JOIN dbo.assets a ON a.asset_id = ii.asset_id
+				LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = ii.asset_item_id AND ai.asset_id = ii.asset_id
 				WHERE ii.inspection_id = ?
-				ORDER BY a.asset_name
+				ORDER BY a.asset_name, ai.item_code, ii.inspection_item_id
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -141,6 +143,12 @@ public class InspectionDAO {
 				assets.add(asset);
 			}
 			return assets;
+		}
+	}
+
+	public List<InspectionItem> findInspectableTargets() throws SQLException {
+		try (Connection connection = db.getConnection()) {
+			return findInspectableTargets(connection);
 		}
 	}
 
@@ -257,21 +265,29 @@ public class InspectionDAO {
 
 	private List<InspectionItem> wholeLabItems(Connection connection, List<InspectionItem> submittedItems)
 			throws SQLException {
-		List<Asset> assets = findInspectableAssets(connection);
+		List<InspectionItem> targets = findInspectableTargets(connection);
 		List<InspectionItem> items = new ArrayList<>();
-		for (Asset asset : assets) {
-			InspectionItem submitted = findSubmittedItem(submittedItems, asset.getAssetId());
-			items.add(inspectionItemFor(asset, submitted));
+		for (InspectionItem target : targets) {
+			InspectionItem submitted = findSubmittedItem(submittedItems, target);
+			items.add(inspectionItemFor(target, submitted));
 		}
 		return items;
 	}
 
 	private List<InspectionItem> selectedAssetItems(Connection connection, List<InspectionItem> submittedItems)
 			throws SQLException {
-		List<InspectionItem> items = new ArrayList<>();
+		Set<Long> selectedAssetIds = new HashSet<>();
 		for (InspectionItem submitted : submittedItems) {
-			Asset asset = lockAsset(connection, submitted.getAssetId());
-			items.add(inspectionItemFor(asset, submitted));
+			if (submitted.getAssetId() == null || !selectedAssetIds.add(submitted.getAssetId())) {
+				continue;
+			}
+			lockAsset(connection, submitted.getAssetId());
+		}
+		List<InspectionItem> targets = findInspectableTargets(connection, selectedAssetIds);
+		List<InspectionItem> items = new ArrayList<>();
+		for (InspectionItem target : targets) {
+			InspectionItem submitted = findSubmittedItem(submittedItems, target);
+			items.add(inspectionItemFor(target, submitted));
 		}
 		return items;
 	}
@@ -280,9 +296,17 @@ public class InspectionDAO {
 		if (items.isEmpty()) {
 			throw new IllegalArgumentException("Vui lòng chọn ít nhất một thiết bị để kiểm tra.");
 		}
-		Set<Long> assets = new HashSet<>();
+		Set<Long> quantityAssets = new HashSet<>();
+		Set<Long> assetItems = new HashSet<>();
 		for (InspectionItem item : items) {
-			if (item.getAssetId() == null || !assets.add(item.getAssetId())) {
+			if (item.getAssetId() == null) {
+				throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
+			}
+			if (item.getAssetItemId() == null && !quantityAssets.add(item.getAssetId())) {
+				throw new IllegalArgumentException(
+						"Một thiết bị không được xuất hiện hai lần trong cùng đợt kiểm tra.");
+			}
+			if (item.getAssetItemId() != null && !assetItems.add(item.getAssetItemId())) {
 				throw new IllegalArgumentException(
 						"Một thiết bị không được xuất hiện hai lần trong cùng đợt kiểm tra.");
 			}
@@ -293,7 +317,7 @@ public class InspectionDAO {
 			if (!validCondition(item.getExpectedCondition()) || !validCondition(item.getActualCondition())) {
 				throw new IllegalArgumentException("Tình trạng thiết bị không hợp lệ.");
 			}
-			if ("SERIALIZED".equals(item.getTrackingMode())) {
+			if (item.getAssetItemId() != null || "SERIALIZED".equals(item.getTrackingMode())) {
 				if (item.getExpectedQuantity() != 1) {
 					throw new IllegalArgumentException("Thiết bị quản lý riêng lẻ phải có số lượng dự kiến bằng 1.");
 				}
@@ -323,6 +347,74 @@ public class InspectionDAO {
 			}
 			return assets;
 		}
+	}
+
+	private List<InspectionItem> findInspectableTargets(Connection connection) throws SQLException {
+		return findInspectableTargets(connection, null);
+	}
+
+	private List<InspectionItem> findInspectableTargets(Connection connection, Set<Long> selectedAssetIds)
+			throws SQLException {
+		String filter = selectedAssetIds == null ? "" : " AND a.asset_id = ?";
+		String quantitySql = """
+				SELECT a.asset_id, CAST(NULL AS bigint) AS asset_item_id, a.asset_code, a.asset_name,
+				       a.tracking_mode, a.total_quantity, a.condition, a.status,
+				       CAST(NULL AS varchar(70)) AS asset_item_code,
+				       CAST(NULL AS varchar(100)) AS serial_number,
+				       CAST(NULL AS varchar(15)) AS asset_item_status
+				FROM dbo.assets a WITH (UPDLOCK, HOLDLOCK)
+				WHERE a.tracking_mode = 'QUANTITY' AND a.status <> 'DISPOSED'
+				""" + filter + """
+				UNION ALL
+				SELECT a.asset_id, ai.asset_item_id, a.asset_code, a.asset_name,
+				       a.tracking_mode, 1 AS total_quantity, ai.condition, a.status,
+				       ai.item_code AS asset_item_code, ai.serial_number,
+				       ai.status AS asset_item_status
+				FROM dbo.assets a WITH (UPDLOCK, HOLDLOCK)
+				JOIN dbo.asset_items ai WITH (UPDLOCK, HOLDLOCK) ON ai.asset_id = a.asset_id
+				WHERE a.tracking_mode = 'SERIALIZED' AND a.status <> 'DISPOSED' AND ai.status <> 'DISPOSED'
+				""" + filter + """
+				ORDER BY asset_name, asset_item_code, asset_code
+				""";
+		List<InspectionItem> items = new ArrayList<>();
+		if (selectedAssetIds == null) {
+			try (PreparedStatement statement = connection.prepareStatement(quantitySql);
+					ResultSet result = statement.executeQuery()) {
+				while (result.next()) {
+					items.add(readInspectableTarget(result));
+				}
+			}
+			return items;
+		}
+		for (Long assetId : selectedAssetIds) {
+			try (PreparedStatement statement = connection.prepareStatement(quantitySql)) {
+				statement.setLong(1, assetId);
+				statement.setLong(2, assetId);
+				try (ResultSet result = statement.executeQuery()) {
+					while (result.next()) {
+						items.add(readInspectableTarget(result));
+					}
+				}
+			}
+		}
+		return items;
+	}
+
+	private InspectionItem readInspectableTarget(ResultSet result) throws SQLException {
+		InspectionItem item = new InspectionItem();
+		item.setAssetId(result.getLong("asset_id"));
+		item.setAssetItemId(nullableLong(result, "asset_item_id"));
+		item.setAssetCode(result.getString("asset_code"));
+		item.setAssetName(result.getString("asset_name"));
+		item.setTrackingMode(result.getString("tracking_mode"));
+		item.setExpectedQuantity(result.getInt("total_quantity"));
+		item.setActualQuantity(result.getInt("total_quantity"));
+		item.setExpectedCondition(result.getString("condition"));
+		item.setActualCondition(result.getString("condition"));
+		item.setAssetItemCode(result.getString("asset_item_code"));
+		item.setSerialNumber(result.getString("serial_number"));
+		item.setAssetItemStatus(result.getString("asset_item_status"));
+		return item;
 	}
 
 	private Asset lockAsset(Connection connection, Long assetId) throws SQLException {
@@ -362,30 +454,40 @@ public class InspectionDAO {
 		return asset;
 	}
 
-	private InspectionItem inspectionItemFor(Asset asset, InspectionItem submitted) {
+	private InspectionItem inspectionItemFor(InspectionItem target, InspectionItem submitted) {
 		InspectionItem item = new InspectionItem();
-		item.setAssetId(asset.getAssetId());
-		item.setTrackingMode(asset.getTrackingMode());
-		item.setExpectedQuantity("SERIALIZED".equals(asset.getTrackingMode())
+		item.setAssetId(target.getAssetId());
+		item.setAssetItemId(target.getAssetItemId());
+		item.setTrackingMode(target.getTrackingMode());
+		item.setAssetCode(target.getAssetCode());
+		item.setAssetName(target.getAssetName());
+		item.setAssetItemCode(target.getAssetItemCode());
+		item.setSerialNumber(target.getSerialNumber());
+		item.setAssetItemStatus(target.getAssetItemStatus());
+		item.setExpectedQuantity(target.getAssetItemId() != null
 				? 1
 				: positiveOrDefault(submitted == null ? null : submitted.getExpectedQuantity(),
-						asset.getTotalQuantity()));
-		item.setActualQuantity("SERIALIZED".equals(asset.getTrackingMode())
+						target.getExpectedQuantity()));
+		item.setActualQuantity(target.getAssetItemId() != null
 				? serializedActual(submitted == null ? null : submitted.getActualQuantity())
 				: nonNegativeOrDefault(submitted == null ? null : submitted.getActualQuantity(),
-						asset.getTotalQuantity()));
-		item.setExpectedCondition(
-				firstNonBlank(submitted == null ? null : submitted.getExpectedCondition(), asset.getCondition()));
+						target.getActualQuantity()));
+		item.setExpectedCondition(firstNonBlank(submitted == null ? null : submitted.getExpectedCondition(),
+				target.getExpectedCondition()));
 		item.setActualCondition(
-				firstNonBlank(submitted == null ? null : submitted.getActualCondition(), asset.getCondition()));
+				firstNonBlank(submitted == null ? null : submitted.getActualCondition(), target.getActualCondition()));
 		item.setDiscrepancyType(submitted == null ? null : submitted.getDiscrepancyType());
 		item.setDiscrepancyNote(submitted == null ? null : submitted.getDiscrepancyNote());
 		return item;
 	}
 
-	private InspectionItem findSubmittedItem(List<InspectionItem> items, Long assetId) {
+	private InspectionItem findSubmittedItem(List<InspectionItem> items, InspectionItem target) {
 		for (InspectionItem item : items) {
-			if (assetId.equals(item.getAssetId())) {
+			if (target.getAssetItemId() != null && target.getAssetItemId().equals(item.getAssetItemId())) {
+				return item;
+			}
+			if (target.getAssetItemId() == null && item.getAssetItemId() == null
+					&& target.getAssetId().equals(item.getAssetId())) {
 				return item;
 			}
 		}
@@ -410,15 +512,28 @@ public class InspectionDAO {
 
 	private void validateAssets(Connection connection, List<InspectionItem> items) throws SQLException {
 		for (InspectionItem item : items) {
-			try (PreparedStatement statement = connection
-					.prepareStatement("SELECT status FROM dbo.assets WITH (UPDLOCK, HOLDLOCK) WHERE asset_id = ?")) {
-				statement.setLong(1, item.getAssetId());
+			try (PreparedStatement statement = connection.prepareStatement("""
+						SELECT a.status AS asset_status, ai.status AS asset_item_status
+						FROM dbo.assets a WITH (UPDLOCK, HOLDLOCK)
+						LEFT JOIN dbo.asset_items ai WITH (UPDLOCK, HOLDLOCK)
+						    ON ai.asset_item_id = ? AND ai.asset_id = a.asset_id
+						WHERE a.asset_id = ?
+					""")) {
+				setNullableLong(statement, 1, item.getAssetItemId());
+				statement.setLong(2, item.getAssetId());
 				try (ResultSet result = statement.executeQuery()) {
 					if (!result.next()) {
 						throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
 					}
-					if ("DISPOSED".equals(result.getString("status"))) {
+					if ("DISPOSED".equals(result.getString("asset_status"))) {
 						throw new IllegalStateException("Không thể chọn thiết bị đã thanh lý làm đối tượng kiểm tra.");
+					}
+					if (item.getAssetItemId() != null && result.getString("asset_item_status") == null) {
+						throw new IllegalArgumentException("Mã thiết bị riêng lẻ đã chọn không tồn tại.");
+					}
+					if ("DISPOSED".equals(result.getString("asset_item_status"))) {
+						throw new IllegalStateException(
+								"Không thể chọn thiết bị riêng lẻ đã thanh lý làm đối tượng kiểm tra.");
 					}
 				}
 			}
@@ -428,20 +543,21 @@ public class InspectionDAO {
 	private void insertItems(Connection connection, long inspectionId, List<InspectionItem> items) throws SQLException {
 		String sql = """
 				INSERT dbo.inspection_items
-				    (inspection_id, asset_id, expected_quantity, actual_quantity, expected_condition,
+				    (inspection_id, asset_id, asset_item_id, expected_quantity, actual_quantity, expected_condition,
 				     actual_condition, discrepancy_type, discrepancy_note)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			for (InspectionItem item : items) {
 				statement.setLong(1, inspectionId);
 				statement.setLong(2, item.getAssetId());
-				statement.setInt(3, item.getExpectedQuantity());
-				statement.setInt(4, item.getActualQuantity());
-				statement.setString(5, blankToNull(item.getExpectedCondition()));
-				statement.setString(6, blankToNull(item.getActualCondition()));
-				statement.setString(7, blankToNull(item.getDiscrepancyType()));
-				statement.setString(8, blankToNull(item.getDiscrepancyNote()));
+				setNullableLong(statement, 3, item.getAssetItemId());
+				statement.setInt(4, item.getExpectedQuantity());
+				statement.setInt(5, item.getActualQuantity());
+				statement.setString(6, blankToNull(item.getExpectedCondition()));
+				statement.setString(7, blankToNull(item.getActualCondition()));
+				statement.setString(8, blankToNull(item.getDiscrepancyType()));
+				statement.setString(9, blankToNull(item.getDiscrepancyNote()));
 				statement.addBatch();
 			}
 			statement.executeBatch();
@@ -504,6 +620,7 @@ public class InspectionDAO {
 				item.setInspectionItemId(result.getLong("inspection_item_id"));
 				item.setInspectionId(result.getLong("inspection_id"));
 				item.setAssetId(result.getLong("asset_id"));
+				item.setAssetItemId(nullableLong(result, "asset_item_id"));
 				item.setExpectedQuantity(result.getInt("expected_quantity"));
 				item.setActualQuantity(result.getInt("actual_quantity"));
 				item.setExpectedCondition(result.getString("expected_condition"));
@@ -514,6 +631,9 @@ public class InspectionDAO {
 				item.setAssetCode(result.getString("asset_code"));
 				item.setAssetName(result.getString("asset_name"));
 				item.setTrackingMode(result.getString("tracking_mode"));
+				item.setAssetItemCode(result.getString("asset_item_code"));
+				item.setSerialNumber(result.getString("serial_number"));
+				item.setAssetItemStatus(result.getString("asset_item_status"));
 				items.add(item);
 			}
 			return items;
@@ -542,6 +662,11 @@ public class InspectionDAO {
 		} else {
 			statement.setLong(index, value);
 		}
+	}
+
+	private Long nullableLong(ResultSet result, String column) throws SQLException {
+		long value = result.getLong(column);
+		return result.wasNull() ? null : value;
 	}
 
 	private String clean(String value) {

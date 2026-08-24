@@ -14,7 +14,7 @@
                     </svg>
                 </button>
                 <div><h1>Chi tiết trách nhiệm</h1>
-                    <p>Hồ sơ trách nhiệm, sự cố và sử dụng thiết bị chỉ đọc</p></div>
+                    <p>Xem kết luận kỹ thuật, đánh giá Mentor và khuyến nghị xử lý</p></div>
             </div>
             <div class="topbar-actions"><a class="btn-secondary"
                                            href="${pageContext.request.contextPath}/lab-manager/responsibilities">‹ Quay lại danh sách trách nhiệm</a></div>

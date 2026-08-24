@@ -17,14 +17,16 @@
     </a>
     <nav class="side-nav" aria-label="Điều hướng thực tập sinh">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
+        <a class="nav-link${activeMenu == 'assets' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/assets"><svg><use href="#i-box"/></svg><span>Danh mục thiết bị</span></a>
         <a class="nav-link${activeMenu == 'borrow' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages/borrow"><svg><use href="#i-box"/></svg><span>Mượn thiết bị</span></a>
         <a class="nav-link${activeMenu == 'usages' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/usages"><svg><use href="#i-calendar"/></svg><span>Lịch sử sử dụng</span></a>
-        <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="#"><svg><use href="#i-alert"/></svg><span>Sự cố của tôi</span></a>
+        <a class="nav-link${activeMenu == 'incidents' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/incidents"><svg><use href="#i-alert"/></svg><span>Sự cố của tôi</span></a>
         <a class="nav-link${activeMenu == 'responsibilities' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/responsibilities"><svg><use href="#i-list"/></svg><span>Trách nhiệm của tôi</span></a>
+        <a class="nav-link${activeMenu == 'labRules' ? ' active' : ''}" href="${pageContext.request.contextPath}/intern/lab-rules"><svg><use href="#i-list"/></svg><span>Nội quy phòng lab</span></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">TT</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i>Thực tập sinh</span></div></div>
-        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
     </div>
 </aside>
 <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Đóng thanh điều hướng"></button>

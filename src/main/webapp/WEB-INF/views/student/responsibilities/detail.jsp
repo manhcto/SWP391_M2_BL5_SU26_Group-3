@@ -14,7 +14,7 @@
                     </svg>
                 </button>
                 <div><h1>Chi tiết trách nhiệm của tôi</h1>
-                    <p>Kết luận của người hướng dẫn, sự cố liên quan và kết quả xử lý dành cho bạn</p></div>
+                    <p>Đánh giá, bằng chứng, sự cố liên quan và khuyến nghị xử lý dành cho bạn</p></div>
             </div>
             <div class="topbar-actions"><a class="btn-secondary"
                                            href="${pageContext.request.contextPath}/intern/responsibilities">‹ Quay lại trách nhiệm của tôi</a></div>

@@ -1,6 +1,9 @@
 package fpt.swp391.labtoolequip.controller.labmanager;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.auth.Authorization;
+import fpt.swp391.labtoolequip.auth.Csrf;
+import fpt.swp391.labtoolequip.auth.Permission;
 import fpt.swp391.labtoolequip.dao.DisposalRecordDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,16 +20,24 @@ public class DisposalController extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		if (!Authorization.has(request, Permission.DISPOSAL_VIEW)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		try {
+			request.setAttribute("csrfToken", Csrf.token(request));
 			String path = request.getPathInfo();
 			if ("/new".equals(path)) {
-				request.setAttribute("assets", dao.findEligibleAssets());
-				forward(request, response, "form.jsp");
+				response.sendError(HttpServletResponse.SC_FORBIDDEN);
 				return;
 			}
 			if (path != null && path.matches("/\\d+")) {
 				request.setAttribute("disposal", dao.findById(Long.parseLong(path.substring(1))).orElseThrow());
 				forward(request, response, "detail.jsp");
+				return;
+			}
+			if (path != null && !"/".equals(path)) {
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
 			request.setAttribute("disposals",
@@ -42,23 +53,30 @@ public class DisposalController extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		request.setCharacterEncoding("UTF-8");
+		if (!Csrf.valid(request)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
+		String action = request.getParameter("action");
+		Permission permission = switch (action == null ? "" : action) {
+			case "approve", "reject" -> Permission.DISPOSAL_REVIEW;
+			case "complete" -> Permission.DISPOSAL_COMPLETE;
+			case "create", "update", "cancel" -> null;
+			default -> null;
+		};
+		if (permission == null || !Authorization.has(request, permission)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		try {
-			String action = request.getParameter("action");
-			long id;
+			long id = disposalId(request);
 			switch (action == null ? "" : action) {
-				case "create" -> id = dao.create(AuthSession.userId(request),
-						Long.parseLong(request.getParameter("assetId")), request.getParameter("reason"));
-				case "update" -> {
-					id = Long.parseLong(request.getParameter("disposalId"));
-					dao.updatePending(id, request.getParameter("reason"));
-				}
-				case "cancel" -> {
-					id = Long.parseLong(request.getParameter("disposalId"));
-					dao.cancel(id, request.getParameter("note"));
-				}
+				case "approve" -> dao.review(id, AuthSession.userId(request), true, request.getParameter("reviewNote"));
+				case "reject" -> dao.review(id, AuthSession.userId(request), false, request.getParameter("reviewNote"));
 				case "complete" -> {
-					id = Long.parseLong(request.getParameter("disposalId"));
-					dao.complete(id, request.getParameter("note"));
+					dao.complete(id, AuthSession.userId(request), request.getParameter("disposalMethod"),
+							request.getParameter("completionNote"));
 				}
 				default -> {
 					response.sendError(HttpServletResponse.SC_BAD_REQUEST);
@@ -71,6 +89,17 @@ public class DisposalController extends HttpServlet {
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			request.setAttribute("message", exception.getMessage());
 			doGet(request, response);
+		}
+	}
+
+	private long disposalId(HttpServletRequest request) {
+		try {
+			long id = Long.parseLong(request.getParameter("disposalId"));
+			if (id <= 0)
+				throw new NumberFormatException();
+			return id;
+		} catch (NumberFormatException exception) {
+			throw new IllegalArgumentException("Yêu cầu thanh lý không hợp lệ.");
 		}
 	}
 

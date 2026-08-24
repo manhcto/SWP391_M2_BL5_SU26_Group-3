@@ -46,33 +46,45 @@
 
             <article class="panel">
                 <c:choose>
-                    <%-- CHẾ ĐỘ CHỈNH SỬA (EDIT): CHỈ CHO ĐỔI ROLE VÀ STATUS, KHÓA TOÀN BỘ THÔNG TIN ĐỊNH DANH --%>
+                    <%-- CHẾ ĐỘ CHỈNH SỬA (EDIT USER) --%>
                     <c:when test="${formMode == 'edit'}">
-                        <form method="post" action="${pageContext.request.contextPath}/admin/users/edit" class="form-grid">
+						<form method="post" action="${pageContext.request.contextPath}/admin/users/edit" class="form-grid">
+							<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                             <input type="hidden" name="id" value="${user.userId}">
 
                             <div class="form-group full-width" style="padding: 10px 14px; background: #fafbf9; border: 1px dashed #d5dbd7; border-radius: 6px;">
-                                <span style="font-size: 11.5px; color: #55605c;">🔒 <b>Quy tắc nghiệp vụ:</b> Quản trị viên chỉ có quyền chuyển đổi vai trò và trạng thái. Các thông tin định danh cá nhân không được phép chỉnh sửa.</span>
+                                <span style="font-size: 11.5px; color: #55605c;">✏️ <b>Cập nhật thông tin:</b> Quản trị viên có thể chỉnh sửa Họ tên, Mã sinh viên, Chuyên ngành, Khóa, Vai trò và Trạng thái. Email đăng nhập Google OAuth2 được giữ cố định.</span>
                             </div>
 
                             <div class="form-group">
-                                <label>Họ và tên <span class="lock-badge">🔒 Cố định</span></label>
-                                <input class="form-control readonly-field" type="text" value="<c:out value='${user.fullName}'/>" readonly disabled>
+                                <label>Họ và tên *</label>
+                                <input class="form-control" type="text" name="fullName" value="<c:out value='${user.fullName}'/>" required placeholder="Nhập họ và tên...">
                             </div>
 
                             <div class="form-group">
-                                <label>Email (@fpt.edu.vn) <span class="lock-badge">🔒 Cố định</span></label>
+								<label>Email <span class="lock-badge">🔒 Cố định</span></label>
                                 <input class="form-control readonly-field" type="email" value="<c:out value='${user.email}'/>" readonly disabled>
                             </div>
 
-                            <c:if test="${not empty user.studentCode}">
+                            <c:if test="${user.role == 'INTERN' || not empty user.studentCode}">
                                 <div class="form-group">
-                                    <label>Mã sinh viên <span class="lock-badge">🔒 Cố định</span></label>
-                                    <input class="form-control readonly-field" type="text" value="<c:out value='${user.studentCode}'/>" readonly disabled>
+                                    <label>Mã sinh viên *</label>
+                                    <input class="form-control" type="text" name="studentCode" value="<c:out value='${user.studentCode}'/>" required placeholder="Ví dụ: SE160123">
                                 </div>
                                 <div class="form-group">
-                                    <label>Chuyên ngành & Khóa <span class="lock-badge">🔒 Cố định</span></label>
-                                    <input class="form-control readonly-field" type="text" value="<c:out value='${user.major}' default='Software Engineering'/> (<c:out value='${user.cohort}' default='K16'/>)" readonly disabled>
+                                    <label>Chuyên ngành</label>
+                                    <select class="form-control" name="majorId">
+                                        <option value="">-- Chọn chuyên ngành --</option>
+                                        <c:forEach var="major" items="${majors}">
+                                            <option value="${major.majorId}" ${user.majorId == major.majorId ? 'selected' : ''}>
+                                                <c:out value="${major.majorCode}"/> - <c:out value="${major.majorName}"/>
+                                            </option>
+                                        </c:forEach>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Khóa</label>
+                                    <input class="form-control" type="text" name="cohort" value="<c:out value='${user.cohort}'/>" placeholder="Ví dụ: K16">
                                 </div>
                             </c:if>
 
@@ -113,7 +125,8 @@
 
                     <%-- CHẾ ĐỘ THÊM MỚI (ADD SINGLE USER) --%>
                     <c:otherwise>
-                        <form method="post" action="${pageContext.request.contextPath}/admin/users/add" class="form-grid">
+						<form method="post" action="${pageContext.request.contextPath}/admin/users/add" class="form-grid">
+							<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
                             <div class="form-group">
                                 <label>Họ và tên *</label>
                                 <input class="form-control" type="text" name="fullName" value="<c:out value='${user.fullName}'/>" required placeholder="Ví dụ: Nguyễn Minh Anh">
@@ -126,6 +139,11 @@
                                     <option value="MENTOR" ${user.role == 'MENTOR' ? 'selected' : ''}>Người hướng dẫn</option>
                                     <option value="LAB_MANAGER" ${user.role == 'LAB_MANAGER' ? 'selected' : ''}>Quản lý phòng LAB</option>
                                 </select>
+                                <c:if test="${hasLabManager}">
+                                    <small id="lmNotice" style="display:none; color:#0369a1; font-size:11.5px; margin-top:5px; line-height:1.4;">
+                                        ℹ️ Hệ thống hiện có Quản lý phòng LAB (<b><c:out value="${currentLmName}"/></b>). Khi tạo tài khoản mới này, tài khoản Quản lý cũ sẽ tự động chuyển sang trạng thái <b>Khóa (INACTIVE)</b>.
+                                    </small>
+                                </c:if>
                             </div>
 
                             <div class="form-group" id="studentCodeGroup">
@@ -134,8 +152,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label id="emailLabel">Email (@fpt.edu.vn) *</label>
-                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: anhnmse160123@fpt.edu.vn">
+                                <label id="emailLabel">Email đăng nhập *</label>
+                                <input class="form-control" type="email" name="email" id="emailInput" value="<c:out value='${user.email}'/>" required placeholder="Ví dụ: ten@gmail.com">
                             </div>
 
                             <div class="form-group" id="majorGroup">
@@ -185,19 +203,21 @@
         const chGroup = document.getElementById('cohortGroup');
         const emailLabel = document.getElementById('emailLabel');
         const emailInput = document.getElementById('emailInput');
+        const lmNotice = document.getElementById('lmNotice');
 
         if (scGroup) scGroup.style.display = isIntern ? 'flex' : 'none';
         if (mjGroup) mjGroup.style.display = isIntern ? 'flex' : 'none';
         if (chGroup) chGroup.style.display = isIntern ? 'flex' : 'none';
+        if (lmNotice) lmNotice.style.display = (roleSelect.value === 'LAB_MANAGER') ? 'block' : 'none';
 
         if (isIntern) {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn) *';
-            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnmse160123@fpt.edu.vn';
+            if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập * <span style="color:#0284c7; font-weight:normal;">(Đăng nhập qua Google)</span>';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: ten@gmail.com';
         } else if (roleSelect.value === 'MENTOR') {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@fpt.edu.vn / @gmail.com) *';
-            if (emailInput) emailInput.placeholder = 'Ví dụ: anhnm@fpt.edu.vn hoặc mentor@gmail.com';
+            if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
+            if (emailInput) emailInput.placeholder = 'Ví dụ: mentor@gmail.com hoặc mentor@fpt.edu.vn';
         } else {
-            if (emailLabel) emailLabel.innerHTML = 'Email (@gmail.com / @fpt.edu.vn) *';
+            if (emailLabel) emailLabel.innerHTML = 'Email đăng nhập *';
             if (emailInput) emailInput.placeholder = 'Ví dụ: manager@gmail.com hoặc manager@fpt.edu.vn';
         }
     }

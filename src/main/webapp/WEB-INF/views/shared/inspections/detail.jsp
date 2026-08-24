@@ -26,7 +26,7 @@
             <h3 class="section-title">Thiết bị kiểm tra</h3>
             <article class="panel"><div class="table-scroll inspection-table-scroll"><table class="inspection-table inspection-detail-table"><thead><tr><th>Mã / Tên thiết bị</th><th>Số lượng dự kiến</th><th>Số lượng thực tế</th><th>Tình trạng dự kiến</th><th>Tình trạng thực tế</th><th>Loại chênh lệch</th><th>Ghi chú chênh lệch</th><th>Sự cố</th></tr></thead><tbody>
                 <c:forEach var="item" items="${items}"><tr>
-                    <td class="asset-cell"><strong><c:out value="${item.assetCode}"/></strong><small><c:out value="${item.assetName}"/></small></td>
+                    <td class="asset-cell"><strong><c:out value="${item.assetCode}"/></strong><small><c:out value="${item.assetName}"/><c:if test="${not empty item.assetItemCode}"> · Item: <c:out value="${item.assetItemCode}"/></c:if><c:if test="${not empty item.serialNumber}"> · Serial: <c:out value="${item.serialNumber}"/></c:if></small></td>
                     <td><c:out value="${item.expectedQuantity}"/></td><td><c:out value="${item.actualQuantity}"/></td>
                     <td><c:out value="${app:label(item.expectedCondition)}"/></td><td><c:out value="${app:label(item.actualCondition)}"/></td>
                     <td><c:out value="${item.discrepancyType}" default="-"/></td><td class="wrap-cell"><c:out value="${item.discrepancyNote}" default="-"/></td>

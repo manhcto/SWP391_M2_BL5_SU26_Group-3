@@ -16,14 +16,45 @@ import java.sql.Types;
 public class UserDAO {
 	private static final String SELECT_USER = """
 			SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
-			       u.role, u.status, u.created_at, u.updated_at,
+			       u.role, u.status, u.must_change_password, u.password_expires_at, u.created_at, u.updated_at,
 			       sp.student_code, sp.major_id, m.major_name AS major, sp.cohort
 			FROM dbo.users u
 			LEFT JOIN dbo.student_profiles sp ON sp.user_id = u.user_id
 			LEFT JOIN dbo.majors m ON m.major_id = sp.major_id
 			""";
+	private static final String SELECT_AUTH_USER = """
+			SELECT u.user_id, u.full_name, u.email, u.password_hash, u.google_subject,
+			       u.role, u.status, u.must_change_password, u.password_expires_at, u.created_at, u.updated_at,
+			       NULL AS student_code, NULL AS major_id, NULL AS major, NULL AS cohort
+			FROM dbo.users u
+			""";
+
+	public record UserSummary(int totalUsers, int internCount, int mentorCount, int labManagerCount, int activeCount,
+			int inactiveCount) {
+	}
 
 	private final DBConnection dbConnection = new DBConnection();
+
+	public UserSummary findSummary() throws SQLException {
+		String sql = """
+				SELECT COUNT(*) AS total_users,
+				       SUM(CASE WHEN role = 'INTERN' THEN 1 ELSE 0 END) AS intern_count,
+				       SUM(CASE WHEN role = 'MENTOR' THEN 1 ELSE 0 END) AS mentor_count,
+				       SUM(CASE WHEN role = 'LAB_MANAGER' THEN 1 ELSE 0 END) AS lab_manager_count,
+				       SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_count,
+				       SUM(CASE WHEN status = 'INACTIVE' THEN 1 ELSE 0 END) AS inactive_count
+				FROM dbo.users
+				WHERE role != 'ADMIN'
+				""";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			result.next();
+			return new UserSummary(result.getInt("total_users"), result.getInt("intern_count"),
+					result.getInt("mentor_count"), result.getInt("lab_manager_count"), result.getInt("active_count"),
+					result.getInt("inactive_count"));
+		}
+	}
 
 	public List<User> findAll(String keyword, String role, String status) throws SQLException {
 		String sql = SELECT_USER + """
@@ -31,7 +62,7 @@ public class UserDAO {
 				  AND (? = '' OR u.full_name LIKE ? OR u.email LIKE ? OR sp.student_code LIKE ?)
 				  AND (? = '' OR u.role = ?)
 				  AND (? = '' OR u.status = ?)
-				ORDER BY u.created_at DESC, u.user_id DESC
+				ORDER BY u.user_id ASC
 				""";
 		String search = valueOrEmpty(keyword);
 		String roleFilter = valueOrEmpty(role);
@@ -69,11 +100,58 @@ public class UserDAO {
 		}
 	}
 
+	public Optional<User> findActiveLabManager() throws SQLException {
+		String sql = SELECT_USER + "WHERE u.role = 'LAB_MANAGER' AND u.status = 'ACTIVE'";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
+		}
+	}
+
+	public Optional<User> findLabManager() throws SQLException {
+		return findActiveLabManager();
+	}
+
+	public boolean appointLabManager(long newLabManagerId) throws SQLException {
+		String sqlDemote = "UPDATE dbo.users SET status = 'INACTIVE', updated_at = SYSUTCDATETIME() WHERE role = 'LAB_MANAGER' AND status = 'ACTIVE' AND user_id != ?";
+		String sqlPromote = "UPDATE dbo.users SET role = 'LAB_MANAGER', status = 'ACTIVE', updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+		try (Connection connection = dbConnection.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				try (PreparedStatement demoteStmt = connection.prepareStatement(sqlDemote)) {
+					demoteStmt.setLong(1, newLabManagerId);
+					demoteStmt.executeUpdate();
+				}
+				try (PreparedStatement promoteStmt = connection.prepareStatement(sqlPromote)) {
+					promoteStmt.setLong(1, newLabManagerId);
+					promoteStmt.executeUpdate();
+				}
+				connection.commit();
+				return true;
+			} catch (SQLException | RuntimeException e) {
+				connection.rollback();
+				throw e;
+			}
+		}
+	}
+
 	public Optional<User> findByEmail(String email) throws SQLException {
-		String sql = SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)";
+		String sql = SELECT_AUTH_USER + "WHERE LOWER(u.email) = LOWER(?)";
 		try (Connection connection = dbConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, valueOrEmpty(email));
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
+			}
+		}
+	}
+
+	public Optional<User> findByStudentCode(String studentCode) throws SQLException {
+		String sql = SELECT_USER + "WHERE LOWER(sp.student_code) = LOWER(?)";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, valueOrEmpty(studentCode));
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next() ? Optional.of(mapUser(result)) : Optional.empty();
 			}
@@ -107,6 +185,15 @@ public class UserDAO {
 		try (Connection connection = dbConnection.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
+				// Nếu tạo tài khoản LAB_MANAGER mới và ACTIVE, tự động vô hiệu hóa (INACTIVE)
+				// Lab Manager đang ACTIVE trước đó
+				if ("LAB_MANAGER".equals(user.getRole()) && "ACTIVE".equals(user.getStatus())) {
+					String sqlDeactivate = "UPDATE dbo.users SET status = 'INACTIVE', updated_at = SYSUTCDATETIME() WHERE role = 'LAB_MANAGER' AND status = 'ACTIVE'";
+					try (PreparedStatement deactStmt = connection.prepareStatement(sqlDeactivate)) {
+						deactStmt.executeUpdate();
+					}
+				}
+
 				long userId;
 				try (PreparedStatement statement = connection.prepareStatement(insertUser,
 						Statement.RETURN_GENERATED_KEYS)) {
@@ -203,6 +290,16 @@ public class UserDAO {
 					deleteStudentProfile(connection, user.getUserId());
 				}
 
+				// Nếu cập nhật tài khoản thành LAB_MANAGER và ACTIVE, tự động vô hiệu hóa các
+				// LAB_MANAGER đang ACTIVE khác
+				if ("LAB_MANAGER".equals(user.getRole()) && "ACTIVE".equals(user.getStatus())) {
+					String sqlDeactivate = "UPDATE dbo.users SET status = 'INACTIVE', updated_at = SYSUTCDATETIME() WHERE role = 'LAB_MANAGER' AND status = 'ACTIVE' AND user_id != ?";
+					try (PreparedStatement deactStmt = connection.prepareStatement(sqlDeactivate)) {
+						deactStmt.setLong(1, user.getUserId());
+						deactStmt.executeUpdate();
+					}
+				}
+
 				boolean updated = updateUser(connection, user);
 				if (!updated) {
 					connection.rollback();
@@ -242,6 +339,17 @@ public class UserDAO {
 			statement.setString(index++, user.getRole());
 			statement.setString(index++, user.getStatus());
 			statement.setLong(index, user.getUserId());
+			return statement.executeUpdate() == 1;
+		}
+	}
+
+	public boolean changePassword(long userId, String passwordHash) throws SQLException {
+		String sql = "UPDATE dbo.users SET password_hash = ?, must_change_password = 0, password_expires_at = NULL, "
+				+ "updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+		try (Connection connection = dbConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setString(1, passwordHash);
+			statement.setLong(2, userId);
 			return statement.executeUpdate() == 1;
 		}
 	}
@@ -296,6 +404,8 @@ public class UserDAO {
 		user.setGoogleSubject(result.getString("google_subject"));
 		user.setRole(result.getString("role"));
 		user.setStatus(result.getString("status"));
+		user.setMustChangePassword(result.getBoolean("must_change_password"));
+		user.setPasswordExpiresAt(ViewFormat.fromUtc(result.getTimestamp("password_expires_at")));
 		user.setStudentCode(result.getString("student_code"));
 		user.setMajorId(nullableLong(result, "major_id"));
 		user.setMajor(result.getString("major"));

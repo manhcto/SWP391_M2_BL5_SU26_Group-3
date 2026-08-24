@@ -6,6 +6,7 @@ public class InspectionItem {
 	private Long inspectionItemId;
 	private Long inspectionId;
 	private Long assetId;
+	private Long assetItemId;
 	private Integer expectedQuantity;
 	private Integer actualQuantity;
 	private String expectedCondition;
@@ -16,6 +17,9 @@ public class InspectionItem {
 	private String assetCode;
 	private String assetName;
 	private String trackingMode;
+	private String assetItemCode;
+	private String serialNumber;
+	private String assetItemStatus;
 
 	public InspectionItem() {
 	}
@@ -57,6 +61,14 @@ public class InspectionItem {
 
 	public void setAssetId(Long assetId) {
 		this.assetId = assetId;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
 	}
 
 	public Integer getExpectedQuantity() {
@@ -137,6 +149,34 @@ public class InspectionItem {
 
 	public void setTrackingMode(String trackingMode) {
 		this.trackingMode = trackingMode;
+	}
+
+	public String getAssetItemCode() {
+		return assetItemCode;
+	}
+
+	public void setAssetItemCode(String assetItemCode) {
+		this.assetItemCode = assetItemCode;
+	}
+
+	public String getSerialNumber() {
+		return serialNumber;
+	}
+
+	public void setSerialNumber(String serialNumber) {
+		this.serialNumber = serialNumber;
+	}
+
+	public String getAssetItemStatus() {
+		return assetItemStatus;
+	}
+
+	public void setAssetItemStatus(String assetItemStatus) {
+		this.assetItemStatus = assetItemStatus;
+	}
+
+	public String getRowKey() {
+		return assetItemId == null ? String.valueOf(assetId) : "item_" + assetItemId;
 	}
 
 	public boolean isAbnormal() {

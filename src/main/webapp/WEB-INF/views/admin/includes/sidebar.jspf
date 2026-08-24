@@ -22,11 +22,12 @@
     <nav class="side-nav" aria-label="Điều hướng quản trị viên">
         <a class="nav-link${activeMenu == 'dashboard' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/dashboard"><svg><use href="#i-grid"/></svg><span>Bảng điều khiển</span></a>
         <a class="nav-link${activeMenu == 'users' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/users"><svg><use href="#i-users"/></svg><span>Quản lý người dùng</span></a>
-        <a class="nav-link${activeMenu == 'labRequests' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg><span>Danh sách thực tập sinh</span></a>
+<a class="nav-link${activeMenu == 'internLists' ? ' active' : ''}" href="${pageContext.request.contextPath}/admin/interns"><svg><use href="#i-clipboard"/></svg><span>Danh sách thực tập sinh</span></a>
+        <a class="nav-link${activeMenu == 'passwordResets' ? ' active' : ''}" href="${pageContext.request.contextPath}/password-reset"><svg><use href="#i-users"/></svg><span>Đặt lại mật khẩu</span><c:if test="${pendingPasswordResetCount > 0}"><span class="nav-count"><c:out value="${pendingPasswordResetCount}"/></span></c:if></a>
     </nav>
     <div class="sidebar-footer">
         <div class="profile-card"><div class="avatar avatar-lg">AD</div><div class="profile-copy"><strong><c:out value="${currentUser.fullName}"/></strong><span><i></i><c:out value="${app:label(currentUser.role)}"/></span></div></div>
-        <form method="post" action="${pageContext.request.contextPath}/logout"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
+        <form method="post" action="${pageContext.request.contextPath}/logout"><input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}"><button class="sign-out" type="submit"><svg><use href="#i-logout"/></svg><span>Đăng xuất</span></button></form>
     </div>
 </aside>
 <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Đóng thanh điều hướng"></button>

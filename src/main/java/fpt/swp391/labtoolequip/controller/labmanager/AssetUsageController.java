@@ -23,8 +23,8 @@ public class AssetUsageController extends HttpServlet {
 				request.getRequestDispatcher("/WEB-INF/views/labmanager/usages/detail.jsp").forward(request, response);
 				return;
 			}
-			request.setAttribute("usages",
-					dao.findAll(request.getParameter("keyword"), request.getParameter("status")));
+			request.setAttribute("usages", dao.findAll(request.getParameter("keyword"), request.getParameter("status"),
+					request.getParameter("fromDate"), request.getParameter("toDate")));
 			request.getRequestDispatcher("/WEB-INF/views/labmanager/usages/list.jsp").forward(request, response);
 		} catch (SQLException exception) {
 			throw new ServletException(exception);

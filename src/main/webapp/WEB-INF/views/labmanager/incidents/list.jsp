@@ -21,7 +21,7 @@
                 </button>
                 <div>
                     <h1>Quản lý sự cố</h1>
-                    <p>Theo dõi và phân loại các sự cố phát sinh trong phòng LAB</p>
+                    <p>Điều tra các sự cố đã được Mentor chuyển tiếp</p>
                 </div>
             </div>
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
@@ -36,10 +36,11 @@
                            placeholder="Tìm theo mã, thiết bị hoặc người báo cáo" style="width:280px">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="OPEN" ${selectedStatus == 'OPEN' ? 'selected' : ''}>Đang mở</option>
+                        <option value="FORWARDED" ${selectedStatus == 'FORWARDED' ? 'selected' : ''}>Đã chuyển tiếp</option>
                         <option value="INVESTIGATING" ${selectedStatus == 'INVESTIGATING' ? 'selected' : ''}>Đang xử lý</option>
                         <option value="RESOLVED" ${selectedStatus == 'RESOLVED' ? 'selected' : ''}>Đã giải quyết</option>
                         <option value="CLOSED" ${selectedStatus == 'CLOSED' ? 'selected' : ''}>Đã đóng</option>
+                        <option value="OPEN" ${selectedStatus == 'OPEN' ? 'selected' : ''}>Mở (lịch sử)</option>
                     </select>
                     <select class="form-control" name="severity">
                         <option value="">Tất cả mức độ</option>
@@ -61,18 +62,19 @@
                     <c:otherwise>
                         <div class="table-scroll">
                             <table>
-                                <thead><tr><th>Mã sự cố</th><th>Thiết bị</th><th>Loại sự cố</th><th>Mức độ</th><th>Người báo cáo</th><th>Thời gian</th><th>Trạng thái</th><th>Mô tả</th></tr></thead>
+                                <thead><tr><th>Mã sự cố</th><th>Thiết bị</th><th>Loại sự cố</th><th>Mức độ</th><th>Người báo cáo</th><th>Thời gian</th><th>Trạng thái</th><th>Mô tả</th><th>Thao tác</th></tr></thead>
                                 <tbody>
                                 <c:forEach var="incident" items="${incidents}">
                                     <tr>
                                         <td><strong>#INC-<c:out value="${incident.incidentId}"/></strong></td>
-                                        <td><strong><c:out value="${incident.assetName}"/></strong><br><small><c:out value="${incident.assetCode}"/></small></td>
+                                        <td><strong><c:out value="${incident.assetName}"/></strong><br><small><c:out value="${empty incident.assetItemCode ? incident.assetCode : incident.assetItemCode}"/></small></td>
                                         <td><c:out value="${app:label(incident.incidentType)}"/></td>
                                         <td><span class="status ${incident.severity == 'CRITICAL' || incident.severity == 'HIGH' ? 'open' : 'review'}"><c:out value="${app:label(incident.severity)}"/></span></td>
                                         <td><c:out value="${incident.reporterName}"/><c:if test="${not empty incident.internName}"><br><small>Thực tập sinh: <c:out value="${incident.internName}"/></small></c:if></td>
                                         <td><c:out value="${app:dateTime(incident.reportedAt)}"/></td>
-                                        <td><span class="status ${incident.status == 'OPEN' ? 'open' : incident.status == 'RESOLVED' || incident.status == 'CLOSED' ? 'returned' : 'review'}"><c:out value="${app:label(incident.status)}"/></span></td>
+                                        <td><span class="status ${incident.status == 'FORWARDED' || incident.status == 'OPEN' ? 'open' : incident.status == 'RESOLVED' || incident.status == 'CLOSED' ? 'returned' : 'review'}"><c:out value="${app:label(incident.status)}"/></span></td>
                                         <td class="wrap-cell"><c:out value="${incident.description}"/></td>
+                                        <td><a class="btn-action btn-action-primary" href="${pageContext.request.contextPath}/lab-manager/incidents/${incident.incidentId}">${incident.status == 'FORWARDED' || incident.status == 'INVESTIGATING' || incident.status == 'RESOLVED' ? 'Xử lý' : 'Xem'}</a></td>
                                     </tr>
                                 </c:forEach>
                                 </tbody>

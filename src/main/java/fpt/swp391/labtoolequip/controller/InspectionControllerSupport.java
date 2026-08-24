@@ -1,8 +1,8 @@
 package fpt.swp391.labtoolequip.controller;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
+import fpt.swp391.labtoolequip.auth.Csrf;
 import fpt.swp391.labtoolequip.dao.InspectionDAO;
-import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.InspectionItem;
 import fpt.swp391.labtoolequip.model.InspectionRecord;
 import jakarta.servlet.ServletException;
@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class InspectionControllerSupport extends HttpServlet {
@@ -23,6 +24,10 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 	protected abstract String roleBase();
 
 	protected abstract String roleName();
+
+	protected boolean canMutate() {
+		return true;
+	}
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -34,10 +39,18 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 				return;
 			}
 			if ("/new".equals(path)) {
+				if (!canMutate()) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
 				showForm(request, response, new InspectionRecord(), List.of());
 				return;
 			}
 			if (path.matches("/\\d+/edit")) {
+				if (!canMutate()) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
 				long id = idFrom(path);
 				InspectionRecord inspection = dao.findById(id).orElseThrow();
 				if (!"DRAFT".equals(inspection.getStatus())) {
@@ -65,6 +78,10 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		if (!canMutate()) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		request.setCharacterEncoding("UTF-8");
 		String action = request.getParameter("action");
 		boolean complete = "complete".equals(action);
@@ -114,13 +131,13 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 
 	private void showForm(HttpServletRequest request, HttpServletResponse response, InspectionRecord inspection,
 			List<InspectionItem> items) throws SQLException, ServletException, IOException {
-		List<Asset> assets = dao.findInspectableAssets();
-		Map<Long, InspectionItem> itemByAsset = items.stream()
-				.collect(Collectors.toMap(InspectionItem::getAssetId, item -> item, (first, second) -> first));
+		List<InspectionItem> targets = dao.findInspectableTargets();
+		Map<String, InspectionItem> itemByTarget = items.stream()
+				.collect(Collectors.toMap(InspectionItem::getRowKey, item -> item, (first, second) -> first));
 		request.setAttribute("inspection", inspection);
 		request.setAttribute("items", items);
-		request.setAttribute("itemByAsset", itemByAsset);
-		request.setAttribute("assets", assets);
+		request.setAttribute("itemByTarget", itemByTarget);
+		request.setAttribute("assets", targets);
 		request.setAttribute("semesters", dao.findSemesters());
 		forward(request, response, "form.jsp");
 	}
@@ -140,10 +157,20 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 	}
 
 	private List<InspectionItem> itemsFrom(HttpServletRequest request, String scope) {
-		List<Long> selected = selectedAssets(request, scope);
+		Set<Long> selected = selectedAssets(request, scope);
+		String[] targetKeys = request.getParameterValues("targetKey");
 		List<InspectionItem> items = new ArrayList<>();
-		for (Long assetId : selected) {
-			items.add(itemFrom(request, assetId));
+		if (targetKeys == null) {
+			return items;
+		}
+		for (String targetKey : targetKeys) {
+			if (targetKey == null || targetKey.isBlank()) {
+				continue;
+			}
+			InspectionItem item = itemFrom(request, targetKey);
+			if ("WHOLE_LAB".equals(scope) || selected.contains(item.getAssetId())) {
+				items.add(item);
+			}
 		}
 		return items;
 	}
@@ -156,35 +183,38 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 		}
 	}
 
-	private List<Long> selectedAssets(HttpServletRequest request, String scope) {
-		String parameter = "WHOLE_LAB".equals(scope) ? "assetId" : "selectedAssetId";
-		String[] values = request.getParameterValues(parameter);
+	private Set<Long> selectedAssets(HttpServletRequest request, String scope) {
+		String[] values = request.getParameterValues("selectedAssetId");
 		if (values == null) {
-			return List.of();
+			return Set.of();
 		}
 		return java.util.Arrays.stream(values).filter(value -> value != null && !value.isBlank()).map(Long::parseLong)
-				.collect(Collectors.toList());
+				.collect(Collectors.toCollection(java.util.LinkedHashSet::new));
 	}
 
-	private InspectionItem itemFrom(HttpServletRequest request, Long assetId) {
+	private InspectionItem itemFrom(HttpServletRequest request, String targetKey) {
 		InspectionItem item = new InspectionItem();
-		item.setAssetId(assetId);
-		item.setExpectedQuantity(intValue(request, "expectedQuantity", assetId));
-		item.setActualQuantity(intValue(request, "actualQuantity", assetId));
-		item.setExpectedCondition(value(request, "expectedCondition", assetId));
-		item.setActualCondition(value(request, "actualCondition", assetId));
-		item.setDiscrepancyType(value(request, "discrepancyType", assetId));
-		item.setDiscrepancyNote(value(request, "discrepancyNote", assetId));
+		item.setAssetId(Long.parseLong(request.getParameter("assetId_" + targetKey)));
+		String assetItemId = request.getParameter("assetItemId_" + targetKey);
+		if (assetItemId != null && !assetItemId.isBlank()) {
+			item.setAssetItemId(Long.parseLong(assetItemId));
+		}
+		item.setExpectedQuantity(intValue(request, "expectedQuantity", targetKey));
+		item.setActualQuantity(intValue(request, "actualQuantity", targetKey));
+		item.setExpectedCondition(value(request, "expectedCondition", targetKey));
+		item.setActualCondition(value(request, "actualCondition", targetKey));
+		item.setDiscrepancyType(value(request, "discrepancyType", targetKey));
+		item.setDiscrepancyNote(value(request, "discrepancyNote", targetKey));
 		return item;
 	}
 
-	private int intValue(HttpServletRequest request, String prefix, Long assetId) {
-		String value = request.getParameter(prefix + "_" + assetId);
+	private int intValue(HttpServletRequest request, String prefix, String targetKey) {
+		String value = request.getParameter(prefix + "_" + targetKey);
 		return value == null || value.isBlank() ? 0 : Integer.parseInt(value);
 	}
 
-	private String value(HttpServletRequest request, String prefix, Long assetId) {
-		return request.getParameter(prefix + "_" + assetId);
+	private String value(HttpServletRequest request, String prefix, String targetKey) {
+		return request.getParameter(prefix + "_" + targetKey);
 	}
 
 	private long idFrom(String path) {
@@ -195,6 +225,7 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 			throws ServletException, IOException {
 		request.setAttribute("roleBase", roleBase());
 		request.setAttribute("roleName", roleName());
+		request.setAttribute("csrfToken", Csrf.token(request));
 		request.getRequestDispatcher("/WEB-INF/views/shared/inspections/" + view).forward(request, response);
 	}
 }

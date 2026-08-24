@@ -15,10 +15,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
@@ -56,11 +56,9 @@ public class GoogleCallbackController extends HttpServlet {
 				return;
 			}
 			User user = found.get();
-			String domain = required("FPT_EMAIL_DOMAIN");
-			if ("INTERN".equals(user.getRole())
-					&& !payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
+			if (!"INTERN".equals(user.getRole())) {
 				deny(request, response,
-						"Access denied: an FPT Google account (@" + domain + ") is required for students.");
+						"Đăng nhập Google chỉ dành riêng cho Thực tập sinh (Sinh viên). Cán bộ/Quản lý vui lòng đăng nhập bằng Email và Mật khẩu.");
 				return;
 			}
 			if (user.getGoogleSubject() == null) {
@@ -99,30 +97,30 @@ public class GoogleCallbackController extends HttpServlet {
 		return matcher.group(1);
 	}
 
-	private GoogleIdToken verify(String token) throws IOException, GeneralSecurityException {
+	private GoogleIdToken verify(String idToken) throws GeneralSecurityException, IOException {
 		GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
 				GsonFactory.getDefaultInstance()).setAudience(Collections.singletonList(required("GOOGLE_CLIENT_ID")))
-				.setIssuers(java.util.List.of("accounts.google.com", "https://accounts.google.com")).build();
-		GoogleIdToken verified = verifier.verify(token);
-		if (verified == null)
-			throw new IllegalArgumentException("ID token của Google không hợp lệ.");
-		return verified;
+				.build();
+		GoogleIdToken token = verifier.verify(idToken);
+		if (token == null)
+			throw new IllegalStateException("ID token từ Google không hợp lệ.");
+		return token;
+	}
+
+	private String required(String key) {
+		String value = AppConfig.get(key);
+		if (value == null || value.isBlank())
+			throw new IllegalStateException("Thiếu cấu hình bắt buộc: " + key);
+		return value.trim();
+	}
+
+	private String encode(String value) {
+		return URLEncoder.encode(value, StandardCharsets.UTF_8);
 	}
 
 	private void deny(HttpServletRequest request, HttpServletResponse response, String message)
 			throws ServletException, IOException {
 		request.setAttribute("message", message);
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
-	}
-
-	private String required(String key) {
-		String value = AppConfig.get(key);
-		if (value == null || value.isBlank())
-			throw new IllegalStateException("Thiếu cấu hình " + key);
-		return value;
-	}
-
-	private String encode(String value) {
-		return URLEncoder.encode(value, StandardCharsets.UTF_8);
 	}
 }

@@ -1,8 +1,9 @@
 package fpt.swp391.labtoolequip.controller.labmanager;
 
 import fpt.swp391.labtoolequip.auth.AuthSession;
-import fpt.swp391.labtoolequip.common.ViewFormat;
-import fpt.swp391.labtoolequip.dao.AssetDAO;
+import fpt.swp391.labtoolequip.auth.Authorization;
+import fpt.swp391.labtoolequip.auth.Csrf;
+import fpt.swp391.labtoolequip.auth.Permission;
 import fpt.swp391.labtoolequip.dao.MaintenanceDAO;
 import fpt.swp391.labtoolequip.model.MaintenanceRecord;
 import jakarta.servlet.ServletException;
@@ -12,31 +13,51 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.List;
 
-@WebServlet({"/labmanager/maintenance", "/labmanager/maintenance/view", "/labmanager/maintenance/add",
-		"/labmanager/maintenance/approve", "/labmanager/maintenance/edit"})
+@WebServlet("/lab-manager/maintenance/*")
 public class LabManagerMaintenanceController extends HttpServlet {
-	private static final String LIST_VIEW = "/WEB-INF/views/labmanager/maintenance/list.jsp";
-	private static final String DETAIL_VIEW = "/WEB-INF/views/labmanager/maintenance/detail.jsp";
-	private static final String FORM_VIEW = "/WEB-INF/views/labmanager/maintenance/form.jsp";
-
-	private final MaintenanceDAO maintenanceDAO = new MaintenanceDAO();
-	private final AssetDAO assetDAO = new AssetDAO();
+	private final MaintenanceDAO dao = new MaintenanceDAO();
 
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		if (!Authorization.has(request, Permission.MAINTENANCE_VIEW)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
+			return;
+		}
 		try {
-			switch (request.getServletPath()) {
-				case "/labmanager/maintenance/view" -> showDetail(request, response);
-				case "/labmanager/maintenance/add" -> showAddForm(request, response);
-				case "/labmanager/maintenance/edit" -> showEditForm(request, response);
-				default -> showList(request, response);
+			request.setAttribute("csrfToken", Csrf.token(request));
+			String path = request.getPathInfo();
+			if ("/new".equals(path)) {
+				response.sendError(HttpServletResponse.SC_FORBIDDEN,
+						"Mentor tạo yêu cầu bảo trì; Lab Manager chỉ xử lý yêu cầu đã gửi.");
+				return;
 			}
-		} catch (SQLException ex) {
-			handleError(request, response, ex);
+			if (path != null && path.matches("/\\d+/edit")) {
+				if (!Authorization.has(request, Permission.MAINTENANCE_PROCESS)) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN);
+					return;
+				}
+				showProcessForm(request, response, Long.parseLong(path.substring(1, path.lastIndexOf('/'))));
+				return;
+			}
+			if (path != null && path.matches("/\\d+")) {
+				showDetail(request, response, Long.parseLong(path.substring(1)));
+				return;
+			}
+			if (path != null && !"/".equals(path)) {
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+				return;
+			}
+			request.setAttribute("records",
+					dao.findAll(request.getParameter("keyword"), request.getParameter("status")));
+			request.setAttribute("keyword", request.getParameter("keyword"));
+			request.setAttribute("selectedStatus", request.getParameter("status"));
+			forward(request, response, "list.jsp");
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		} catch (RuntimeException exception) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 		}
 	}
 
@@ -44,145 +65,83 @@ public class LabManagerMaintenanceController extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
-		try {
-			switch (request.getServletPath()) {
-				case "/labmanager/maintenance/add" -> createRecord(request, response);
-				case "/labmanager/maintenance/approve" -> processApproval(request, response);
-				case "/labmanager/maintenance/edit" -> updateProgress(request, response);
-				default -> response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-			}
-		} catch (SQLException ex) {
-			handleError(request, response, ex);
-		}
-	}
-
-	private void showList(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		String keyword = request.getParameter("keyword");
-		String status = request.getParameter("status");
-		List<MaintenanceRecord> records = maintenanceDAO.findAll(keyword, status, null);
-		request.setAttribute("records", records);
-		request.setAttribute("keyword", keyword);
-		request.setAttribute("selectedStatus", status);
-		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
-	}
-
-	private void showDetail(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		long id = requireId(request, response);
-		if (response.isCommitted())
-			return;
-
-		MaintenanceRecord record = maintenanceDAO.findById(id).orElse(null);
-		if (record == null) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+		if (!Csrf.valid(request) || !Authorization.has(request, Permission.MAINTENANCE_PROCESS)) {
+			response.sendError(HttpServletResponse.SC_FORBIDDEN);
 			return;
 		}
-		request.setAttribute("record", record);
-		request.getRequestDispatcher(DETAIL_VIEW).forward(request, response);
-	}
-
-	private void showAddForm(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		request.setAttribute("assets", assetDAO.findAll());
-		request.setAttribute("formMode", "add");
-		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
-	}
-
-	private void showEditForm(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, ServletException, IOException {
-		long id = requireId(request, response);
-		if (response.isCommitted())
-			return;
-
-		MaintenanceRecord record = maintenanceDAO.findById(id).orElse(null);
-		if (record == null) {
-			response.sendError(HttpServletResponse.SC_NOT_FOUND);
-			return;
-		}
-		request.setAttribute("record", record);
-		request.setAttribute("formMode", "edit");
-		request.getRequestDispatcher(FORM_VIEW).forward(request, response);
-	}
-
-	private void createRecord(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, IOException {
-		long assetId = Long.parseLong(request.getParameter("assetId"));
-		String description = request.getParameter("description");
-		int quantity = Integer.parseInt(request.getParameter("quantity"));
-
-		MaintenanceRecord m = new MaintenanceRecord();
-		m.setAssetId(assetId);
-		m.setDescription(description);
-		m.setQuantity(quantity);
-		m.setRequestedBy(AuthSession.userId(request));
-
-		long createdId = maintenanceDAO.create(m);
-		// Update asset status to MAINTENANCE
-		assetDAO.updateStatus(assetId, "MAINTENANCE");
-
-		response.sendRedirect(request.getContextPath() + "/labmanager/maintenance?success=created");
-	}
-
-	private void processApproval(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, IOException {
-		long id = Long.parseLong(request.getParameter("id"));
-		String decision = request.getParameter("decision"); // APPROVED or REJECTED
-		String note = request.getParameter("approvalNote");
-
-		maintenanceDAO.approveOrReject(id, decision, AuthSession.userId(request), note);
-
-		if ("APPROVED".equals(decision)) {
-			// Find asset to set to MAINTENANCE status
-			maintenanceDAO.findById(id).ifPresent(m -> {
-				try {
-					assetDAO.updateStatus(m.getAssetId(), "MAINTENANCE");
-				} catch (SQLException ignored) {
-				}
-			});
-		}
-
-		response.sendRedirect(request.getContextPath() + "/labmanager/maintenance?success=approved");
-	}
-
-	private void updateProgress(HttpServletRequest request, HttpServletResponse response)
-			throws SQLException, IOException {
-		long id = Long.parseLong(request.getParameter("id"));
-		String status = request.getParameter("status"); // IN_PROGRESS or COMPLETED
-		String repairResult = request.getParameter("repairResult");
-		String note = request.getParameter("note");
-
-		LocalDateTime startedAt = "IN_PROGRESS".equals(status) || "COMPLETED".equals(status) ? ViewFormat.now() : null;
-		LocalDateTime completedAt = "COMPLETED".equals(status) ? ViewFormat.now() : null;
-
-		maintenanceDAO.updateProgress(id, status, startedAt, completedAt, repairResult, note);
-
-		if ("COMPLETED".equals(status)) {
-			// Asset is repaired and back in service
-			maintenanceDAO.findById(id).ifPresent(m -> {
-				try {
-					assetDAO.updateStatus(m.getAssetId(), "AVAILABLE");
-				} catch (SQLException ignored) {
-				}
-			});
-		}
-
-		response.sendRedirect(request.getContextPath() + "/labmanager/maintenance?success=updated");
-	}
-
-	private long requireId(HttpServletRequest request, HttpServletResponse response) throws IOException {
-		try {
-			return Long.parseLong(request.getParameter("id"));
-		} catch (Exception e) {
+		String action = request.getParameter("action");
+		if (!"approve".equals(action) && !"reject".equals(action) && !"start".equals(action)
+				&& !"complete".equals(action)) {
 			response.sendError(HttpServletResponse.SC_BAD_REQUEST);
-			return -1;
+			return;
+		}
+		long id;
+		try {
+			id = requiredId(request, "id");
+		} catch (IllegalArgumentException exception) {
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, exception.getMessage());
+			return;
+		}
+		try {
+			long managerId = AuthSession.userId(request);
+			switch (action) {
+				case "approve" -> dao.approve(id, managerId, request.getParameter("approvalNote"));
+				case "reject" -> dao.reject(id, managerId, request.getParameter("approvalNote"));
+				case "start" -> dao.start(id, managerId, request.getParameter("note"));
+				case "complete" -> dao.complete(id, managerId, request.getParameter("repairOutcome"),
+						request.getParameter("repairResult"), request.getParameter("note"));
+				default -> throw new IllegalStateException("Thao tác bảo trì không hợp lệ.");
+			}
+			response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance/" + id + "?success=" + action);
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		} catch (IllegalArgumentException | IllegalStateException exception) {
+			request.setAttribute("message", exception.getMessage());
+			try {
+				showProcessForm(request, response, id);
+			} catch (SQLException sqlException) {
+				throw new ServletException(sqlException);
+			}
 		}
 	}
 
-	private void handleError(HttpServletRequest request, HttpServletResponse response, SQLException ex)
+	private void showDetail(HttpServletRequest request, HttpServletResponse response, long id)
+			throws SQLException, ServletException, IOException {
+		MaintenanceRecord record = dao.findById(id).orElse(null);
+		if (record == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		request.setAttribute("record", record);
+		forward(request, response, "detail.jsp");
+	}
+
+	private void showProcessForm(HttpServletRequest request, HttpServletResponse response, long id)
+			throws SQLException, ServletException, IOException {
+		request.setAttribute("csrfToken", Csrf.token(request));
+		MaintenanceRecord record = dao.findById(id).orElse(null);
+		if (record == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		request.setAttribute("record", record);
+		forward(request, response, "form.jsp");
+	}
+
+	private long requiredId(HttpServletRequest request, String name) {
+		try {
+			long id = Long.parseLong(request.getParameter(name));
+			if (id <= 0) {
+				throw new NumberFormatException();
+			}
+			return id;
+		} catch (NumberFormatException exception) {
+			throw new IllegalArgumentException("Mã phiếu bảo trì không hợp lệ.");
+		}
+	}
+
+	private void forward(HttpServletRequest request, HttpServletResponse response, String view)
 			throws ServletException, IOException {
-		getServletContext().log("LabManagerMaintenanceController error", ex);
-		request.setAttribute("errorMessage", "Lỗi cơ sở dữ liệu: " + ex.getMessage());
-		request.getRequestDispatcher(LIST_VIEW).forward(request, response);
+		request.getRequestDispatcher("/WEB-INF/views/labmanager/maintenance/" + view).forward(request, response);
 	}
 }
