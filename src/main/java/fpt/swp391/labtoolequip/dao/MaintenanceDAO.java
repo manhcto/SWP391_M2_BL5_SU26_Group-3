@@ -16,7 +16,8 @@ import java.util.regex.Pattern;
 
 public class MaintenanceDAO {
 	private static final String SELECT = """
-			SELECT m.*, a.asset_code, a.asset_name, a.storage_location, a.status AS asset_status,
+			SELECT m.*, a.asset_code, a.asset_name, a.storage_location,
+			       COALESCE(ai_direct.status, ai_incident.status, a.status) AS asset_status,
 			       requester.full_name AS requester_name,
 			       approver.full_name AS approver_name,
 			       i.description AS incident_description,
