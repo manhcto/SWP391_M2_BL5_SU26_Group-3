@@ -298,7 +298,14 @@
                                                             </svg>+ Lên lịch bảo trì mới
                                                         </a>
                                                     </c:when>
-                                                    <c:otherwise><span class="status">Duyệt yêu cầu từ Mentor</span></c:otherwise>
+                                                    <c:otherwise>
+                                                        <a class="primary-button"
+                                                            href="${pageContext.request.contextPath}/lab-manager/maintenance/new">
+                                                            <svg>
+                                                                <use href="#i-plus" />
+                                                            </svg>+ Tạo phiếu bảo trì
+                                                        </a>
+                                                    </c:otherwise>
                                                 </c:choose>
                                             </div>
                                         </div>
