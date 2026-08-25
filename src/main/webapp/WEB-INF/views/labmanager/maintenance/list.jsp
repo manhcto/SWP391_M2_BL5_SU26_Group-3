@@ -12,13 +12,12 @@
                     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
                     <style>
                         .alert-banner {
-                            background: #fffbeb;
-                            border: 1px solid #fde68a;
-                            border-left: 5px solid #f59e0b;
-                            border-radius: 10px;
-                            padding: 16px 20px;
-                            margin-bottom: 22px;
-                            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                            background: #f8fafc;
+                            border: 1px solid #e2e8f0;
+                            border-left: 4px solid #f59e0b;
+                            border-radius: 8px;
+                            padding: 14px 18px;
+                            margin-bottom: 20px;
                         }
 
                         .alert-banner-header {
@@ -27,16 +26,17 @@
                             justify-content: space-between;
                             gap: 12px;
                             flex-wrap: wrap;
-                            margin-bottom: 8px;
+                            margin-bottom: 6px;
                         }
 
                         .alert-badge {
-                            background: #ef4444;
-                            color: #fff;
+                            background: #fef2f2;
+                            color: #dc2626;
+                            border: 1px solid #fecaca;
                             font-size: 11.5px;
                             padding: 2px 8px;
-                            border-radius: 12px;
-                            font-weight: 700;
+                            border-radius: 10px;
+                            font-weight: 600;
                         }
 
                         .nav-tabs {
@@ -206,67 +206,65 @@
                                 </header>
 
                                 <section class="content-area">
-                                    <%-- CẢNH BÁO LỊCH BẢO TRÌ ĐẾN HẠN / QUÁ HẠN (ALERT BANNER) --%>
-                                        <c:if test="${not empty dueSchedules}">
-                                            <div class="alert-banner">
-                                                <div class="alert-banner-header">
-                                                    <div
-                                                        style="font-size: 14.5px; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 8px;">
-                                                        <span>NHẮC NHỞ LỊCH BẢO TRÌ ĐỊNH KỲ</span>
-                                                        <span class="alert-badge">${dueSchedules.size()} lịch cần thực
-                                                            hiện</span>
-                                                    </div>
-                                                    <c:if test="${activeTab != 'schedules'}">
-                                                        <a href="${pageContext.request.contextPath}/lab-manager/maintenance?tab=schedules"
-                                                            class="primary-button"
-                                                            style="background: #d97706; font-size: 12.5px; padding: 6px 12px; height: auto; text-decoration: none;">
-                                                            Xem chi tiết lịch bảo trì →
-                                                        </a>
-                                                    </c:if>
+                                    <c:if test="${not empty dueSchedules}">
+                                        <div class="alert-banner">
+                                            <div class="alert-banner-header">
+                                                <div
+                                                    style="font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                                                    <span>Nhắc nhở lịch bảo trì định kỳ</span>
+                                                    <span class="alert-badge">${dueSchedules.size()} lịch cần thực
+                                                        hiện</span>
                                                 </div>
-                                                <div style="font-size: 13.5px; color: #78350f; line-height: 1.5;">
-                                                    Phát hiện <b>${dueSchedules.size()}</b> thiết bị đến hạn bảo dưỡng
-                                                    trong tuần này hoặc đã quá hạn:
-                                                    <ul style="margin: 6px 0 0 20px; padding: 0;">
-                                                        <c:forEach var="ds" items="${dueSchedules}" varStatus="status">
-                                                            <c:if test="${status.index < 3}">
-                                                                <li style="margin-bottom: 3px;">
-                                                                    <b>
-                                                                        <c:out value="${ds.title}" />
-                                                                    </b> —
-                                                                    <c:out value="${ds.assetName}" /> (
-                                                                    <c:out
-                                                                        value="${not empty ds.itemCode ? ds.itemCode : ds.assetCode}" />
-                                                                    )
-                                                                    <c:choose>
-                                                                        <c:when test="${ds.overdue}">
-                                                                            <span
-                                                                                style="color: #dc2626; font-weight: 700;">(Đã
-                                                                                quá hạn ${ds.daysDiff * -1} ngày)</span>
-                                                                        </c:when>
-                                                                        <c:when test="${ds.daysDiff == 0}">
-                                                                            <span
-                                                                                style="color: #ea580c; font-weight: 700;">(Đến
-                                                                                hạn hôm nay!)</span>
-                                                                        </c:when>
-                                                                        <c:otherwise>
-                                                                            <span
-                                                                                style="color: #b45309; font-weight: 600;">(Hạn:
-                                                                                ${app:date(ds.scheduledDate)} - Còn
-                                                                                ${ds.daysDiff} ngày)</span>
-                                                                        </c:otherwise>
-                                                                    </c:choose>
-                                                                </li>
-                                                            </c:if>
-                                                        </c:forEach>
-                                                        <c:if test="${dueSchedules.size() > 3}">
-                                                            <li><em>Và ${dueSchedules.size() - 3} thiết bị khác trong
-                                                                    danh sách lịch...</em></li>
-                                                        </c:if>
-                                                    </ul>
-                                                </div>
+                                                <c:if test="${activeTab != 'schedules'}">
+                                                    <a href="${pageContext.request.contextPath}/lab-manager/maintenance?tab=schedules"
+                                                        style="font-size: 12px; padding: 5px 12px; text-decoration: none; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; color: #334155; font-weight: 500;">
+                                                        Xem chi tiết lịch →
+                                                    </a>
+                                                </c:if>
                                             </div>
-                                        </c:if>
+                                            <div style="font-size: 13px; color: #475569; line-height: 1.6;">
+                                                Phát hiện <b>${dueSchedules.size()}</b> thiết bị đến hạn bảo dưỡng
+                                                trong tuần này hoặc đã quá hạn:
+                                                <ul style="margin: 6px 0 0 20px; padding: 0; color: #334155;">
+                                                    <c:forEach var="ds" items="${dueSchedules}" varStatus="status">
+                                                        <c:if test="${status.index < 3}">
+                                                            <li style="margin-bottom: 4px;">
+                                                                <b>
+                                                                    <c:out value="${ds.title}" />
+                                                                </b> —
+                                                                <c:out value="${ds.assetName}" /> (
+                                                                <c:out
+                                                                    value="${not empty ds.itemCode ? ds.itemCode : ds.assetCode}" />
+                                                                )
+                                                                <c:choose>
+                                                                    <c:when test="${ds.overdue}">
+                                                                        <span
+                                                                            style="color: #dc2626; font-weight: 600;">(Đã
+                                                                            quá hạn ${ds.daysDiff * -1} ngày)</span>
+                                                                    </c:when>
+                                                                    <c:when test="${ds.daysDiff == 0}">
+                                                                        <span
+                                                                            style="color: #ea580c; font-weight: 600;">(Đến
+                                                                            hạn hôm nay)</span>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <span
+                                                                            style="color: #64748b;">(Hạn:
+                                                                            ${app:date(ds.scheduledDate)} - còn
+                                                                            ${ds.daysDiff} ngày)</span>
+                                                                    </c:otherwise>
+                                                                </c:choose>
+                                                            </li>
+                                                        </c:if>
+                                                    </c:forEach>
+                                                    <c:if test="${dueSchedules.size() > 3}">
+                                                        <li style="color: #64748b;"><em>Và ${dueSchedules.size() - 3} thiết bị khác trong
+                                                                danh sách lịch...</em></li>
+                                                    </c:if>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </c:if>
 
                                         <div class="content-heading">
                                             <div>
