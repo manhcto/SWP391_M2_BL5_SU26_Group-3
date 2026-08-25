@@ -53,7 +53,7 @@
                                 <c:choose>
                                     <c:when test="${record.status == 'COMPLETED'}">
                                         <c:choose>
-                                            <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
+                                            <c:when test="${record.repairOutcome == 'FAILED' or (empty record.repairOutcome and record.assetStatus == 'UNAVAILABLE')}">
                                                 <span class="status overdue">Sửa thất bại</span>
                                             </c:when>
                                             <c:otherwise>

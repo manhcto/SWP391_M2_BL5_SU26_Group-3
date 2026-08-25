@@ -931,7 +931,7 @@
                                                                                                                 test="${r.status == 'COMPLETED'}">
                                                                                                                 <c:choose>
                                                                                                                     <c:when
-                                                                                                                        test="${r.assetStatus == 'UNAVAILABLE'}">
+                                                                                                                        test="${r.repairOutcome == 'FAILED' or (empty r.repairOutcome and r.assetStatus == 'UNAVAILABLE')}">
                                                                                                                         <span
                                                                                                                             class="status overdue">Sửa
                                                                                                                             thất

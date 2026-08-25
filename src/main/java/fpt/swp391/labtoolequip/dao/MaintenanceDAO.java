@@ -383,11 +383,13 @@ public class MaintenanceDAO {
 					}
 				}
 
+				String outcome = "COMPLETED".equals(dbStatus) ? (isFailed ? "FAILED" : "SUCCESS") : "PENDING";
 				String sql;
 				if ("COMPLETED".equals(dbStatus)) {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'COMPLETED',
+							    repair_outcome = ?,
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
 							    repair_completed_at = SYSUTCDATETIME(),
 							    note = ?, provider_phone = ?, provider_address = ?,
@@ -400,6 +402,7 @@ public class MaintenanceDAO {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'IN_PROGRESS',
+							    repair_outcome = ?,
 							    repair_started_at = COALESCE(repair_started_at, SYSUTCDATETIME()),
 							    note = ?, provider_phone = ?, provider_address = ?,
 							    image_url = COALESCE(?, image_url),
@@ -411,6 +414,7 @@ public class MaintenanceDAO {
 					sql = """
 							UPDATE dbo.maintenance_records
 							SET status = 'APPROVED',
+							    repair_outcome = ?,
 							    note = ?, provider_phone = ?, provider_address = ?,
 							    image_url = COALESCE(?, image_url),
 							    repair_result = ?, estimated_cost = ?, actual_cost = ?,
@@ -420,14 +424,15 @@ public class MaintenanceDAO {
 				}
 
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
-					statement.setString(1, blankToNull(note));
-					statement.setString(2, blankToNull(providerPhone));
-					statement.setString(3, blankToNull(providerAddress));
-					statement.setString(4, blankToNull(imageUrl));
-					statement.setString(5, blankToNull(repairResult));
-					setNullableLong(statement, 6, estimatedCost);
-					setNullableLong(statement, 7, actualCost);
-					statement.setLong(8, id);
+					statement.setString(1, outcome);
+					statement.setString(2, blankToNull(note));
+					statement.setString(3, blankToNull(providerPhone));
+					statement.setString(4, blankToNull(providerAddress));
+					statement.setString(5, blankToNull(imageUrl));
+					statement.setString(6, blankToNull(repairResult));
+					setNullableLong(statement, 7, estimatedCost);
+					setNullableLong(statement, 8, actualCost);
+					statement.setLong(9, id);
 					statement.executeUpdate();
 				}
 
@@ -764,6 +769,7 @@ public class MaintenanceDAO {
 				record.setRepairStartedAt(ViewFormat.fromUtc(result.getTimestamp("repair_started_at")));
 				record.setRepairCompletedAt(ViewFormat.fromUtc(result.getTimestamp("repair_completed_at")));
 				record.setRepairResult(result.getString("repair_result"));
+				record.setRepairOutcome(result.getString("repair_outcome"));
 				record.setEstimatedCost(nullableLong(result, "estimated_cost"));
 				record.setActualCost(nullableLong(result, "actual_cost"));
 				record.setNote(result.getString("note"));

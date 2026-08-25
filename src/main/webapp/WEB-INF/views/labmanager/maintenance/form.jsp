@@ -99,14 +99,12 @@
                                                                     Đang sửa chữa (Đang tiến hành sửa
                                                                     chữa, thay linh kiện)</option>
                                                                 <option value="COMPLETED_SUCCESS"
-                                                                    ${record.status=='COMPLETED' && record.assetStatus
-                                                                    !='UNAVAILABLE' ? 'selected' : '' }>✅ Đã sửa xong –
+                                                                    ${record.status=='COMPLETED' && (record.repairOutcome == 'SUCCESS' or (empty record.repairOutcome && record.assetStatus != 'UNAVAILABLE')) ? 'selected' : '' }>✅ Đã sửa xong –
                                                                     Hoàn
                                                                     tất thành công (Thiết bị về Sẵn sàng AVAILABLE)
                                                                 </option>
                                                                 <option value="COMPLETED_FAILED"
-                                                                    ${record.status=='COMPLETED' &&
-                                                                    record.assetStatus=='UNAVAILABLE' ? 'selected' : ''
+                                                                    ${record.status=='COMPLETED' && (record.repairOutcome == 'FAILED' or (empty record.repairOutcome && record.assetStatus == 'UNAVAILABLE')) ? 'selected' : ''
                                                                     }>❌
                                                                     Sửa thất bại – Không thể phục hồi (Thiết bị chuyển
                                                                     UNAVAILABLE chờ thanh lý)</option>

@@ -20,6 +20,7 @@ public class MaintenanceRecord {
 	private LocalDateTime repairStartedAt;
 	private LocalDateTime repairCompletedAt;
 	private String repairResult;
+	private String repairOutcome;
 	private Long estimatedCost;
 	private Long actualCost;
 	private String note;
@@ -314,5 +315,13 @@ public class MaintenanceRecord {
 
 	public void setScheduledDate(LocalDate scheduledDate) {
 		this.scheduledDate = scheduledDate;
+	}
+
+	public String getRepairOutcome() {
+		return repairOutcome;
+	}
+
+	public void setRepairOutcome(String repairOutcome) {
+		this.repairOutcome = repairOutcome;
 	}
 }
