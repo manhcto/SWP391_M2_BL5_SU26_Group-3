@@ -285,8 +285,14 @@ public class MaintenanceDAO {
 					}
 				}
 
-				// Tự động chuyển trạng thái cá thể thiết bị sang MAINTENANCE
+				// Tự động chuyển trạng thái cá thể thiết bị sang MAINTENANCE và sự cố sang
+				// INVESTIGATING
 				if (incidentId != null) {
+					try (PreparedStatement incStmt = connection.prepareStatement(
+							"UPDATE dbo.incidents SET status = 'INVESTIGATING', updated_at = SYSUTCDATETIME() WHERE incident_id = ? AND status IN ('OPEN', 'REPORTED', 'FORWARDED')")) {
+						incStmt.setLong(1, incidentId);
+						incStmt.executeUpdate();
+					}
 					try (PreparedStatement itemStmt = connection.prepareStatement("""
 							UPDATE ai
 							SET ai.status = 'MAINTENANCE', ai.updated_at = SYSUTCDATETIME()
@@ -518,8 +524,9 @@ public class MaintenanceDAO {
 			try {
 				long assetId = -1;
 				Long assetItemId = null;
+				Long linkedIncidentId = null;
 				try (PreparedStatement checkStmt = connection.prepareStatement("""
-						SELECT m.asset_id, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id
+						SELECT m.asset_id, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id, m.incident_id
 						FROM dbo.maintenance_records m
 						LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
 						WHERE m.maintenance_id = ?
@@ -531,6 +538,7 @@ public class MaintenanceDAO {
 						}
 						assetId = rs.getLong("asset_id");
 						assetItemId = nullableLong(rs, "asset_item_id");
+						linkedIncidentId = nullableLong(rs, "incident_id");
 					}
 				}
 
@@ -538,6 +546,14 @@ public class MaintenanceDAO {
 						.prepareStatement("DELETE FROM dbo.maintenance_records WHERE maintenance_id = ?")) {
 					delStmt.setLong(1, maintenanceId);
 					delStmt.executeUpdate();
+				}
+
+				if (linkedIncidentId != null) {
+					try (PreparedStatement incStmt = connection.prepareStatement(
+							"UPDATE dbo.incidents SET status = 'FORWARDED', updated_at = SYSUTCDATETIME() WHERE incident_id = ? AND status = 'INVESTIGATING'")) {
+						incStmt.setLong(1, linkedIncidentId);
+						incStmt.executeUpdate();
+					}
 				}
 
 				if (assetItemId != null) {
@@ -724,7 +740,7 @@ public class MaintenanceDAO {
 				SET status = 'RESOLVED',
 				    handling_result = COALESCE(?, handling_result, N'Đã hoàn tất bảo trì sửa chữa thiết bị.'),
 				    updated_at = SYSUTCDATETIME()
-				WHERE incident_id = ? AND status IN ('OPEN', 'INVESTIGATING')
+				WHERE incident_id = ? AND status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, blankToNull(repairResult));
