@@ -701,16 +701,20 @@ public class MaintenanceDAO {
 
 	private MaintenanceTarget requireMaintenanceTarget(Connection connection, long id, String expectedStatus)
 			throws SQLException {
-		String statusCondition = "COMPLETED".equals(expectedStatus)
-				? "m.status = 'IN_PROGRESS'"
-				: "m.status IN ('APPROVED', 'IN_PROGRESS')";
-		try (PreparedStatement statement = connection.prepareStatement(
-				"""
+		String sql = "COMPLETED".equals(expectedStatus)
+				? """
 						SELECT m.asset_id, m.incident_id, m.schedule_id, m.status, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id
 						FROM dbo.maintenance_records m
 						LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
-						WHERE m.maintenance_id = ? AND """
-						+ statusCondition)) {
+						WHERE m.maintenance_id = ? AND m.status = 'IN_PROGRESS'
+						"""
+				: """
+						SELECT m.asset_id, m.incident_id, m.schedule_id, m.status, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id
+						FROM dbo.maintenance_records m
+						LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
+						WHERE m.maintenance_id = ? AND m.status IN ('APPROVED', 'IN_PROGRESS')
+						""";
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, id);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
