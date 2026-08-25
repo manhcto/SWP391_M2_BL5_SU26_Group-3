@@ -61,9 +61,9 @@ public class LabManagerMaintenanceController extends HttpServlet {
 			}
 
 			// ─── PHIẾU BẢO TRÌ (TICKETS) ───
-			// Mentor tạo yêu cầu; Lab Manager chỉ duyệt và xử lý tại màn này.
+			// /lab-manager/maintenance/new -> Tạo phiếu bảo trì mới
 			if ("/new".equals(path)) {
-				response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance?tab=tickets");
+				showCreateForm(request, response);
 				return;
 			}
 
@@ -136,12 +136,39 @@ public class LabManagerMaintenanceController extends HttpServlet {
 
 			switch (action == null ? "" : action) {
 				// ─── TICKET ACTIONS ───
+				// Lab Manager tạo phiếu bảo trì (trực tiếp IN_PROGRESS)
+				case "create" -> {
+					String incidentParam = request.getParameter("incidentId");
+					Long incidentId = (incidentParam == null || incidentParam.isBlank())
+							? null
+							: Long.parseLong(incidentParam);
+					String assetItemParam = request.getParameter("assetItemId");
+					Long assetItemId = (assetItemParam == null || assetItemParam.isBlank())
+							? null
+							: Long.parseLong(assetItemParam);
+					String scheduleParam = request.getParameter("scheduleId");
+					if (scheduleParam == null || scheduleParam.isBlank()) {
+						scheduleParam = request.getParameter("linkedScheduleId");
+					}
+					Long scheduleId = (scheduleParam == null || scheduleParam.isBlank())
+							? null
+							: Long.parseLong(scheduleParam);
+					Part imagePart = request.getPart("imageFile");
+					String imageUrl = CloudinaryUtil.uploadImage(imagePart, "labtoolequip/maintenance");
+					id = dao.create(AuthSession.userId(request), Long.parseLong(request.getParameter("assetId")),
+							assetItemId, incidentId, scheduleId, request.getParameter("note"),
+							request.getParameter("providerPhone"), request.getParameter("providerAddress"), imageUrl,
+							request.getParameter("description"), parseCost(request.getParameter("estimatedCost")));
+					response.sendRedirect(
+							request.getContextPath() + "/lab-manager/maintenance/" + id + "?success=saved");
+					return;
+				}
 				case "approve", "reject" -> {
 					id = Long.parseLong(request.getParameter("id"));
 					dao.review(id, AuthSession.userId(request), "approve".equals(action),
 							request.getParameter("approvalNote"));
-					response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance/" + id
-							+ "?success=reviewed");
+					response.sendRedirect(
+							request.getContextPath() + "/lab-manager/maintenance/" + id + "?success=reviewed");
 					return;
 				}
 				// Lab Manager cập nhật tiến độ sửa chữa
@@ -159,6 +186,13 @@ public class LabManagerMaintenanceController extends HttpServlet {
 							parseCost(request.getParameter("actualCost")), linkedScheduleId);
 					response.sendRedirect(
 							request.getContextPath() + "/lab-manager/maintenance/" + id + "?success=saved");
+					return;
+				}
+				// Lab Manager xóa phiếu bảo trì (trả thiết bị về AVAILABLE)
+				case "delete" -> {
+					id = Long.parseLong(request.getParameter("id"));
+					dao.delete(id);
+					response.sendRedirect(request.getContextPath() + "/lab-manager/maintenance?success=deleted");
 					return;
 				}
 				// ─── SCHEDULE ACTIONS ───
@@ -275,7 +309,25 @@ public class LabManagerMaintenanceController extends HttpServlet {
 			doGet(request, response);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
 			request.setAttribute("message", exception.getMessage());
-			if ("createSchedule".equals(action) || "updateSchedule".equals(action)) {
+			if ("updateProgress".equals(action)) {
+				try {
+					long id = Long.parseLong(request.getParameter("id"));
+					request.setAttribute("record", dao.findById(id).orElseThrow());
+					request.setAttribute("formMode", "edit");
+					request.setAttribute("pendingSchedules", scheduleDAO.findAll(null, "PENDING"));
+					forward(request, response, "form.jsp");
+					return;
+				} catch (SQLException sqlException) {
+					throw new ServletException(sqlException);
+				}
+			} else if ("create".equals(action)) {
+				try {
+					showCreateForm(request, response);
+					return;
+				} catch (SQLException sqlException) {
+					throw new ServletException(sqlException);
+				}
+			} else if ("createSchedule".equals(action) || "updateSchedule".equals(action)) {
 				try {
 					request.setAttribute("formMode", "createSchedule".equals(action) ? "create" : "edit");
 					request.setAttribute("schedulableAssets", scheduleDAO.findSchedulableAssets());
@@ -288,6 +340,15 @@ public class LabManagerMaintenanceController extends HttpServlet {
 				doGet(request, response);
 			}
 		}
+	}
+
+	private void showCreateForm(HttpServletRequest request, HttpServletResponse response)
+			throws SQLException, ServletException, IOException {
+		request.setAttribute("formMode", "create");
+		request.setAttribute("routineAssets", dao.findRoutineMaintenanceAssets());
+		request.setAttribute("incidents", dao.findOpenIncidents());
+		request.setAttribute("pendingSchedules", scheduleDAO.findAll(null, "PENDING"));
+		forward(request, response, "form.jsp");
 	}
 
 	private void validateSchedule(MaintenanceSchedule s, Long excludeId) throws SQLException {

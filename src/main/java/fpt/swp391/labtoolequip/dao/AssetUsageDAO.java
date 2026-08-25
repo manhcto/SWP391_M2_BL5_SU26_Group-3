@@ -571,16 +571,16 @@ public class AssetUsageDAO {
 		String reviewerScope = labManager
 				? "EXISTS (SELECT 1 FROM dbo.users reviewer WHERE reviewer.user_id=? AND reviewer.role='LAB_MANAGER' AND reviewer.status='ACTIVE')"
 				: """
-				  EXISTS (
-				    SELECT 1 FROM dbo.users reviewer
-				    JOIN dbo.lab_usage_requests request_scope
-				      ON request_scope.mentor_id=reviewer.user_id
-				     AND request_scope.request_id=au.request_id
-				     AND request_scope.semester_id=au.semester_id
-				     AND request_scope.status='APPROVED'
-				    WHERE reviewer.user_id=? AND reviewer.role='MENTOR' AND reviewer.status='ACTIVE'
-				  )
-				""";
+						  EXISTS (
+						    SELECT 1 FROM dbo.users reviewer
+						    JOIN dbo.lab_usage_requests request_scope
+						      ON request_scope.mentor_id=reviewer.user_id
+						     AND request_scope.request_id=au.request_id
+						     AND request_scope.semester_id=au.semester_id
+						     AND request_scope.status='APPROVED'
+						    WHERE reviewer.user_id=? AND reviewer.role='MENTOR' AND reviewer.status='ACTIVE'
+						  )
+						""";
 		String sql = """
 				SELECT au.asset_id, au.asset_item_id FROM dbo.asset_usages au WITH (UPDLOCK, HOLDLOCK)
 				WHERE au.asset_usage_id=? AND au.status='RETURN_PENDING' AND
@@ -873,7 +873,10 @@ public class AssetUsageDAO {
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, assetId);
-			if (assetItemId == null) statement.setNull(2, Types.BIGINT); else statement.setLong(2, assetItemId);
+			if (assetItemId == null)
+				statement.setNull(2, Types.BIGINT);
+			else
+				statement.setLong(2, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
 			}

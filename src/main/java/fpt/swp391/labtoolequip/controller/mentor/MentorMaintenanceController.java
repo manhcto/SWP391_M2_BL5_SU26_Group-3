@@ -30,17 +30,8 @@ public class MentorMaintenanceController extends HttpServlet {
 		try {
 			request.setAttribute("csrfToken", Csrf.token(request));
 			String path = request.getPathInfo();
-			if ("/new".equals(path)) {
-				if (!Authorization.has(request, Permission.MAINTENANCE_REQUEST)) {
-					response.sendError(HttpServletResponse.SC_FORBIDDEN);
-					return;
-				}
-				showForm(request, response);
-				return;
-			}
 			if (path != null && path.matches("/\\d+")) {
-				request.setAttribute("record", dao.findByIdForRequester(Long.parseLong(path.substring(1)),
-						AuthSession.userId(request)).orElseThrow());
+				request.setAttribute("record", dao.findById(Long.parseLong(path.substring(1))).orElseThrow());
 				forward(request, response, "detail.jsp");
 				return;
 			}
@@ -48,8 +39,8 @@ public class MentorMaintenanceController extends HttpServlet {
 				response.sendError(HttpServletResponse.SC_NOT_FOUND);
 				return;
 			}
-			request.setAttribute("records", dao.findForRequester(AuthSession.userId(request),
-					request.getParameter("keyword"), request.getParameter("status")));
+			request.setAttribute("records",
+					dao.findAll(request.getParameter("keyword"), request.getParameter("status")));
 			request.setAttribute("keyword", request.getParameter("keyword"));
 			request.setAttribute("selectedStatus", request.getParameter("status"));
 			forward(request, response, "list.jsp");
@@ -81,8 +72,8 @@ public class MentorMaintenanceController extends HttpServlet {
 			AssetItem item = assetItemDAO.findById(itemId)
 					.orElseThrow(() -> new IllegalArgumentException("Thiết bị không tồn tại."));
 			Long incidentId = optionalLong(request.getParameter("incidentId"));
-			long id = dao.create(AuthSession.userId(request), item.getAssetId(), itemId, incidentId, null,
-					null, null, null, null, request.getParameter("description"), null);
+			long id = dao.create(AuthSession.userId(request), item.getAssetId(), itemId, incidentId, null, null, null,
+					null, null, request.getParameter("description"), null);
 			response.sendRedirect(request.getContextPath() + "/mentor/maintenance/" + id + "?success=created");
 		} catch (SQLException exception) {
 			throw new ServletException(exception);

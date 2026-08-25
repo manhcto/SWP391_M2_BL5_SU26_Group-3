@@ -13,8 +13,7 @@ class InspectionAssetItemContractTest {
 	@Test
 	void inspectionSelectionUsesExactAssetItems() throws IOException {
 		String dao = read("src/main/java/fpt/swp391/labtoolequip/dao/InspectionDAO.java");
-		String controller = read(
-				"src/main/java/fpt/swp391/labtoolequip/controller/InspectionControllerSupport.java");
+		String controller = read("src/main/java/fpt/swp391/labtoolequip/controller/InspectionControllerSupport.java");
 		String form = read("src/main/webapp/WEB-INF/views/shared/inspections/form.jsp");
 
 		assertTrue(dao.contains("JOIN dbo.asset_items ai"));

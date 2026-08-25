@@ -92,8 +92,8 @@ public class ResponsibilityController extends HttpServlet {
 				response.sendError(HttpServletResponse.SC_BAD_REQUEST);
 				return;
 			}
-			response.sendRedirect(request.getContextPath() + "/lab-manager/responsibilities/" + id
-					+ "?success=" + action);
+			response.sendRedirect(
+					request.getContextPath() + "/lab-manager/responsibilities/" + id + "?success=" + action);
 		} catch (SQLException exception) {
 			throw new ServletException(exception);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
@@ -104,8 +104,7 @@ public class ResponsibilityController extends HttpServlet {
 					record = new Responsibility();
 					record.setIncidentId(requiredId(request, "incidentId", "Sự cố"));
 				} else {
-					record = dao.findById(requiredId(request, "responsibilityId", "Hồ sơ trách nhiệm"))
-							.orElseThrow();
+					record = dao.findById(requiredId(request, "responsibilityId", "Hồ sơ trách nhiệm")).orElseThrow();
 				}
 				record.setInternId(optionalId(request, "relatedStudentId", "Thực tập sinh"));
 				record.setResponsibilityLevel(request.getParameter("responsibilityLevel"));

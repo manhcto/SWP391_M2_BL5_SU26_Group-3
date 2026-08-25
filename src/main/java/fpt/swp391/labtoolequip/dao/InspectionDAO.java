@@ -199,8 +199,10 @@ public class InspectionDAO {
 		}
 	}
 
-	/* Every inspection target is one physical AssetItem, regardless of the
-	 * parent asset's tracking mode. */
+	/*
+	 * Every inspection target is one physical AssetItem, regardless of the parent
+	 * asset's tracking mode.
+	 */
 	public List<InspectionItem> findInspectableTargets() throws SQLException {
 		try (Connection connection = db.getConnection()) {
 			return findInspectableTargets(connection);

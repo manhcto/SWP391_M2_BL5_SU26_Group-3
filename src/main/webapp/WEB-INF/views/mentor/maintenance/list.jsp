@@ -17,9 +17,8 @@
         <header class="topbar">
             <div class="heading-wrap">
                 <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button>
-                <div><h1>Theo dõi bảo trì thiết bị</h1><p>Xem yêu cầu do bạn gửi và tiến độ Lab Manager xử lý.</p></div>
+                <div><h1>Theo dõi bảo trì thiết bị</h1><p>Xem danh sách và tiến độ các phiếu bảo trì thiết bị phòng lab.</p></div>
             </div>
-            <div class="topbar-actions"><a class="primary-button" href="${pageContext.request.contextPath}/mentor/maintenance/new">+ Tạo yêu cầu bảo trì</a></div>
         </header>
 
         <section class="content-area">
