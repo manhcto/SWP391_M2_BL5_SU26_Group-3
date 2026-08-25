@@ -83,28 +83,6 @@
 									✓ Đã nhập thành công <c:out value="${param.count}"/> tài khoản vào hệ thống!</div>
                             </c:if>
 
-                            <%-- THỐNG KÊ NGƯỜI DÙNG --%>
-                            <c:if test="${not empty summary}">
-                            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:20px;">
-                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
-                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">👥 Tổng người dùng</div>
-                                    <div style="font-size:28px; font-weight:700; color:#1e293b; margin-top:4px;">${summary.totalUsers()}</div>
-                                </div>
-                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
-                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">🎓 Thực tập sinh</div>
-                                    <div style="font-size:28px; font-weight:700; color:#2563eb; margin-top:4px;">${summary.internCount()}</div>
-                                </div>
-                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
-                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">👨‍🏫 Người hướng dẫn</div>
-                                    <div style="font-size:28px; font-weight:700; color:#0d9488; margin-top:4px;">${summary.mentorCount()}</div>
-                                </div>
-                                <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 20px;">
-                                    <div style="font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase; letter-spacing:.5px;">🛠️ Quản lý phòng LAB</div>
-                                    <div style="font-size:28px; font-weight:700; color:#d97706; margin-top:4px;">${summary.labManagerCount()}</div>
-                                </div>
-                            </div>
-                            </c:if>
-
                             <div class="filter-bar">
                                 <form method="get" action="${pageContext.request.contextPath}/admin/users"
                                     class="filter-group">
