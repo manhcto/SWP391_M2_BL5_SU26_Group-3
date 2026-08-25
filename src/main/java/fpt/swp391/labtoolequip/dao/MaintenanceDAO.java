@@ -250,9 +250,9 @@ public class MaintenanceDAO {
 
 				String sql = """
 						INSERT INTO dbo.maintenance_records
-						    (asset_id, asset_item_id, incident_id, schedule_id, quantity, requested_by, note, provider_phone, provider_address, image_url, description, estimated_cost, status)
+						    (asset_id, asset_item_id, incident_id, schedule_id, quantity, requested_by, approved_by, approved_at, repair_started_at, note, provider_phone, provider_address, image_url, description, estimated_cost, status)
 						OUTPUT INSERTED.maintenance_id
-						VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+						VALUES (?, ?, ?, ?, 1, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME(), ?, ?, ?, ?, ?, ?, 'IN_PROGRESS')
 						""";
 				long id;
 				try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -261,17 +261,21 @@ public class MaintenanceDAO {
 					setNullableLong(statement, 3, incidentId);
 					setNullableLong(statement, 4, scheduleId);
 					statement.setLong(5, userId);
-					statement.setString(6, blankToNull(note));
-					statement.setString(7, blankToNull(providerPhone));
-					statement.setString(8, blankToNull(providerAddress));
-					statement.setString(9, blankToNull(imageUrl));
-					statement.setString(10, description.trim());
-					setNullableLong(statement, 11, estimatedCost);
+					statement.setLong(6, userId);
+					statement.setString(7, blankToNull(note));
+					statement.setString(8, blankToNull(providerPhone));
+					statement.setString(9, blankToNull(providerAddress));
+					statement.setString(10, blankToNull(imageUrl));
+					statement.setString(11, description.trim());
+					setNullableLong(statement, 12, estimatedCost);
 					try (ResultSet result = statement.executeQuery()) {
 						result.next();
 						id = result.getLong(1);
 					}
 				}
+
+				startMaintenance(connection,
+						new MaintenanceTarget(assetId, incidentId, assetItemId, scheduleId, "IN_PROGRESS"));
 
 				connection.commit();
 				return id;
@@ -389,8 +393,8 @@ public class MaintenanceDAO {
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
-				MaintenanceTarget target = requireMaintenanceTarget(connection, id, expectedStatus);
-				if ("IN_PROGRESS".equals(dbStatus)) {
+				MaintenanceTarget target = requireMaintenanceTarget(connection, id, dbStatus);
+				if ("IN_PROGRESS".equals(dbStatus) && "APPROVED".equals(target.currentStatus())) {
 					startMaintenance(connection, target);
 				}
 
@@ -414,7 +418,7 @@ public class MaintenanceDAO {
 							    image_url = COALESCE(?, image_url),
 							    repair_result = ?, estimated_cost = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
-							WHERE maintenance_id = ? AND status = ?
+							WHERE maintenance_id = ? AND status = 'IN_PROGRESS'
 							""";
 				} else if ("IN_PROGRESS".equals(dbStatus)) {
 					sql = """
@@ -425,7 +429,7 @@ public class MaintenanceDAO {
 							    image_url = COALESCE(?, image_url),
 							    repair_result = ?, estimated_cost = ?, actual_cost = ?,
 							    updated_at = SYSUTCDATETIME()
-							WHERE maintenance_id = ? AND status = ?
+							WHERE maintenance_id = ? AND status IN ('APPROVED', 'IN_PROGRESS')
 							""";
 				} else {
 					throw new IllegalStateException("Không thể cập nhật trực tiếp sang trạng thái này.");
@@ -440,7 +444,6 @@ public class MaintenanceDAO {
 					setNullableLong(statement, 6, estimatedCost);
 					setNullableLong(statement, 7, actualCost);
 					statement.setLong(8, id);
-					statement.setString(9, expectedStatus);
 					if (statement.executeUpdate() != 1)
 						throw new IllegalStateException(
 								"Phiếu bảo trì đã được người khác xử lý hoặc không còn ở đúng bước.");
@@ -488,7 +491,15 @@ public class MaintenanceDAO {
 							String failNote = blankToNull(repairResult) != null
 									? repairResult
 									: "Sửa chữa không thành công. Thiết bị đã chuyển về hàng chờ để Lab Manager quyết định bước tiếp theo.";
-							setIncidentResolved(connection, target.incidentId(), failNote);
+							try (PreparedStatement incidentStmt = connection.prepareStatement("""
+									UPDATE dbo.incidents
+									SET status = 'INVESTIGATING', investigation_note = ?, updated_at = SYSUTCDATETIME()
+									WHERE incident_id = ? AND status <> 'RESOLVED'
+									""")) {
+								incidentStmt.setString(1, failNote);
+								incidentStmt.setLong(2, target.incidentId());
+								incidentStmt.executeUpdate();
+							}
 						}
 					} else {
 						if (target.incidentId() != null) {
@@ -496,17 +507,10 @@ public class MaintenanceDAO {
 						}
 					}
 
-					// Nếu phiếu bảo trì này được liên kết với lịch bảo trì định kỳ cụ thể (LM chọn
-					// hoàn tất lịch),
-					// cập nhật trạng thái lịch bảo trì đó sang COMPLETED
-					Long finalScheduleId = target.scheduleId() != null ? target.scheduleId() : linkedScheduleId;
-					if (finalScheduleId != null) {
-						try (PreparedStatement schedStmt = connection.prepareStatement("""
-								UPDATE dbo.maintenance_schedules
-								SET status = 'COMPLETED', updated_at = SYSUTCDATETIME()
-								WHERE schedule_id = ? AND status = 'PENDING'
-								""")) {
-							schedStmt.setLong(1, finalScheduleId);
+					if (target.scheduleId() != null) {
+						try (PreparedStatement schedStmt = connection.prepareStatement(
+								"UPDATE dbo.maintenance_schedules SET status = 'COMPLETED', updated_at = SYSUTCDATETIME() WHERE schedule_id = ?")) {
+							schedStmt.setLong(1, target.scheduleId());
 							schedStmt.executeUpdate();
 						}
 					}
@@ -521,16 +525,61 @@ public class MaintenanceDAO {
 	}
 
 	/**
-	 * Chỉ cho xóa yêu cầu còn nằm trong hàng chờ. Xóa yêu cầu không thay đổi trạng
-	 * thái thiết bị.
+	 * Cho phép xóa yêu cầu PENDING hoặc phiếu bảo trì IN_PROGRESS của Lab Manager.
+	 * Khi xóa phiếu IN_PROGRESS: khôi phục lại trạng thái thiết bị về AVAILABLE.
 	 */
 	public void delete(long maintenanceId) throws SQLException {
-		try (Connection connection = db.getConnection();
-				PreparedStatement statement = connection.prepareStatement(
-						"DELETE FROM dbo.maintenance_records WHERE maintenance_id=? AND status='PENDING'")) {
-			statement.setLong(1, maintenanceId);
-			if (statement.executeUpdate() != 1)
-				throw new IllegalStateException("Chỉ yêu cầu đang chờ mới có thể xóa.");
+		try (Connection connection = db.getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				MaintenanceTarget target;
+				try (PreparedStatement statement = connection.prepareStatement(
+						"""
+								SELECT m.asset_id, m.incident_id, m.schedule_id, m.status, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id
+								FROM dbo.maintenance_records m
+								LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
+								WHERE m.maintenance_id = ? AND m.status IN ('PENDING', 'IN_PROGRESS', 'APPROVED')
+								""")) {
+					statement.setLong(1, maintenanceId);
+					try (ResultSet rs = statement.executeQuery()) {
+						if (!rs.next()) {
+							throw new IllegalStateException("Chỉ phiếu bảo trì chưa hoàn thành mới có thể xóa.");
+						}
+						target = new MaintenanceTarget(rs.getLong("asset_id"), nullableLong(rs, "incident_id"),
+								nullableLong(rs, "asset_item_id"), nullableLong(rs, "schedule_id"),
+								rs.getString("status"));
+					}
+				}
+
+				try (PreparedStatement delStmt = connection
+						.prepareStatement("DELETE FROM dbo.maintenance_records WHERE maintenance_id = ?")) {
+					delStmt.setLong(1, maintenanceId);
+					delStmt.executeUpdate();
+				}
+
+				// Rollback asset status to AVAILABLE if it was in MAINTENANCE
+				if ("IN_PROGRESS".equals(target.currentStatus())) {
+					if (target.assetItemId() != null) {
+						try (PreparedStatement itemStmt = connection.prepareStatement(
+								"UPDATE dbo.asset_items SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME() WHERE asset_item_id = ? AND status = 'MAINTENANCE'")) {
+							itemStmt.setLong(1, target.assetItemId());
+							itemStmt.executeUpdate();
+						}
+						syncParentAssetStatus(connection, target.assetId());
+					} else {
+						try (PreparedStatement assetStmt = connection.prepareStatement(
+								"UPDATE dbo.assets SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME() WHERE asset_id = ? AND status = 'MAINTENANCE'")) {
+							assetStmt.setLong(1, target.assetId());
+							assetStmt.executeUpdate();
+						}
+					}
+				}
+
+				connection.commit();
+			} catch (SQLException | RuntimeException e) {
+				connection.rollback();
+				throw e;
+			}
 		}
 	}
 
@@ -646,29 +695,34 @@ public class MaintenanceDAO {
 		}
 	}
 
-	private record MaintenanceTarget(long assetId, Long incidentId, Long assetItemId, Long scheduleId) {
+	private record MaintenanceTarget(long assetId, Long incidentId, Long assetItemId, Long scheduleId,
+			String currentStatus) {
 	}
 
 	private MaintenanceTarget requireMaintenanceTarget(Connection connection, long id, String expectedStatus)
 			throws SQLException {
+		String statusCondition = "COMPLETED".equals(expectedStatus)
+				? "m.status = 'IN_PROGRESS'"
+				: "m.status IN ('APPROVED', 'IN_PROGRESS')";
 		try (PreparedStatement statement = connection.prepareStatement(
 				"""
-						SELECT m.asset_id, m.incident_id, m.schedule_id, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id
+						SELECT m.asset_id, m.incident_id, m.schedule_id, m.status, COALESCE(m.asset_item_id, i.asset_item_id) AS asset_item_id
 						FROM dbo.maintenance_records m
 						LEFT JOIN dbo.incidents i ON i.incident_id = m.incident_id
-						WHERE m.maintenance_id = ? AND m.status = ?
-						""")) {
+						WHERE m.maintenance_id = ? AND """
+						+ statusCondition)) {
 			statement.setLong(1, id);
-			statement.setString(2, expectedStatus);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next()) {
-					throw new IllegalStateException("Phiếu bảo trì không còn ở bước " + expectedStatus + ".");
+					throw new IllegalStateException(
+							"Phiếu bảo trì đã được người khác xử lý hoặc không còn ở đúng bước.");
 				}
 				long assetId = result.getLong("asset_id");
 				Long incidentId = nullableLong(result, "incident_id");
 				Long assetItemId = nullableLong(result, "asset_item_id");
 				Long scheduleId = nullableLong(result, "schedule_id");
-				return new MaintenanceTarget(assetId, incidentId, assetItemId, scheduleId);
+				String currentStatus = result.getString("status");
+				return new MaintenanceTarget(assetId, incidentId, assetItemId, scheduleId, currentStatus);
 			}
 		}
 	}
