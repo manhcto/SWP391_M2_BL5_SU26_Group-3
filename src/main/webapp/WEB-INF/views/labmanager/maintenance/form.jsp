@@ -95,19 +95,13 @@
                                                             <select class="form-control" name="status"
                                                                 id="progressStatusSelect" required>
                                                                 <option value="IN_PROGRESS"
-                                                                    ${record.status=='IN_PROGRESS' ? 'selected' : '' }>⏳
-                                                                    Đang sửa chữa (Đang tiến hành sửa
-                                                                    chữa, thay linh kiện)</option>
+                                                                    ${record.status=='IN_PROGRESS' ? 'selected' : '' }>Đang sửa chữa (Đang tiến hành sửa chữa, thay linh kiện)</option>
                                                                 <option value="COMPLETED_SUCCESS"
-                                                                    ${record.status=='COMPLETED' && (record.repairOutcome == 'SUCCESS' or (empty record.repairOutcome && record.assetStatus != 'UNAVAILABLE')) ? 'selected' : '' }>✅ Đã sửa xong –
-                                                                    Hoàn
-                                                                    tất thành công (Thiết bị về Sẵn sàng AVAILABLE)
+                                                                    ${record.status=='COMPLETED' && (record.repairOutcome == 'SUCCESS' or (empty record.repairOutcome && record.assetStatus != 'UNAVAILABLE')) ? 'selected' : '' }>Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)
                                                                 </option>
                                                                 <option value="COMPLETED_FAILED"
                                                                     ${record.status=='COMPLETED' && (record.repairOutcome == 'FAILED' or (empty record.repairOutcome && record.assetStatus == 'UNAVAILABLE')) ? 'selected' : ''
-                                                                    }>❌
-                                                                    Sửa thất bại – Không thể phục hồi (Thiết bị chuyển
-                                                                    UNAVAILABLE chờ thanh lý)</option>
+                                                                    }>Sửa thất bại – Không thể phục hồi (Thiết bị chuyển UNAVAILABLE chờ thanh lý)</option>
                                                             </select>
                                                         </div>
 
@@ -125,7 +119,7 @@
                                                                 style="padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                                                                 <div
                                                                     style="font-size: 13px; color: #166534; font-weight: 600;">
-                                                                    💡 Phiếu bảo trì này đã liên kết với lịch: <strong>
+                                                                    Phiếu bảo trì này đã liên kết với lịch: <strong>
                                                                         <c:out
                                                                             value="${not empty linkedSchedule ? linkedSchedule.title : 'Lịch bảo dưỡng định kỳ'}" />
                                                                     </strong>
@@ -144,7 +138,7 @@
                                                                 style="padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                                                                 <div
                                                                     style="font-size: 13px; color: #166534; font-weight: 600; margin-bottom: 6px;">
-                                                                    💡 Thiết bị này đang có lịch bảo dưỡng định kỳ vào
+                                                                    Thiết bị này đang có lịch bảo dưỡng định kỳ vào
                                                                     ngày
                                                                     <strong>${editMatchedSched.scheduledDate}</strong>:
                                                                     <em>
@@ -164,7 +158,7 @@
                                                                     test="${not empty editMatchedSched and not empty editMatchedSched.estimatedCost and editMatchedSched.estimatedCost > 0}">
                                                                     <div id="editCostScheduleHint"
                                                                         style="display: none; margin-top: 6px; font-size: 12px; color: #166534; line-height: 1.4;">
-                                                                        💡 Dự toán kế hoạch định kỳ là
+                                                                        Dự toán kế hoạch định kỳ là
                                                                         <strong>${editMatchedSched.estimatedCost}
                                                                             VNĐ</strong>. Hãy nhập Tổng chi phí (bao gồm
                                                                         cả tiền sửa sự cố).
@@ -397,7 +391,7 @@
                                                                                             Không thể chọn]</c:when>
                                                                                         <c:when
                                                                                             test="${a.status == 'UNAVAILABLE'}">
-                                                                                            — [❌ Đã hỏng chờ thanh lý -
+                                                                                            — [Đã hỏng chờ thanh lý -
                                                                                             Không thể chọn]</c:when>
                                                                                         <c:when
                                                                                             test="${not empty a.storageLocation}">
@@ -423,7 +417,7 @@
                                                                         style="display: none; margin-top: 10px; padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                                                                         <div
                                                                             style="font-size: 13px; color: #166534; font-weight: 600;">
-                                                                            💡 Phiếu bảo trì này được liên kết với kế
+                                                                            Phiếu bảo trì này được liên kết với kế
                                                                             hoạch: <strong
                                                                                 id="routineScheduleTitleText"></strong>
                                                                             (ngày <span id="routineScheduleDateText"
@@ -439,7 +433,7 @@
                                                                             style="display: none; margin-top: 10px; padding: 12px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                                                                             <div
                                                                                 style="font-size: 13px; color: #166534; font-weight: 600; margin-bottom: 6px;">
-                                                                                💡 Thiết bị này đang có lịch bảo dưỡng
+                                                                                Thiết bị này đang có lịch bảo dưỡng
                                                                                 định kỳ vào ngày <span
                                                                                     id="incidentReminderDateText"
                                                                                     style="color: #15803d; font-weight: 700;"></span>:
@@ -471,7 +465,7 @@
                                                                     placeholder="Ví dụ: 650000">
                                                                 <small id="costScheduleHint"
                                                                     style="display: none; margin-top: 5px; font-size: 12px; color: #166534; line-height: 1.4;">
-                                                                    💡 Dự toán kế hoạch định kỳ là <strong
+                                                                    Dự toán kế hoạch định kỳ là <strong
                                                                         id="hintScheduleCostText"
                                                                         style="color: #15803d;"></strong>. Hãy nhập Tổng
                                                                     chi phí dự toán (bao gồm cả tiền sửa sự cố).
