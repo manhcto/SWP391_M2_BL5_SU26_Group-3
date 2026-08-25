@@ -968,6 +968,18 @@
                                                                                                                 <c:choose><c:when test="${r.status == 'APPROVED'}">Bắt đầu</c:when><c:otherwise>Tiến độ</c:otherwise></c:choose>
                                                                                                             </a>
                                                                                                         </c:if>
+
+<c:if test="${r.status == 'PENDING' || r.status == 'IN_PROGRESS' || r.status == 'APPROVED'}">
+    <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance?csrfToken=${sessionScope.csrfToken}" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu bảo trì #MNT-${r.maintenanceId}? Thiết bị sẽ được trả về trạng thái Sẵn sàng (AVAILABLE).');" style="display:inline;margin:0;">
+        <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" value="${r.maintenanceId}">
+        <button class="btn-secondary" type="submit" style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;font-weight:600;cursor:pointer;" title="Xóa phiếu bảo trì này">Xóa</button>
+    </form>
+</c:if>
+<c:if test="${r.status == 'COMPLETED'}">
+    <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#f3f4f6;color:#374151;border-color:#d1d5db;font-weight:500;" href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">Sửa</a>
+</c:if>
                                                                                                     </td>
                                                                                                 </tr>
                                                                                             </c:forEach>
