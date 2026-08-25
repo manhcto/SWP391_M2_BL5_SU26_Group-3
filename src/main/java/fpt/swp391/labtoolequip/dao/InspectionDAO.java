@@ -2,7 +2,6 @@ package fpt.swp391.labtoolequip.dao;
 
 import fpt.swp391.labtoolequip.common.DBConnection;
 import fpt.swp391.labtoolequip.common.ViewFormat;
-import fpt.swp391.labtoolequip.model.Asset;
 import fpt.swp391.labtoolequip.model.AssetItem;
 import fpt.swp391.labtoolequip.model.InspectionItem;
 import fpt.swp391.labtoolequip.model.InspectionRecord;
@@ -154,34 +153,6 @@ public class InspectionDAO {
 	}
 
 	/*
-	 * Kept for compatibility with existing FE-05 controller/view code. Quantity
-	 * assets are still represented by the parent Asset.
-	 */
-	public List<Asset> findInspectableAssets() throws SQLException {
-
-		String sql = """
-				SELECT asset_id, asset_code, asset_name, tracking_mode,
-				       total_quantity, condition, status, storage_location
-				FROM dbo.assets
-				WHERE status <> 'DISPOSED'
-				ORDER BY asset_name, asset_code
-				""";
-
-		try (Connection connection = db.getConnection();
-				PreparedStatement statement = connection.prepareStatement(sql);
-				ResultSet result = statement.executeQuery()) {
-
-			List<Asset> assets = new ArrayList<>();
-
-			while (result.next()) {
-				assets.add(readAsset(result));
-			}
-
-			return assets;
-		}
-	}
-
-	/*
 	 * Kept from latest main for compatibility with code that directly requests
 	 * physical asset items.
 	 */
@@ -228,10 +199,8 @@ public class InspectionDAO {
 		}
 	}
 
-	/*
-	 * Hybrid FE-05 target list: - QUANTITY asset -> one row for the parent asset. -
-	 * SERIALIZED asset -> one row per physical AssetItem.
-	 */
+	/* Every inspection target is one physical AssetItem, regardless of the
+	 * parent asset's tracking mode. */
 	public List<InspectionItem> findInspectableTargets() throws SQLException {
 		try (Connection connection = db.getConnection()) {
 			return findInspectableTargets(connection);
@@ -408,17 +377,16 @@ public class InspectionDAO {
 	private List<InspectionItem> selectedAssetItems(Connection connection, List<InspectionItem> submittedItems)
 			throws SQLException {
 
-		Set<Long> selectedAssetIds = new HashSet<>();
+		Set<Long> selectedAssetItemIds = new HashSet<>();
 
 		for (InspectionItem submitted : submittedItems) {
-			if (submitted.getAssetId() == null || !selectedAssetIds.add(submitted.getAssetId())) {
-				continue;
+			if (submitted.getAssetItemId() == null) {
+				throw new IllegalArgumentException("Vui lòng chọn một sản phẩm cụ thể để kiểm tra.");
 			}
-
-			lockAsset(connection, submitted.getAssetId());
+			selectedAssetItemIds.add(submitted.getAssetItemId());
 		}
 
-		List<InspectionItem> targets = findInspectableTargets(connection, selectedAssetIds);
+		List<InspectionItem> targets = findInspectableTargets(connection, selectedAssetItemIds);
 
 		List<InspectionItem> items = new ArrayList<>();
 
@@ -488,59 +456,17 @@ public class InspectionDAO {
 		}
 	}
 
-	private List<Asset> findInspectableAssets(Connection connection) throws SQLException {
-
-		String sql = """
-				SELECT asset_id, asset_code, asset_name, tracking_mode,
-				       total_quantity, condition, status, storage_location
-				FROM dbo.assets WITH (UPDLOCK, HOLDLOCK)
-				WHERE status <> 'DISPOSED'
-				ORDER BY asset_name, asset_code
-				""";
-
-		try (PreparedStatement statement = connection.prepareStatement(sql);
-				ResultSet result = statement.executeQuery()) {
-
-			List<Asset> assets = new ArrayList<>();
-
-			while (result.next()) {
-				assets.add(readAsset(result));
-			}
-
-			return assets;
-		}
-	}
-
 	private List<InspectionItem> findInspectableTargets(Connection connection) throws SQLException {
 
 		return findInspectableTargets(connection, null);
 	}
 
-	private List<InspectionItem> findInspectableTargets(Connection connection, Set<Long> selectedAssetIds)
+	private List<InspectionItem> findInspectableTargets(Connection connection, Set<Long> selectedAssetItemIds)
 			throws SQLException {
 
-		String filter = selectedAssetIds == null ? "" : " AND a.asset_id = ?";
+		String filter = selectedAssetItemIds == null ? "" : " AND ai.asset_item_id = ?";
 
 		String sql = """
-				SELECT
-				    a.asset_id,
-				    CAST(NULL AS bigint) AS asset_item_id,
-				    a.asset_code,
-				    a.asset_name,
-				    a.tracking_mode,
-				    a.total_quantity,
-				    a.condition,
-				    a.status,
-				    CAST(NULL AS varchar(70)) AS item_code,
-				    CAST(NULL AS varchar(100)) AS serial_number,
-				    CAST(NULL AS varchar(15)) AS asset_item_status
-				FROM dbo.assets a WITH (UPDLOCK, HOLDLOCK)
-				WHERE a.tracking_mode = 'QUANTITY'
-				  AND a.status <> 'DISPOSED'
-				""" + filter + """
-
-				UNION ALL
-
 				SELECT
 				    a.asset_id,
 				    ai.asset_item_id,
@@ -556,8 +482,7 @@ public class InspectionDAO {
 				FROM dbo.assets a WITH (UPDLOCK, HOLDLOCK)
 				JOIN dbo.asset_items ai WITH (UPDLOCK, HOLDLOCK)
 				    ON ai.asset_id = a.asset_id
-				WHERE a.tracking_mode = 'SERIALIZED'
-				  AND a.status <> 'DISPOSED'
+				WHERE a.status <> 'DISPOSED'
 				  AND ai.status <> 'DISPOSED'
 				""" + filter + """
 
@@ -566,7 +491,7 @@ public class InspectionDAO {
 
 		List<InspectionItem> items = new ArrayList<>();
 
-		if (selectedAssetIds == null) {
+		if (selectedAssetItemIds == null) {
 			try (PreparedStatement statement = connection.prepareStatement(sql);
 					ResultSet result = statement.executeQuery()) {
 
@@ -578,11 +503,10 @@ public class InspectionDAO {
 			return items;
 		}
 
-		for (Long assetId : selectedAssetIds) {
+		for (Long assetItemId : selectedAssetItemIds) {
 			try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
-				statement.setLong(1, assetId);
-				statement.setLong(2, assetId);
+				statement.setLong(1, assetItemId);
 
 				try (ResultSet result = statement.executeQuery()) {
 					while (result.next()) {
@@ -623,62 +547,6 @@ public class InspectionDAO {
 		item.setAssetItemStatus(result.getString("asset_item_status"));
 
 		return item;
-	}
-
-	private Asset lockAsset(Connection connection, Long assetId) throws SQLException {
-
-		if (assetId == null) {
-			throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
-		}
-
-		try (PreparedStatement statement = connection.prepareStatement("""
-				SELECT asset_id, asset_code, asset_name,
-				       tracking_mode, total_quantity,
-				       condition, status, storage_location
-				FROM dbo.assets WITH (UPDLOCK, HOLDLOCK)
-				WHERE asset_id = ?
-				""")) {
-
-			statement.setLong(1, assetId);
-
-			try (ResultSet result = statement.executeQuery()) {
-
-				if (!result.next()) {
-					throw new IllegalArgumentException("Thiết bị đã chọn không tồn tại.");
-				}
-
-				Asset asset = readAsset(result);
-
-				if ("DISPOSED".equals(asset.getStatus())) {
-					throw new IllegalStateException("Không thể chọn thiết bị đã thanh lý làm đối tượng kiểm tra.");
-				}
-
-				return asset;
-			}
-		}
-	}
-
-	private Asset readAsset(ResultSet result) throws SQLException {
-
-		Asset asset = new Asset();
-
-		asset.setAssetId(result.getLong("asset_id"));
-
-		asset.setAssetCode(result.getString("asset_code"));
-
-		asset.setAssetName(result.getString("asset_name"));
-
-		asset.setTrackingMode(result.getString("tracking_mode"));
-
-		asset.setTotalQuantity(result.getInt("total_quantity"));
-
-		asset.setCondition(result.getString("condition"));
-
-		asset.setStatus(result.getString("status"));
-
-		asset.setStorageLocation(result.getString("storage_location"));
-
-		return asset;
 	}
 
 	private InspectionItem inspectionItemFor(InspectionItem target, InspectionItem submitted) {

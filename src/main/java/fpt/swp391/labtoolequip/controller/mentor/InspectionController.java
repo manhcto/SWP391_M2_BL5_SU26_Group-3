@@ -15,8 +15,4 @@ public class InspectionController extends InspectionControllerSupport {
 		return "Người hướng dẫn";
 	}
 
-	@Override
-	protected boolean canMutate() {
-		return false;
-	}
 }

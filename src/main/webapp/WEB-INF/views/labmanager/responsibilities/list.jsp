@@ -19,13 +19,16 @@
                 <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng">
                     <svg><use href="#i-menu"/></svg>
                 </button>
-                <div><h1>Hồ sơ trách nhiệm</h1><p>Xem kết luận kỹ thuật, đánh giá Mentor và khuyến nghị xử lý.</p></div>
+                <div><h1>Hồ sơ trách nhiệm</h1><p>Gán Intern, xác định mức trách nhiệm và ghi nhận căn cứ xử lý.</p></div>
             </div>
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">LM</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
         </header>
 
         <section class="content-area">
-            <div class="content-heading"><div><p class="eyebrow">RESPONSIBILITY</p><h2>Hồ sơ trách nhiệm (${responsibilities.size()})</h2></div></div>
+            <div class="content-heading">
+                <div><p class="eyebrow">RESPONSIBILITY</p><h2>Hồ sơ trách nhiệm (${responsibilities.size()})</h2></div>
+                <a class="primary-button" href="${pageContext.request.contextPath}/lab-manager/responsibilities/new">Tạo mới trách nhiệm</a>
+            </div>
             <form class="filter-bar" method="get" action="${pageContext.request.contextPath}/lab-manager/responsibilities">
                 <div class="filter-group">
                     <input class="form-control" type="search" name="keyword" value="<c:out value='${keyword}'/>" placeholder="Tìm theo hồ sơ, Intern, sự cố, thiết bị hoặc đánh giá" style="width:280px">
@@ -48,7 +51,7 @@
                         <div class="empty-box">
                             <div class="empty-box-icon"><svg><use href="#i-list"/></svg></div>
                             <h3>Chưa có hồ sơ trách nhiệm</h3>
-                            <p>Hồ sơ do Mentor đánh giá sẽ xuất hiện tại đây để xem.</p>
+                            <p>Lab Manager bấm “Tạo mới trách nhiệm” để nhập hồ sơ và gán cho Intern.</p>
                         </div>
                     </c:when>
                     <c:otherwise>
@@ -74,7 +77,10 @@
                                         <td class="wrap-cell"><c:choose><c:when test="${not empty r.evidenceSummary}"><c:out value="${r.evidenceSummary}"/></c:when><c:otherwise><c:out value="${r.conclusion}" default="—"/></c:otherwise></c:choose><c:if test="${not empty r.responsibilityNote}"><br><small><c:out value="${r.responsibilityNote}"/></small></c:if></td>
                                         <td class="wrap-cell"><c:choose><c:when test="${not empty r.handlingRecommendation}"><c:out value="${r.handlingRecommendation}"/></c:when><c:otherwise><c:out value="${r.decision}" default="—"/></c:otherwise></c:choose></td>
                                         <td><span class="status ${r.status == 'RESOLVED' || r.status == 'CONFIRMED' || r.status == 'APPROVED' ? 'returned' : 'review'}"><c:out value="${app:label(r.status)}"/></span></td>
-                                        <td><a class="btn-action" href="${pageContext.request.contextPath}/lab-manager/responsibilities/${r.responsibilityId}">Xem</a></td>
+                                        <td>
+                                            <a class="btn-action" href="${pageContext.request.contextPath}/lab-manager/responsibilities/${r.responsibilityId}">Xem</a>
+                                            <a class="btn-action" href="${pageContext.request.contextPath}/lab-manager/responsibilities/${r.responsibilityId}/edit"><c:choose><c:when test="${empty r.responsibilityLevel || r.responsibilityLevel == 'UNDETERMINED'}">Gán</c:when><c:otherwise>Cập nhật</c:otherwise></c:choose></a>
+                                        </td>
                                     </tr>
                                 </c:forEach>
                                 </tbody>

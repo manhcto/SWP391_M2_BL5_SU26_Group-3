@@ -15,7 +15,7 @@
           href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
 </head>
 
-<body class="inspection-page${roleBase == '/mentor' ? ' mentor-page' : ' lab-manager-page'}">
+<body class="inspection-page inspection-detail-page${roleBase == '/mentor' ? ' mentor-page' : ' lab-manager-page'}">
 
 <c:set var="activeMenu" value="inspections" scope="request"/>
 
@@ -56,9 +56,7 @@
                         Kiểm tra #INS-${inspection.inspectionId}
                     </h1>
 
-                    <p>
-                        Xem thông tin chung và các thiết bị đã kiểm tra
-                    </p>
+                    <p>Theo dõi kết quả và tình trạng từng sản phẩm đã kiểm tra</p>
 
                 </div>
 
@@ -94,10 +92,7 @@
                         <c:out value="${app:label(inspection.status)}"/>
                     </p>
 
-                    <h2>
-                        Chi tiết
-                        <c:out value="${app:label(inspection.inspectionType)}"/>
-                    </h2>
+                    <h2>Chi tiết đợt kiểm tra</h2>
 
                 </div>
 
@@ -124,129 +119,58 @@
             </div>
 
 
-            <article class="panel detail-panel">
-
-                <div class="detail-grid compact-detail">
-
-                    <div class="detail-item">
-                        <dt>ID</dt>
-                        <dd>#INS-${inspection.inspectionId}</dd>
+            <article class="panel inspection-overview">
+                <div class="inspection-overview-head">
+                    <div>
+                        <span class="inspection-code">#INS-${inspection.inspectionId}</span>
+                        <h3><c:out value="${app:label(inspection.inspectionType)}"/></h3>
+                        <p><c:out value="${app:label(inspection.scope)}"/></p>
                     </div>
 
-
-                    <div class="detail-item">
-                        <dt>Loại</dt>
-                        <dd>
-                            <c:out value="${app:label(inspection.inspectionType)}"/>
-                        </dd>
-                    </div>
-
-
-                    <div class="detail-item">
-                        <dt>Học kỳ</dt>
-                        <dd>
-                            <c:out value="${inspection.semesterCode}"/>
-                            -
-                            <c:out value="${inspection.semesterName}"/>
-                        </dd>
-                    </div>
-
-
-                    <div class="detail-item">
-                        <dt>Phạm vi</dt>
-                        <dd>
-                            <c:out value="${app:label(inspection.scope)}"/>
-                        </dd>
-                    </div>
-
-
-                    <div class="detail-item">
-                        <dt>Người kiểm tra</dt>
-                        <dd>
-                            <c:out value="${inspection.inspectorName}"/>
-                        </dd>
-                    </div>
-
-
-                    <div class="detail-item">
-                        <dt>Thời gian kiểm tra</dt>
-                        <dd>
-                            <c:out value="${app:dateTime(inspection.inspectionDate)}"/>
-                        </dd>
-                    </div>
-
-
-                    <div class="detail-item">
-
-                        <dt>Trạng thái</dt>
-
-                        <dd>
-
-                            <span class="status ${inspection.status == 'COMPLETED'
-                                ? 'returned'
-                                : 'review'}">
-
-                                <c:out value="${app:label(inspection.status)}"/>
-
+                    <div class="inspection-badges">
+                        <span class="status ${inspection.status == 'COMPLETED' ? 'returned' : 'review'}">
+                            <c:out value="${app:label(inspection.status)}"/>
+                        </span>
+                        <c:if test="${not empty inspection.result}">
+                            <span class="status ${inspection.result == 'NORMAL' ? 'returned' : 'open'}">
+                                <c:out value="${app:label(inspection.result)}"/>
                             </span>
-
-                        </dd>
-
+                        </c:if>
                     </div>
-
-
-                    <div class="detail-item">
-
-                        <dt>Kết quả</dt>
-
-                        <dd>
-
-                            <c:choose>
-
-                                <c:when test="${empty inspection.result}">
-                                    -
-                                </c:when>
-
-                                <c:otherwise>
-
-                                    <span class="status ${inspection.result == 'NORMAL'
-                                        ? 'returned'
-                                        : 'open'}">
-
-                                        <c:out value="${app:label(inspection.result)}"/>
-
-                                    </span>
-
-                                </c:otherwise>
-
-                            </c:choose>
-
-                        </dd>
-
-                    </div>
-
-
-                    <div class="detail-item wide">
-
-                        <dt>Ghi chú</dt>
-
-                        <dd>
-                            <c:out value="${inspection.note}" default="-"/>
-                        </dd>
-
-                    </div>
-
                 </div>
 
+                <dl class="inspection-meta-grid">
+                    <div>
+                        <dt>Học kỳ</dt>
+                        <dd><c:out value="${inspection.semesterCode}"/> · <c:out value="${inspection.semesterName}"/></dd>
+                    </div>
+                    <div>
+                        <dt>Người kiểm tra</dt>
+                        <dd><c:out value="${inspection.inspectorName}"/></dd>
+                    </div>
+                    <div>
+                        <dt>Thời gian kiểm tra</dt>
+                        <dd><c:out value="${app:dateTime(inspection.inspectionDate)}"/></dd>
+                    </div>
+                </dl>
+
+                <div class="inspection-note">
+                    <span>Ghi chú</span>
+                    <p><c:out value="${inspection.note}" default="Không có ghi chú"/></p>
+                </div>
             </article>
 
 
-            <h3 class="section-title">
-                Thiết bị kiểm tra
-            </h3>
-
-
-            <article class="panel">
+            <article class="panel inspection-results-panel">
+                <header class="panel-header">
+                    <div class="panel-title">
+                        <span class="title-icon"><svg><use href="#i-inspect"/></svg></span>
+                        <div>
+                            <h3>Sản phẩm đã kiểm tra</h3>
+                            <p>${items.size()} sản phẩm vật lý</p>
+                        </div>
+                    </div>
+                </header>
 
                 <div class="table-scroll inspection-table-scroll">
 
@@ -255,14 +179,14 @@
                         <thead>
 
                         <tr>
-                            <th>Thiết bị / Sản phẩm</th>
-                            <th>Số lượng dự kiến</th>
-                            <th>Số lượng thực tế</th>
+                            <th>Sản phẩm</th>
+                            <th>Dự kiến</th>
+                            <th>Thực tế</th>
                             <th>Tình trạng dự kiến</th>
                             <th>Tình trạng thực tế</th>
                             <th>Loại chênh lệch</th>
                             <th>Ghi chú chênh lệch</th>
-                            <th>Sự cố</th>
+                            <th>Thao tác</th>
                         </tr>
 
                         </thead>
@@ -283,12 +207,10 @@
 
                                         <c:choose>
 
-                                            <%-- Asset managed individually --%>
                                             <c:when test="${serialized && not empty item.itemCode}">
                                                 <c:out value="${item.itemCode}"/>
                                             </c:when>
 
-                                            <%-- Quantity-based asset --%>
                                             <c:otherwise>
                                                 <c:out value="${item.assetCode}"/>
                                             </c:otherwise>
@@ -307,16 +229,10 @@
 
                                             <c:when test="${serialized}">
 
-                                                · Quản lý riêng lẻ
-
-                                                <c:if test="${not empty item.assetCode}">
-                                                    · Nhóm:
-                                                    <c:out value="${item.assetCode}"/>
-                                                </c:if>
+                                                <c:if test="${not empty item.assetCode}"> · Nhóm <c:out value="${item.assetCode}"/></c:if>
 
                                                 <c:if test="${not empty item.serialNumber}">
-                                                    · Serial:
-                                                    <c:out value="${item.serialNumber}"/>
+                                                    · Serial <c:out value="${item.serialNumber}"/>
                                                 </c:if>
 
                                                 <c:if test="${not empty item.assetItemStatus}">
@@ -370,23 +286,25 @@
 
                                 <td>
 
-                                    <c:if test="${not empty item.assetItemId}">
+                                    <div class="inspection-row-actions">
+                                      <c:if test="${not empty item.assetItemId}">
 
                                         <a class="btn-action"
                                            href="${pageContext.request.contextPath}${roleBase}/assets/${item.assetItemId}/lifecycle">
                                             Xem vòng đời
                                         </a>
 
-                                    </c:if>
+                                      </c:if>
 
-                                    <c:if test="${inspection.status == 'COMPLETED' && item.abnormal}">
+                                      <c:if test="${inspection.status == 'COMPLETED' && item.abnormal}">
 
                                         <a class="btn-action"
                                            href="#">
                                             Báo cáo sự cố
                                         </a>
 
-                                    </c:if>
+                                      </c:if>
+                                    </div>
 
                                 </td>
 

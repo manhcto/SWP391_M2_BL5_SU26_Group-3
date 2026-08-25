@@ -14,12 +14,17 @@
                     </svg>
                 </button>
                 <div><h1>Chi tiết trách nhiệm</h1>
-                    <p>Xem kết luận kỹ thuật, đánh giá Mentor và khuyến nghị xử lý</p></div>
+                    <p>Xem Intern được gán, mức trách nhiệm và căn cứ xử lý</p></div>
             </div>
-            <div class="topbar-actions"><a class="btn-secondary"
-                                           href="${pageContext.request.contextPath}/lab-manager/responsibilities">‹ Quay lại danh sách trách nhiệm</a></div>
+            <div class="topbar-actions">
+                <a class="primary-button" href="${pageContext.request.contextPath}/lab-manager/responsibilities/${responsibility.responsibilityId}/edit">Gán / cập nhật trách nhiệm</a>
+                <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/responsibilities">‹ Quay lại danh sách trách nhiệm</a>
+            </div>
         </header>
         <section class="content-area">
+            <c:if test="${param.success == 'assign' || param.success == 'create'}">
+                <div class="success-message"><c:choose><c:when test="${param.success == 'create'}">Đã tạo và gán trách nhiệm cho Intern thành công.</c:when><c:otherwise>Đã cập nhật trách nhiệm của Intern thành công.</c:otherwise></c:choose></div>
+            </c:if>
             <%@ include file="../../shared/responsibility-detail.jspf" %>
         </section>
     </main>

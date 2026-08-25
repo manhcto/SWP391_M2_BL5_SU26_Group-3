@@ -32,4 +32,11 @@ class ResponsibilityDAOTest {
 		assertThrows(IllegalArgumentException.class,
 				() -> ResponsibilityDAO.validateAssessment("ASSIGNED", 12L, "Bằng chứng.", "Lý do."));
 	}
+
+	@Test
+	void labManagerMustChooseAnIntern() {
+		assertDoesNotThrow(() -> ResponsibilityDAO.validateLabManagerAssignment("NONE", 12L, null, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> ResponsibilityDAO.validateLabManagerAssignment("NONE", null, null, null));
+	}
 }

@@ -17,6 +17,7 @@ class AuthorizationTest {
 		assertTrue(Authorization.has("INTERN", Permission.INCIDENT_REPORT));
 		assertTrue(Authorization.has("MENTOR", Permission.INCIDENT_REVIEW));
 		assertTrue(Authorization.has("MENTOR", Permission.RESPONSIBILITY_ASSESS));
+		assertTrue(Authorization.has("LAB_MANAGER", Permission.RESPONSIBILITY_ASSESS));
 		assertTrue(Authorization.has("LAB_MANAGER", Permission.INCIDENT_RESOLVE));
 
 		assertFalse(Authorization.has("ADMIN", Permission.DISPOSAL_REVIEW));
@@ -25,7 +26,6 @@ class AuthorizationTest {
 		assertFalse(Authorization.has("MENTOR", Permission.DISPOSAL_COMPLETE));
 		assertFalse(Authorization.has("LAB_MANAGER", Permission.DISPOSAL_REQUEST));
 		assertFalse(Authorization.has("INTERN", Permission.USER_MANAGE));
-		assertFalse(Authorization.has("LAB_MANAGER", Permission.RESPONSIBILITY_ASSESS));
 	}
 
 	@Test

@@ -287,11 +287,7 @@
                             <c:forEach var="asset"
                                        items="${assets}">
 
-                                <%--
-                                    rowKey:
-                                    QUANTITY    -> assetId
-                                    SERIALIZED  -> item_<assetItemId>
-                                --%>
+                                <%-- Mỗi dòng luôn đại diện cho một AssetItem cụ thể. --%>
                                 <c:set var="rowKey"
                                        value="${asset.rowKey}"/>
 
@@ -312,8 +308,8 @@
 
                                         <input class="asset-check"
                                                type="checkbox"
-                                               name="selectedAssetId"
-                                               value="${asset.assetId}"
+                                               name="selectedTargetKey"
+                                               value="${rowKey}"
                                             ${checked ? 'checked' : ''}>
 
                                         <input type="hidden"
@@ -353,9 +349,7 @@
 
                                             ·
 
-                                            <c:out value="${serialized
-                                                ? 'Quản lý riêng lẻ'
-                                                : 'Theo số lượng'}"/>
+                                            Sản phẩm riêng lẻ
 
 
                                             <c:if test="${serialized && not empty asset.assetCode}">

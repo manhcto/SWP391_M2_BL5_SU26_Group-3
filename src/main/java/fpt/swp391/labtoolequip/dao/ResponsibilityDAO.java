@@ -191,6 +191,113 @@ public class ResponsibilityDAO {
 		}
 	}
 
+	public List<Responsibility> findActiveInterns() throws SQLException {
+		String sql = """
+				SELECT sp.student_id, sp.student_code AS intern_code, u.full_name AS intern_name,
+				       u.email AS intern_email
+				FROM dbo.student_profiles sp
+				JOIN dbo.users u ON u.user_id = sp.user_id
+				WHERE sp.status = 'ACTIVE' AND u.role = 'INTERN' AND u.status = 'ACTIVE'
+				ORDER BY u.full_name, sp.student_code
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			try (ResultSet result = statement.executeQuery()) {
+				List<Responsibility> interns = new ArrayList<>();
+				while (result.next()) {
+					Responsibility intern = new Responsibility();
+					intern.setInternId(result.getLong("student_id"));
+					intern.setInternCode(result.getString("intern_code"));
+					intern.setInternName(result.getString("intern_name"));
+					intern.setInternEmail(result.getString("intern_email"));
+					interns.add(intern);
+				}
+				return interns;
+			}
+		}
+	}
+
+	public List<Responsibility> findUnassignedIncidents() throws SQLException {
+		String sql = """
+				SELECT i.incident_id, i.reported_at, i.incident_type, i.description AS incident_description,
+				       i.severity AS incident_severity, i.status AS incident_status,
+				       a.asset_id, a.asset_code, a.asset_name
+				FROM dbo.incidents i
+				JOIN dbo.assets a ON a.asset_id = i.asset_id
+				WHERE NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
+				ORDER BY i.reported_at DESC
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql);
+				ResultSet result = statement.executeQuery()) {
+			List<Responsibility> incidents = new ArrayList<>();
+			while (result.next()) {
+				Responsibility incident = new Responsibility();
+				incident.setIncidentId(result.getLong("incident_id"));
+				incident.setReportedAt(ViewFormat.fromUtc(result.getTimestamp("reported_at")));
+				incident.setIncidentType(result.getString("incident_type"));
+				incident.setIncidentDescription(result.getString("incident_description"));
+				incident.setIncidentSeverity(result.getString("incident_severity"));
+				incident.setIncidentStatus(result.getString("incident_status"));
+				incident.setAssetId(result.getLong("asset_id"));
+				incident.setAssetCode(result.getString("asset_code"));
+				incident.setAssetName(result.getString("asset_name"));
+				incidents.add(incident);
+			}
+			return incidents;
+		}
+	}
+
+	public long createByLabManager(long managerUserId, long incidentId, String responsibilityLevel,
+			Long relatedStudentId, String evidenceSummary, String responsibilityNote, String handlingRecommendation)
+			throws SQLException {
+		String level = normalizeLevel(responsibilityLevel);
+		String evidence = blankToNull(evidenceSummary);
+		String note = blankToNull(responsibilityNote);
+		String recommendation = blankToNull(handlingRecommendation);
+		validateLabManagerAssignment(level, relatedStudentId, evidence, note);
+		String sql = """
+				INSERT dbo.responsibilities
+				    (incident_id, student_id, determined_by, conclusion, decision, status, responsibility_level,
+				     evidence_summary, responsibility_note, handling_recommendation, responsibility_assessed_by,
+				     responsibility_assessed_at)
+				OUTPUT INSERTED.responsibility_id
+				SELECT i.incident_id, ?, ?, ?, ?, 'CONFIRMED', ?, ?, ?, ?, ?, SYSUTCDATETIME()
+				FROM dbo.incidents i
+				WHERE i.incident_id = ?
+				  AND NOT EXISTS (SELECT 1 FROM dbo.responsibilities r WHERE r.incident_id = i.incident_id)
+				  AND EXISTS (SELECT 1 FROM dbo.users manager
+				              WHERE manager.user_id = ? AND manager.role = 'LAB_MANAGER' AND manager.status = 'ACTIVE')
+				  AND (? IS NULL OR EXISTS (
+				      SELECT 1 FROM dbo.student_profiles selected_student
+				      JOIN dbo.users intern_account ON intern_account.user_id = selected_student.user_id
+				      WHERE selected_student.student_id = ? AND selected_student.status = 'ACTIVE'
+				        AND intern_account.role = 'INTERN' AND intern_account.status = 'ACTIVE'))
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			int index = 1;
+			setNullableLong(statement, index++, relatedStudentId);
+			statement.setLong(index++, managerUserId);
+			statement.setString(index++, legacyConclusion(level, evidence, note));
+			statement.setString(index++, recommendation);
+			statement.setString(index++, level);
+			statement.setString(index++, evidence);
+			statement.setString(index++, note);
+			statement.setString(index++, recommendation);
+			statement.setLong(index++, managerUserId);
+			statement.setLong(index++, incidentId);
+			statement.setLong(index++, managerUserId);
+			setNullableLong(statement, index++, relatedStudentId);
+			setNullableLong(statement, index, relatedStudentId);
+			try (ResultSet result = statement.executeQuery()) {
+				if (!result.next())
+					throw new IllegalStateException("Sự cố đã có hồ sơ, hoặc dữ liệu Lab Manager/Intern không hợp lệ.");
+				return result.getLong(1);
+			}
+		}
+	}
+
 	public long createAssessment(long mentorUserId, long incidentId, String responsibilityLevel, Long relatedStudentId,
 			String evidenceSummary, String responsibilityNote, String handlingRecommendation) throws SQLException {
 		String level = normalizeLevel(responsibilityLevel);
@@ -303,6 +410,48 @@ public class ResponsibilityDAO {
 		}
 	}
 
+	public void assignByLabManager(long managerUserId, long id, String responsibilityLevel, Long relatedStudentId,
+			String evidenceSummary, String responsibilityNote, String handlingRecommendation) throws SQLException {
+		String level = normalizeLevel(responsibilityLevel);
+		String evidence = blankToNull(evidenceSummary);
+		String note = blankToNull(responsibilityNote);
+		String recommendation = blankToNull(handlingRecommendation);
+		validateLabManagerAssignment(level, relatedStudentId, evidence, note);
+		String sql = """
+				UPDATE r
+				SET student_id = ?, responsibility_level = ?, evidence_summary = ?, responsibility_note = ?,
+				    handling_recommendation = ?, responsibility_assessed_by = ?,
+				    responsibility_assessed_at = SYSUTCDATETIME(), updated_at = SYSUTCDATETIME()
+				FROM dbo.responsibilities r
+				WHERE r.responsibility_id = ?
+				  AND EXISTS (SELECT 1 FROM dbo.users manager
+				              WHERE manager.user_id = ? AND manager.role = 'LAB_MANAGER' AND manager.status = 'ACTIVE')
+				  AND (? IS NULL OR EXISTS (
+				      SELECT 1
+				      FROM dbo.student_profiles selected_student
+				      JOIN dbo.users intern_account ON intern_account.user_id = selected_student.user_id
+				      WHERE selected_student.student_id = ?
+				        AND selected_student.status = 'ACTIVE'
+				        AND intern_account.role = 'INTERN' AND intern_account.status = 'ACTIVE'))
+				""";
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(sql)) {
+			int index = 1;
+			setNullableLong(statement, index++, relatedStudentId);
+			statement.setString(index++, level);
+			statement.setString(index++, evidence);
+			statement.setString(index++, note);
+			statement.setString(index++, recommendation);
+			statement.setLong(index++, managerUserId);
+			statement.setLong(index++, id);
+			statement.setLong(index++, managerUserId);
+			setNullableLong(statement, index++, relatedStudentId);
+			setNullableLong(statement, index, relatedStudentId);
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Không tìm thấy hồ sơ hoặc dữ liệu Lab Manager/Intern không hợp lệ.");
+		}
+	}
+
 	static void validateAssessment(String responsibilityLevel, Long relatedStudentId, String evidenceSummary,
 			String responsibilityNote) {
 		if (!RESPONSIBILITY_LEVELS.contains(responsibilityLevel))
@@ -315,6 +464,13 @@ public class ResponsibilityDAO {
 			throw new IllegalArgumentException("PARTIAL hoặc FULL phải có tóm tắt bằng chứng.");
 		if (responsibilityNote == null || responsibilityNote.isBlank())
 			throw new IllegalArgumentException("PARTIAL hoặc FULL phải có lý do đánh giá.");
+	}
+
+	static void validateLabManagerAssignment(String responsibilityLevel, Long relatedStudentId, String evidenceSummary,
+			String responsibilityNote) {
+		if (relatedStudentId == null || relatedStudentId <= 0)
+			throw new IllegalArgumentException("Lab Manager phải chọn Intern để gán trách nhiệm.");
+		validateAssessment(responsibilityLevel, relatedStudentId, evidenceSummary, responsibilityNote);
 	}
 
 	private String searchWhere(String prefix) {

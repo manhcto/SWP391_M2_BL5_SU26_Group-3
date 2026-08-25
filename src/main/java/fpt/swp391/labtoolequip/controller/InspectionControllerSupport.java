@@ -190,13 +190,7 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 
 		request.setAttribute("itemByTarget", itemByTarget);
 
-		/*
-		 * Keep the attribute name "assets" because the FE-05 form currently iterates
-		 * over this collection.
-		 *
-		 * Each element is actually an InspectionItem target: - QUANTITY asset -> one
-		 * parent row - SERIALIZED asset -> one row per AssetItem
-		 */
+		/* Keep the existing view attribute name; every element is one AssetItem. */
 		request.setAttribute("assets", targets);
 
 		request.setAttribute("semesters", dao.findSemesters());
@@ -227,15 +221,10 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 		return record;
 	}
 
-	/*
-	 * Hybrid request parser:
-	 *
-	 * targetKey is: - assetId for QUANTITY assets - item_<assetItemId> for
-	 * SERIALIZED rows
-	 */
+	/* targetKey is item_<assetItemId>, so selection is exact to one product. */
 	private List<InspectionItem> itemsFrom(HttpServletRequest request, String scope) {
 
-		Set<Long> selected = selectedAssets(request, scope);
+		Set<String> selected = selectedTargets(request);
 
 		String[] targetKeys = request.getParameterValues("targetKey");
 
@@ -253,7 +242,7 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 
 			InspectionItem item = itemFrom(request, targetKey);
 
-			if ("WHOLE_LAB".equals(scope) || selected.contains(item.getAssetId())) {
+			if ("WHOLE_LAB".equals(scope) || selected.contains(targetKey)) {
 
 				items.add(item);
 			}
@@ -272,15 +261,15 @@ public abstract class InspectionControllerSupport extends HttpServlet {
 		}
 	}
 
-	private Set<Long> selectedAssets(HttpServletRequest request, String scope) {
+	private Set<String> selectedTargets(HttpServletRequest request) {
 
-		String[] values = request.getParameterValues("selectedAssetId");
+		String[] values = request.getParameterValues("selectedTargetKey");
 
 		if (values == null) {
 			return Set.of();
 		}
 
-		return java.util.Arrays.stream(values).filter(value -> value != null && !value.isBlank()).map(Long::parseLong)
+		return java.util.Arrays.stream(values).filter(value -> value != null && !value.isBlank())
 				.collect(Collectors.toCollection(java.util.LinkedHashSet::new));
 	}
 
