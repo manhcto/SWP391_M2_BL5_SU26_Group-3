@@ -493,7 +493,7 @@ BEGIN TRY
         requested_by bigint NOT NULL,
         description nvarchar(max) NOT NULL,
         requested_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_records_requested_at DEFAULT (SYSUTCDATETIME()),
-        status varchar(15) NOT NULL CONSTRAINT DF_maintenance_records_status DEFAULT ('PENDING'),
+        status varchar(15) NOT NULL CONSTRAINT DF_maintenance_records_status DEFAULT ('IN_PROGRESS'),
         approved_by bigint NULL,
         approved_at datetime2(0) NULL,
         approval_note nvarchar(max) NULL,
@@ -504,10 +504,14 @@ BEGIN TRY
         estimated_cost decimal(15,0) NULL,
         actual_cost decimal(15,0) NULL,
         note nvarchar(max) NULL,
+        provider_phone varchar(30) NULL,
+        provider_address nvarchar(255) NULL,
+        image_url varchar(500) NULL,
         created_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_records_created_at DEFAULT (SYSUTCDATETIME()),
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_records_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_maintenance_records PRIMARY KEY (maintenance_id),
         CONSTRAINT FK_maintenance_records_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
+        CONSTRAINT FK_maintenance_records_asset_item FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id),
         CONSTRAINT FK_maintenance_records_incident FOREIGN KEY (incident_id) REFERENCES dbo.incidents(incident_id),
         CONSTRAINT FK_maintenance_records_schedule FOREIGN KEY (schedule_id) REFERENCES dbo.maintenance_schedules(schedule_id),
         CONSTRAINT FK_maintenance_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
@@ -518,20 +522,6 @@ BEGIN TRY
         ),
         CONSTRAINT CK_maintenance_records_repair_outcome CHECK (
             repair_outcome IN ('PENDING', 'SUCCESS', 'FAILED')
-        ),
-        CONSTRAINT CK_maintenance_records_approval CHECK (
-            (status = 'PENDING' AND approved_by IS NULL AND approved_at IS NULL)
-            OR (status IN ('APPROVED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED')
-                AND approved_by IS NOT NULL AND approved_at IS NOT NULL)
-        ),
-        CONSTRAINT CK_maintenance_records_dates CHECK (
-            (repair_started_at IS NULL OR repair_started_at >= approved_at)
-            AND (repair_completed_at IS NULL
-                OR (repair_started_at IS NOT NULL AND repair_completed_at >= repair_started_at))
-        ),
-        CONSTRAINT CK_maintenance_records_completion CHECK (
-            status <> 'COMPLETED'
-            OR (repair_started_at IS NOT NULL AND repair_completed_at IS NOT NULL)
         )
     );
 
