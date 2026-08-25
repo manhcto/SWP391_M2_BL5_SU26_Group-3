@@ -90,13 +90,13 @@ public class AssetItemDAO {
 	public List<AssetItemLifecycleEvent> findLifecycle(long assetItemId) throws SQLException {
 		String sql = """
 				SELECT event_time, event_type, event_label, detail, event_status, actor_name, reference_type,
-				       reference_id, event_scope
+				       reference_id, event_scope, event_result
 				FROM (
 				 SELECT i.created_at, 'REGISTRATION', N'Đăng ký sản phẩm', i.note, i.status, NULL,
-				        'ASSET_ITEM', i.asset_item_id, 'ITEM', 10 FROM dbo.asset_items i WHERE i.asset_item_id=?
+				        'ASSET_ITEM', i.asset_item_id, 'ITEM', CAST(NULL AS varchar(20)), 10 FROM dbo.asset_items i WHERE i.asset_item_id=?
 				 UNION ALL
 				 SELECT event.event_time, event.event_type, event.event_label, event.detail, allocation.status,
-				        event.actor_name, 'ALLOCATION', allocation.allocation_id, 'ITEM', event.sort_order
+				        event.actor_name, 'ALLOCATION', allocation.allocation_id, 'ITEM', CAST(NULL AS varchar(20)), event.sort_order
 				 FROM dbo.equipment_allocations allocation
 				 LEFT JOIN dbo.users handover ON handover.user_id=allocation.handed_over_by
 				 LEFT JOIN dbo.users recovery ON recovery.user_id=allocation.recovered_by
@@ -108,7 +108,7 @@ public class AssetItemDAO {
 				 WHERE allocation.asset_item_id=? AND event.event_time IS NOT NULL
 				 UNION ALL
 				 SELECT event.event_time,event.event_type,event.event_label,event.detail,usage.status,event.actor_name,
-				        'ASSET_USAGE',usage.asset_usage_id,'ITEM',event.sort_order
+				        'ASSET_USAGE',usage.asset_usage_id,'ITEM',CAST(NULL AS varchar(20)),event.sort_order
 				 FROM dbo.asset_usages usage
 				 JOIN dbo.student_profiles profile ON profile.student_id=usage.student_id
 				 JOIN dbo.users intern ON intern.user_id=profile.user_id
@@ -121,7 +121,7 @@ public class AssetItemDAO {
 				 WHERE usage.asset_item_id=? AND event.event_time IS NOT NULL
 				 UNION ALL
 				 SELECT event.event_time,event.event_type,event.event_label,event.detail,incident.status,actor.full_name,
-				        'INCIDENT',incident.incident_id,'ITEM',event.sort_order
+				        'INCIDENT',incident.incident_id,'ITEM',CAST(NULL AS varchar(20)),event.sort_order
 				 FROM dbo.incidents incident LEFT JOIN dbo.asset_usages usage ON usage.asset_usage_id=incident.asset_usage_id
 				 CROSS APPLY (VALUES
 				   (incident.reported_at,'INCIDENT_REPORTED',N'Báo cáo sự cố',incident.description,incident.reported_by,40),
@@ -132,7 +132,7 @@ public class AssetItemDAO {
 				 WHERE (incident.asset_item_id=? OR (incident.asset_item_id IS NULL AND usage.asset_item_id=?)) AND event.event_time IS NOT NULL
 				 UNION ALL
 				 SELECT event.event_time,event.event_type,event.event_label,event.detail,maintenance.status,actor.full_name,
-				        'MAINTENANCE',maintenance.maintenance_id,'ITEM',event.sort_order
+				        'MAINTENANCE',maintenance.maintenance_id,'ITEM',CAST(NULL AS varchar(20)),event.sort_order
 				 FROM dbo.maintenance_records maintenance
 				 CROSS APPLY (VALUES
 				   (maintenance.requested_at,'MAINTENANCE_REQUESTED',N'Tạo phiếu bảo trì',maintenance.description,maintenance.requested_by,50),
@@ -144,7 +144,7 @@ public class AssetItemDAO {
 				 WHERE maintenance.asset_item_id=? AND event.event_time IS NOT NULL
 				 UNION ALL
 				 SELECT event.event_time,event.event_type,event.event_label,event.detail,disposal.status,actor.full_name,
-				        'DISPOSAL',disposal.disposal_id,'ITEM',event.sort_order
+				        'DISPOSAL',disposal.disposal_id,'ITEM',CAST(NULL AS varchar(20)),event.sort_order
 				 FROM dbo.disposal_records disposal
 				 CROSS APPLY (VALUES
 				   (disposal.requested_at,'DISPOSAL_REQUESTED',N'Yêu cầu thanh lý',disposal.reason,disposal.requested_by,60),
@@ -154,18 +154,49 @@ public class AssetItemDAO {
 				 LEFT JOIN dbo.users actor ON actor.user_id=event.actor_id
 				 WHERE disposal.asset_item_id=? AND event.event_time IS NOT NULL
 				 UNION ALL
-				 SELECT record.inspection_date,'PARENT_INSPECTION',N'Kiểm tra Asset cha',item.discrepancy_note,
-				        record.status,actor.full_name,'INSPECTION',record.inspection_id,'PARENT_ASSET',70
+				 SELECT record.inspection_date,'ITEM_INSPECTION',
+				        CASE WHEN record.inspection_type='INVENTORY' THEN N'Kiểm kê sản phẩm' ELSE N'Kiểm tra sản phẩm' END,
+				        CAST(CONCAT_WS(CHAR(10),
+				        CONCAT(N'Loại: ',record.inspection_type),
+				        CONCAT(N'Số lượng: dự kiến ',item.expected_quantity,N' / thực tế ',item.actual_quantity),
+				        CASE WHEN item.expected_condition IS NOT NULL OR item.actual_condition IS NOT NULL
+				             THEN CASE WHEN COALESCE(item.expected_condition,N'-')=COALESCE(item.actual_condition,N'-')
+				                       THEN CONCAT(N'Tình trạng: ',COALESCE(item.actual_condition,item.expected_condition,N'-'))
+				                       ELSE CONCAT(N'Tình trạng: ',COALESCE(item.expected_condition,N'-'),
+				                                   N' → ',COALESCE(item.actual_condition,N'-')) END END,
+				        CASE WHEN item.discrepancy_type IS NOT NULL THEN CONCAT(N'Chênh lệch: ',item.discrepancy_type) END,
+				        CASE WHEN item.discrepancy_note IS NOT NULL THEN CONCAT(N'Ghi chú: ',item.discrepancy_note) END
+				     ) AS nvarchar(max)),
+				        record.status,actor.full_name,'INSPECTION',record.inspection_id,'ITEM',record.result,70
+				 FROM dbo.inspection_items item
+				 JOIN dbo.inspection_records record ON record.inspection_id=item.inspection_id
+				 JOIN dbo.users actor ON actor.user_id=record.inspected_by
+				 WHERE item.asset_item_id=?
+				 UNION ALL
+				 SELECT record.inspection_date,'PARENT_INSPECTION',
+				        CASE WHEN record.inspection_type='INVENTORY' THEN N'Kiểm kê Asset cha' ELSE N'Kiểm tra Asset cha' END,
+				        CAST(CONCAT_WS(CHAR(10),
+				        CONCAT(N'Loại: ',record.inspection_type),
+				        CONCAT(N'Số lượng: dự kiến ',item.expected_quantity,N' / thực tế ',item.actual_quantity),
+				        CASE WHEN item.expected_condition IS NOT NULL OR item.actual_condition IS NOT NULL
+				             THEN CASE WHEN COALESCE(item.expected_condition,N'-')=COALESCE(item.actual_condition,N'-')
+				                       THEN CONCAT(N'Tình trạng: ',COALESCE(item.actual_condition,item.expected_condition,N'-'))
+				                       ELSE CONCAT(N'Tình trạng: ',COALESCE(item.expected_condition,N'-'),
+				                                   N' → ',COALESCE(item.actual_condition,N'-')) END END,
+				        CASE WHEN item.discrepancy_type IS NOT NULL THEN CONCAT(N'Chênh lệch: ',item.discrepancy_type) END,
+				        CASE WHEN item.discrepancy_note IS NOT NULL THEN CONCAT(N'Ghi chú: ',item.discrepancy_note) END
+				     ) AS nvarchar(max)),
+				        record.status,actor.full_name,'INSPECTION',record.inspection_id,'PARENT_ASSET',record.result,71
 				 FROM dbo.asset_items physical
-				 JOIN dbo.inspection_items item ON item.asset_id=physical.asset_id
+				 JOIN dbo.inspection_items item ON item.asset_id=physical.asset_id AND item.asset_item_id IS NULL
 				 JOIN dbo.inspection_records record ON record.inspection_id=item.inspection_id
 				 JOIN dbo.users actor ON actor.user_id=record.inspected_by WHERE physical.asset_item_id=?
-				) events(event_time,event_type,event_label,detail,event_status,actor_name,reference_type,reference_id,event_scope,sort_order)
+				) events(event_time,event_type,event_label,detail,event_status,actor_name,reference_type,reference_id,event_scope,event_result,sort_order)
 				ORDER BY event_time, sort_order, reference_id
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
-			for (int index = 1; index <= 8; index++)
+			for (int index = 1; index <= 9; index++)
 				statement.setLong(index, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				List<AssetItemLifecycleEvent> events = new ArrayList<>();
@@ -174,7 +205,7 @@ public class AssetItemDAO {
 							result.getString("event_type"), result.getString("event_label"), result.getString("detail"),
 							result.getString("event_status"), result.getString("actor_name"),
 							result.getString("reference_type"), result.getLong("reference_id"),
-							result.getString("event_scope")));
+							result.getString("event_scope"), result.getString("event_result")));
 				return events;
 			}
 		}

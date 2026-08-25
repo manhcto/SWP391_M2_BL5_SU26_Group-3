@@ -370,6 +370,15 @@
 
                                 <td>
 
+                                    <c:if test="${not empty item.assetItemId}">
+
+                                        <a class="btn-action"
+                                           href="${pageContext.request.contextPath}${roleBase}/assets/${item.assetItemId}/lifecycle">
+                                            Xem vòng đời
+                                        </a>
+
+                                    </c:if>
+
                                     <c:if test="${inspection.status == 'COMPLETED' && item.abnormal}">
 
                                         <a class="btn-action"
