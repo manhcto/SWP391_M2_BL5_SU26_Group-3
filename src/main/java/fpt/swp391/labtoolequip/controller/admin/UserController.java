@@ -68,7 +68,6 @@ public class UserController extends HttpServlet {
 		String status = normalize(request.getParameter("status"));
 
 		request.setAttribute("users", userDAO.findAll(keyword, role, status));
-		request.setAttribute("summary", userDAO.findSummary());
 
 		request.setAttribute("keyword", keyword);
 		request.setAttribute("selectedRole", role);
