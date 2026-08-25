@@ -16,8 +16,10 @@ public class InspectionItem {
 	private LocalDateTime createdAt;
 	private String assetCode;
 	private String assetName;
+	private String trackingMode;
 	private String itemCode;
 	private String serialNumber;
+	private String assetItemStatus;
 
 	public InspectionItem() {
 	}
@@ -141,12 +143,28 @@ public class InspectionItem {
 		this.assetName = assetName;
 	}
 
+	public String getTrackingMode() {
+		return trackingMode;
+	}
+
+	public void setTrackingMode(String trackingMode) {
+		this.trackingMode = trackingMode;
+	}
+
 	public String getItemCode() {
 		return itemCode;
 	}
 
 	public void setItemCode(String itemCode) {
 		this.itemCode = itemCode;
+	}
+
+	public String getAssetItemCode() {
+		return itemCode;
+	}
+
+	public void setAssetItemCode(String assetItemCode) {
+		this.itemCode = assetItemCode;
 	}
 
 	public String getSerialNumber() {
@@ -157,13 +175,27 @@ public class InspectionItem {
 		this.serialNumber = serialNumber;
 	}
 
+	public String getAssetItemStatus() {
+		return assetItemStatus;
+	}
+
+	public void setAssetItemStatus(String assetItemStatus) {
+		this.assetItemStatus = assetItemStatus;
+	}
+
+	public String getRowKey() {
+		return assetItemId == null ? String.valueOf(assetId) : "item_" + assetItemId;
+	}
+
 	public boolean isAbnormal() {
 		if (discrepancyType != null && !discrepancyType.isBlank()) {
 			return true;
 		}
+
 		if (expectedQuantity != null && actualQuantity != null && !expectedQuantity.equals(actualQuantity)) {
 			return true;
 		}
+
 		return expectedCondition != null && actualCondition != null && !expectedCondition.equals(actualCondition);
 	}
 }

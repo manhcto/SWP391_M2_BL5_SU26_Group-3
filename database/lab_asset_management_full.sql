@@ -222,7 +222,6 @@ BEGIN TRY
         CONSTRAINT CK_assets_tracking_mode CHECK (tracking_mode IN ('SERIALIZED', 'QUANTITY')),
         CONSTRAINT CK_assets_quantity CHECK (
             total_quantity > 0
-            AND (tracking_mode = 'QUANTITY' OR total_quantity = 1)
         ),
         CONSTRAINT CK_assets_condition CHECK (condition IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')),
         CONSTRAINT CK_assets_status CHECK (status IN ('AVAILABLE', 'MAINTENANCE', 'UNAVAILABLE', 'DISPOSED'))
@@ -334,6 +333,7 @@ BEGIN TRY
         CONSTRAINT FK_inspection_items_inspection FOREIGN KEY (inspection_id) REFERENCES dbo.inspection_records(inspection_id),
         CONSTRAINT FK_inspection_items_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
         CONSTRAINT CK_inspection_items_quantity CHECK (expected_quantity >= 0 AND actual_quantity >= 0),
+        CONSTRAINT CK_inspection_items_asset_item_quantity CHECK (asset_item_id IS NULL OR (expected_quantity = 1 AND actual_quantity IN (0, 1))),
         CONSTRAINT CK_inspection_items_expected_condition CHECK (
             expected_condition IS NULL OR expected_condition IN ('GOOD', 'FAIR', 'DAMAGED', 'BROKEN')
         ),
@@ -343,6 +343,10 @@ BEGIN TRY
     );
 
     CREATE INDEX IX_inspection_items_asset ON dbo.inspection_items (asset_id);
+    CREATE UNIQUE INDEX UX_inspection_items_asset_quantity ON dbo.inspection_items (inspection_id, asset_id)
+        WHERE asset_item_id IS NULL;
+    CREATE UNIQUE INDEX UX_inspection_items_asset_item ON dbo.inspection_items (inspection_id, asset_item_id)
+        WHERE asset_item_id IS NOT NULL;
 
     CREATE TABLE dbo.incidents (
         incident_id bigint IDENTITY(1,1) NOT NULL,
@@ -906,6 +910,58 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.inspe
 GO
 
 /* asset_items is available only after the initial schema and seed above. */
+IF COL_LENGTH('dbo.inspection_items', 'asset_item_id') IS NULL
+    ALTER TABLE dbo.inspection_items ADD asset_item_id bigint NULL;
+IF EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_assets_quantity'
+      AND parent_object_id = OBJECT_ID('dbo.assets')
+)
+    ALTER TABLE dbo.assets DROP CONSTRAINT CK_assets_quantity;
+ALTER TABLE dbo.assets ADD CONSTRAINT CK_assets_quantity CHECK (total_quantity > 0);
+IF EXISTS (
+    SELECT 1 FROM sys.key_constraints
+    WHERE name = 'UQ_inspection_items_asset'
+      AND parent_object_id = OBJECT_ID('dbo.inspection_items')
+)
+    ALTER TABLE dbo.inspection_items DROP CONSTRAINT UQ_inspection_items_asset;
+IF EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UQ_inspection_items_asset'
+      AND object_id = OBJECT_ID('dbo.inspection_items')
+)
+    DROP INDEX UQ_inspection_items_asset ON dbo.inspection_items;
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_inspection_items_asset_item_quantity'
+      AND parent_object_id = OBJECT_ID('dbo.inspection_items')
+)
+    ALTER TABLE dbo.inspection_items
+        ADD CONSTRAINT CK_inspection_items_asset_item_quantity
+        CHECK (asset_item_id IS NULL OR (expected_quantity = 1 AND actual_quantity IN (0, 1)));
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys
+    WHERE name = 'FK_inspection_items_asset_item'
+      AND parent_object_id = OBJECT_ID('dbo.inspection_items')
+)
+    ALTER TABLE dbo.inspection_items
+        ADD CONSTRAINT FK_inspection_items_asset_item FOREIGN KEY (asset_item_id, asset_id)
+        REFERENCES dbo.asset_items(asset_item_id, asset_id);
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UX_inspection_items_asset_quantity'
+      AND object_id = OBJECT_ID('dbo.inspection_items')
+)
+    CREATE UNIQUE INDEX UX_inspection_items_asset_quantity ON dbo.inspection_items (inspection_id, asset_id)
+        WHERE asset_item_id IS NULL;
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UX_inspection_items_asset_item'
+      AND object_id = OBJECT_ID('dbo.inspection_items')
+)
+    CREATE UNIQUE INDEX UX_inspection_items_asset_item ON dbo.inspection_items (inspection_id, asset_item_id)
+        WHERE asset_item_id IS NOT NULL;
+
 IF COL_LENGTH('dbo.incidents', 'reported_cause') IS NULL
     ALTER TABLE dbo.incidents ADD reported_cause varchar(15) NOT NULL
         CONSTRAINT DF_incidents_reported_cause DEFAULT ('UNKNOWN');
@@ -1257,7 +1313,7 @@ FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id
 WHERE NOT EXISTS (SELECT 1 FROM @targets t WHERE t.asset_code = a.asset_code);
 
 UPDATE a
-SET a.asset_name = t.asset_name, a.category_id = t.category_id, a.tracking_mode = 'QUANTITY',
+SET a.asset_name = t.asset_name, a.category_id = t.category_id, a.tracking_mode = 'SERIALIZED',
     a.serial_number = NULL, a.total_quantity = t.total_quantity, a.condition = 'GOOD',
     a.status = 'AVAILABLE', a.is_borrowable = t.is_borrowable, a.storage_location = t.storage_location,
     a.description = t.description, a.updated_at = SYSUTCDATETIME()
@@ -1266,7 +1322,7 @@ FROM dbo.assets a JOIN @targets t ON t.asset_code = a.asset_code;
 INSERT dbo.assets
     (asset_code, asset_name, category_id, tracking_mode, serial_number, total_quantity,
      condition, status, is_borrowable, storage_location, description)
-SELECT t.asset_code, t.asset_name, t.category_id, 'QUANTITY', NULL, t.total_quantity,
+SELECT t.asset_code, t.asset_name, t.category_id, 'SERIALIZED', NULL, t.total_quantity,
        'GOOD', 'AVAILABLE', t.is_borrowable, t.storage_location, t.description
 FROM @targets t
 WHERE NOT EXISTS (SELECT 1 FROM dbo.assets a WHERE a.asset_code = t.asset_code);
@@ -1291,6 +1347,27 @@ FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @target
 UPDATE i SET i.status = 'UNAVAILABLE', i.updated_at = SYSUTCDATETIME()
 FROM dbo.asset_items i JOIN dbo.assets a ON a.asset_id = i.asset_id JOIN @targets t ON t.asset_code = a.asset_code
 WHERE TRY_CONVERT(int, RIGHT(i.item_code, 4)) > t.total_quantity;
+
+UPDATE a
+SET a.tracking_mode = 'SERIALIZED',
+    a.serial_number = NULL,
+    a.updated_at = SYSUTCDATETIME()
+FROM dbo.assets a
+WHERE a.asset_code IN (
+    'ARD-KIT-A01',
+    'SENSOR-KIT-S04',
+    'ARDUINO-UNO-KIT',
+    'RASPBERRY-PI-KIT',
+    'DIGITAL-MULTIMETER',
+    'WIRELESS-MOUSE',
+    'PRESENTATION-REMOTE'
+)
+AND EXISTS (
+    SELECT 1
+    FROM dbo.asset_items i
+    WHERE i.asset_id = a.asset_id
+      AND i.serial_number IS NOT NULL
+);
 
 COMMIT TRANSACTION;
 GO

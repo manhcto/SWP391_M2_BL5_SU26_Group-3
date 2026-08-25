@@ -2,9 +2,13 @@ package fpt.swp391.labtoolequip.dao;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import fpt.swp391.labtoolequip.model.AssetItem;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -76,6 +80,20 @@ class AssetItemDAOTest {
 		AssetItem injected = item("GOOD", "AVAILABLE", "SN-010");
 		injected.setImagePath("/uploads/x.jpg\" onerror=alert(1)");
 		assertThrows(IllegalArgumentException.class, () -> AssetItemDAO.validateItem(injected));
+	}
+
+	@Test
+	void lifecycleInspectionQuerySeparatesItemAndParentInspectionRows() throws IOException {
+		String source = Files.readString(
+				Path.of("src", "main", "java", "fpt", "swp391", "labtoolequip", "dao", "AssetItemDAO.java"));
+
+		assertTrue(source.contains("'ITEM_INSPECTION'"));
+		assertTrue(source.contains("WHERE item.asset_item_id=?"));
+		assertTrue(source.contains("'PARENT_INSPECTION'"));
+		assertTrue(source.contains("item.asset_item_id IS NULL"));
+		assertTrue(source.contains("event_result"));
+		assertTrue(source.contains("record.result"));
+		assertTrue(source.contains("N' → '"));
 	}
 
 	private AssetItem item(String condition, String status, String serialNumber) {

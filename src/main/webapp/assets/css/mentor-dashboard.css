@@ -546,6 +546,9 @@ textarea.form-control { height: 75px; padding: 8px 10px; resize: vertical; }
 .inspection-item-table th:nth-child(8), .inspection-item-table td:nth-child(8) { width: 210px; }
 .inspection-form .form-control { width: 100%; min-width: 0; }
 .inspection-form .asset-cell small { white-space: normal; }
+.whole-lab-scope .asset-check { opacity: .45; cursor: not-allowed; }
+.whole-lab-scope .inspection-item-table td:first-child::after { display: block; margin-top: 4px; color: #7b8581; font-size: 8px; content: "T\1EF1  \111\1ED9 ng"; }
+.inspection-item-table input[readonly] { color: #65716d; background: #f4f6f4; }
 .compact-input { min-width: 0; }
 .hint { color: var(--muted); font-size: 10px; }
 .row-actions { display: flex; align-items: center; gap: 8px; }
