@@ -122,7 +122,7 @@
                                         <option value="ACTIVE" ${selectedStatus=='ACTIVE' ? 'selected' : '' }>Đang hoạt động
                                         </option>
                                         <option value="INACTIVE" ${selectedStatus=='INACTIVE' ? 'selected' : '' }>
-                                            Không hoạt động</option>
+                                            Đã khóa</option>
                                     </select>
                                     <button class="primary-button" type="submit"
                                         style="height: 36px; padding: 0 16px;">Lọc</button>
@@ -217,7 +217,7 @@
                                                                             class="status returned">Đang hoạt động</span>
                                                                     </c:when>
                                                                     <c:otherwise><span class="status review"
-                                                                            style="color:#c63d3d; background:#fbeaea;">Không hoạt động</span>
+                                                                            style="color:#c63d3d; background:#fbeaea;">Đã khóa</span>
                                                                     </c:otherwise>
                                                                 </c:choose>
                                                             </td>

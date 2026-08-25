@@ -112,7 +112,7 @@
                                 <label>Trạng thái tài khoản * <small style="color:#188255; font-weight:600;">(Được phép khóa/mở)</small></label>
                                 <select class="form-control" name="status" style="border-color: #188255; font-weight: 600;">
                                     <option value="ACTIVE" ${user.status == 'ACTIVE' ? 'selected' : ''}>Đang hoạt động</option>
-                                    <option value="INACTIVE" ${user.status == 'INACTIVE' ? 'selected' : ''}>Khóa tài khoản</option>
+                                    <option value="INACTIVE" ${user.status == 'INACTIVE' ? 'selected' : ''}>Đã khóa</option>
                                 </select>
                             </div>
 
@@ -141,7 +141,7 @@
                                 </select>
                                 <c:if test="${hasLabManager}">
                                     <small id="lmNotice" style="display:none; color:#0369a1; font-size:11.5px; margin-top:5px; line-height:1.4;">
-                                        ℹ️ Hệ thống hiện có Quản lý phòng LAB (<b><c:out value="${currentLmName}"/></b>). Khi tạo tài khoản mới này, tài khoản Quản lý cũ sẽ tự động chuyển sang trạng thái <b>Khóa (INACTIVE)</b>.
+                                        ℹ️ Hệ thống hiện có Quản lý phòng LAB (<b><c:out value="${currentLmName}"/></b>). Khi tạo tài khoản mới này, tài khoản Quản lý cũ sẽ tự động chuyển sang trạng thái <b>Đã khóa (INACTIVE)</b>.
                                     </small>
                                 </c:if>
                             </div>
@@ -177,7 +177,7 @@
                                 <label>Trạng thái khởi tạo *</label>
                                 <select class="form-control" name="status">
                                     <option value="ACTIVE" ${user.status == 'ACTIVE' ? 'selected' : ''}>Hoạt động ngay</option>
-                                    <option value="INACTIVE" ${user.status == 'INACTIVE' ? 'selected' : ''}>Tạm khóa</option>
+                                    <option value="INACTIVE" ${user.status == 'INACTIVE' ? 'selected' : ''}>Đã khóa</option>
                                 </select>
                             </div>
 

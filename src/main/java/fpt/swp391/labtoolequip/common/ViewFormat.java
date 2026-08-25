@@ -55,8 +55,8 @@ public final class ViewFormat {
 			case "UNKNOWN" -> "Chưa rõ nguyên nhân";
 			case "MENTOR" -> "Người hướng dẫn";
 			case "LAB_MANAGER" -> "Quản lý phòng LAB";
-			case "ACTIVE" -> "Hoạt động";
-			case "INACTIVE" -> "Tạm khóa";
+			case "ACTIVE" -> "Đang hoạt động";
+			case "INACTIVE" -> "Đã khóa";
 			case "UPCOMING" -> "Sắp diễn ra";
 			case "CLOSED" -> "Đã kết thúc";
 			case "PENDING", "PENDING_REVIEW" -> "Chờ duyệt";
