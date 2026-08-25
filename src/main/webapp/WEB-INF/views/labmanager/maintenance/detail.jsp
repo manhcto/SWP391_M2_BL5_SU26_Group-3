@@ -41,6 +41,18 @@
                         <svg><use href="#i-wrench"/></svg><c:choose><c:when test="${record.status == 'APPROVED'}">Bắt đầu bảo trì</c:when><c:otherwise>Cập nhật tiến độ</c:otherwise></c:choose>
                     </a>
                 </c:if>
+                <c:if test="${record.status == 'PENDING' || record.status == 'IN_PROGRESS' || record.status == 'APPROVED'}">
+                    <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance"
+                          style="display:inline; margin:0;"
+                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu bảo trì #MNT-${record.maintenanceId} này không? Thiết bị sẽ được khôi phục trạng thái Sẵn sàng (AVAILABLE).');">
+                        <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="id" value="${record.maintenanceId}">
+                        <button class="btn-secondary" type="submit"
+                                style="color:#dc2626;border-color:#fecaca;background:#fff5f5;"
+                                title="Xóa phiếu bảo trì này">Xóa phiếu</button>
+                    </form>
+                </c:if>
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">‹ Quay lại</a>
             </div>
         </header>

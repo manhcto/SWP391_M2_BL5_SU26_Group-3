@@ -98,13 +98,9 @@
                                                                     <option value="IN_PROGRESS">Bắt đầu bảo trì</option>
                                                                 </c:if>
                                                                 <c:if test="${record.status == 'IN_PROGRESS'}">
-                                                                <option value="COMPLETED_SUCCESS"
-                                                                    >Đã sửa xong –
-                                                                    Hoàn
-                                                                    tất thành công (Thiết bị về Sẵn sàng AVAILABLE)
-                                                                </option>
-                                                                <option value="COMPLETED_FAILED"
-                                                                    >Sửa thất bại – Thiết bị về hàng chờ quyết định tiếp theo</option>
+                                                                    <option value="IN_PROGRESS" selected>Đang sửa chữa (Cập nhật thông tin / chi phí / thợ sửa)</option>
+                                                                    <option value="COMPLETED_SUCCESS">Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)</option>
+                                                                    <option value="COMPLETED_FAILED">Sửa thất bại – Thiết bị về hàng chờ quyết định tiếp theo</option>
                                                                 </c:if>
                                                             </select>
                                                         </div>
