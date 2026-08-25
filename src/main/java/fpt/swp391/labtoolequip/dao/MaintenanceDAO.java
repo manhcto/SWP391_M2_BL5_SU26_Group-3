@@ -115,15 +115,20 @@ public class MaintenanceDAO {
 				SELECT ai.asset_item_id, a.asset_id,
 				       ai.item_code, a.asset_code, a.asset_name,
 				       COALESCE(ai.storage_location, a.storage_location) AS storage_location,
-				       CASE
-				           WHEN ai.status = 'IN_USE' OR EXISTS (SELECT 1 FROM dbo.asset_usages u WHERE u.asset_item_id = ai.asset_item_id AND u.status = 'IN_USE') THEN 'IN_USE'
-				           WHEN ai.status = 'UNAVAILABLE' THEN 'UNAVAILABLE'
-				           ELSE 'AVAILABLE'
-				       END AS status
+				       'AVAILABLE' AS status
 				FROM dbo.asset_items ai
 				JOIN dbo.assets a ON a.asset_id = ai.asset_id
-				WHERE a.status <> 'DISPOSED'
-				  AND ai.status <> 'DISPOSED'
+				WHERE a.status = 'AVAILABLE'
+				  AND ai.status = 'AVAILABLE'
+				  AND NOT EXISTS (
+				    SELECT 1 FROM dbo.asset_usages u
+				    WHERE u.asset_item_id = ai.asset_item_id AND u.status = 'IN_USE'
+				  )
+				  AND NOT EXISTS (
+				    SELECT 1 FROM dbo.incidents i
+				    WHERE i.asset_item_id = ai.asset_item_id
+				      AND i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
+				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
 					WHERE m.asset_item_id = ai.asset_item_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
@@ -132,19 +137,21 @@ public class MaintenanceDAO {
 				SELECT NULL AS asset_item_id, a.asset_id,
 				       a.asset_code AS item_code, a.asset_code, a.asset_name,
 				       a.storage_location,
-				       CASE
-				           WHEN (a.total_quantity - COALESCE((SELECT SUM(u.quantity) FROM dbo.asset_usages u WHERE u.asset_id = a.asset_id AND u.status = 'IN_USE'), 0)) <= 0 THEN 'IN_USE'
-				           WHEN a.status = 'UNAVAILABLE' THEN 'UNAVAILABLE'
-				           ELSE 'AVAILABLE'
-				       END AS status
+				       'AVAILABLE' AS status
 				FROM dbo.assets a
-				WHERE a.status <> 'DISPOSED'
+				WHERE a.status = 'AVAILABLE'
 				  AND NOT EXISTS (SELECT 1 FROM dbo.asset_items ai WHERE ai.asset_id = a.asset_id)
+				  AND (a.total_quantity - COALESCE((SELECT SUM(u.quantity) FROM dbo.asset_usages u WHERE u.asset_id = a.asset_id AND u.status = 'IN_USE'), 0)) > 0
+				  AND NOT EXISTS (
+				    SELECT 1 FROM dbo.incidents i
+				    WHERE i.asset_id = a.asset_id AND i.asset_item_id IS NULL
+				      AND i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
+				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
-					WHERE m.asset_id = a.asset_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
+					WHERE m.asset_id = a.asset_id AND m.asset_item_id IS NULL AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
 				  )
-				ORDER BY status ASC, asset_name, item_code
+				ORDER BY asset_name, item_code
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql);

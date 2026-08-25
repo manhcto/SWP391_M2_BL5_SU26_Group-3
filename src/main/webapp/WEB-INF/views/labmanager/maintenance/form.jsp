@@ -373,33 +373,13 @@
                                                                                     data-schedule-cost="${matchedSched.estimatedCost}"
                                                                                     data-schedule-provider="<c:out value='${matchedSched.providerName}'/>"
                                                                                     data-schedule-phone="<c:out value='${matchedSched.providerPhone}'/>"
-                                                                                    ${(a.status=='IN_USE' or a.status=='UNAVAILABLE')
-                                                                                    ? 'disabled style="color:#94a3b8;background:#f8fafc;"'
-                                                                                    : '' } ${(not empty param.itemCode
-                                                                                    and param.itemCode==a.itemCode) or
-                                                                                    (empty param.itemCode and
-                                                                                    param.assetId==a.assetId)
-                                                                                    ? 'selected' : '' }>
+                                                                                    ${(not empty param.itemCode and param.itemCode==a.itemCode) or (empty param.itemCode and param.assetId==a.assetId) ? 'selected' : ''}>
                                                                                     <c:out value="${a.assetName}" /> (
-                                                                                    <c:out
-                                                                                        value="${not empty a.itemCode ? a.itemCode : a.assetCode}" />
+                                                                                    <c:out value="${not empty a.itemCode ? a.itemCode : a.assetCode}" />
                                                                                     )
-                                                                                    <c:choose>
-                                                                                        <c:when
-                                                                                            test="${a.status == 'IN_USE'}">
-                                                                                            — [Đang được mượn sử dụng -
-                                                                                            Không thể chọn]</c:when>
-                                                                                        <c:when
-                                                                                            test="${a.status == 'UNAVAILABLE'}">
-                                                                                            — [Không khả dụng, đang ở hàng chờ -
-                                                                                            Không thể chọn]</c:when>
-                                                                                        <c:when
-                                                                                            test="${not empty a.storageLocation}">
-                                                                                            –
-                                                                                            <c:out
-                                                                                                value="${a.storageLocation}" />
-                                                                                        </c:when>
-                                                                                    </c:choose>
+                                                                                    <c:if test="${not empty a.storageLocation}">
+                                                                                        – <c:out value="${a.storageLocation}" />
+                                                                                    </c:if>
                                                                                 </option>
                                                                             </c:forEach>
                                                                         </optgroup>
