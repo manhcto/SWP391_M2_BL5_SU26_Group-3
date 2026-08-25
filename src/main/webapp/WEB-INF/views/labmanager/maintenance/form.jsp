@@ -94,14 +94,22 @@
                                                             <label>Trạng thái tiến độ *</label>
                                                             <select class="form-control" name="status"
                                                                 id="progressStatusSelect" required>
-                                                                <c:if test="${record.status == 'APPROVED'}">
-                                                                    <option value="IN_PROGRESS">Bắt đầu bảo trì</option>
-                                                                </c:if>
-                                                                <c:if test="${record.status == 'IN_PROGRESS'}">
-                                                                    <option value="IN_PROGRESS" selected>Đang sửa chữa (Cập nhật thông tin / chi phí / thợ sửa)</option>
-                                                                    <option value="COMPLETED_SUCCESS">Đã sửa xong – Hoàn tất thành công (Thiết bị về Sẵn sàng AVAILABLE)</option>
-                                                                    <option value="COMPLETED_FAILED">Sửa thất bại – Thiết bị về hàng chờ quyết định tiếp theo</option>
-                                                                </c:if>
+                                                                <option value="IN_PROGRESS"
+                                                                    ${record.status=='IN_PROGRESS' ? 'selected' : '' }>⏳
+                                                                    Đang sửa chữa (Đang tiến hành sửa
+                                                                    chữa, thay linh kiện)</option>
+                                                                <option value="COMPLETED_SUCCESS"
+                                                                    ${record.status=='COMPLETED' && record.assetStatus
+                                                                    !='UNAVAILABLE' ? 'selected' : '' }>✅ Đã sửa xong –
+                                                                    Hoàn
+                                                                    tất thành công (Thiết bị về Sẵn sàng AVAILABLE)
+                                                                </option>
+                                                                <option value="COMPLETED_FAILED"
+                                                                    ${record.status=='COMPLETED' &&
+                                                                    record.assetStatus=='UNAVAILABLE' ? 'selected' : ''
+                                                                    }>❌
+                                                                    Sửa thất bại – Không thể phục hồi (Thiết bị chuyển
+                                                                    UNAVAILABLE chờ thanh lý)</option>
                                                             </select>
                                                         </div>
 
@@ -373,13 +381,33 @@
                                                                                     data-schedule-cost="${matchedSched.estimatedCost}"
                                                                                     data-schedule-provider="<c:out value='${matchedSched.providerName}'/>"
                                                                                     data-schedule-phone="<c:out value='${matchedSched.providerPhone}'/>"
-                                                                                    ${(not empty param.itemCode and param.itemCode==a.itemCode) or (empty param.itemCode and param.assetId==a.assetId) ? 'selected' : ''}>
+                                                                                    ${(a.status=='IN_USE' or a.status=='UNAVAILABLE')
+                                                                                    ? 'disabled style="color:#94a3b8;background:#f8fafc;"'
+                                                                                    : '' } ${(not empty param.itemCode
+                                                                                    and param.itemCode==a.itemCode) or
+                                                                                    (empty param.itemCode and
+                                                                                    param.assetId==a.assetId)
+                                                                                    ? 'selected' : '' }>
                                                                                     <c:out value="${a.assetName}" /> (
-                                                                                    <c:out value="${not empty a.itemCode ? a.itemCode : a.assetCode}" />
+                                                                                    <c:out
+                                                                                        value="${not empty a.itemCode ? a.itemCode : a.assetCode}" />
                                                                                     )
-                                                                                    <c:if test="${not empty a.storageLocation}">
-                                                                                        – <c:out value="${a.storageLocation}" />
-                                                                                    </c:if>
+                                                                                    <c:choose>
+                                                                                        <c:when
+                                                                                            test="${a.status == 'IN_USE'}">
+                                                                                            — [Đang được mượn sử dụng -
+                                                                                            Không thể chọn]</c:when>
+                                                                                        <c:when
+                                                                                            test="${a.status == 'UNAVAILABLE'}">
+                                                                                            — [❌ Đã hỏng chờ thanh lý -
+                                                                                            Không thể chọn]</c:when>
+                                                                                        <c:when
+                                                                                            test="${not empty a.storageLocation}">
+                                                                                            –
+                                                                                            <c:out
+                                                                                                value="${a.storageLocation}" />
+                                                                                        </c:when>
+                                                                                    </c:choose>
                                                                                 </option>
                                                                             </c:forEach>
                                                                         </optgroup>

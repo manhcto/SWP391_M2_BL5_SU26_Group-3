@@ -302,7 +302,7 @@
                                                         <a class="primary-button"
                                                             href="${pageContext.request.contextPath}/lab-manager/maintenance/new">
                                                             <svg>
-                                                                <use href="#i-plus" />
+                                                                <use href="#i-wrench" />
                                                             </svg>+ Tạo phiếu bảo trì
                                                         </a>
                                                     </c:otherwise>
@@ -671,7 +671,7 @@
                                                                                                                     <c:choose>
                                                                                                                         <c:when test="${s.targetAssetStatus == 'UNAVAILABLE'}">
                                                                                                                             <span style="color:#dc2626;font-size:11px;font-weight:600;background:#fef2f2;border:1px solid #fecaca;padding:2px 8px;border-radius:4px;"
-                                                                                                                                  title="Thiết bị đang không khả dụng và chờ quyết định nghiệp vụ tiếp theo">Không khả dụng (Hàng chờ)</span>
+                                                                                                                                  title="Thiết bị này đã bị hỏng không thể phục hồi (UNAVAILABLE), đang chờ thanh lý">Đã hỏng (Chờ thanh lý)</span>
                                                                                                                         </c:when>
                                                                                                                         <c:otherwise>
                                                                                                                             <a class="btn-secondary"
@@ -808,8 +808,6 @@
                                                                             <select class="form-control" name="status">
                                                                                 <option value="">Tất cả trạng thái
                                                                                 </option>
-                                                                                <option value="PENDING" ${selectedStatus=='PENDING' ? 'selected' : ''}>Chờ duyệt</option>
-                                                                                <option value="APPROVED" ${selectedStatus=='APPROVED' ? 'selected' : ''}>Đã duyệt, chờ bắt đầu</option>
                                                                                 <option value="IN_PROGRESS"
                                                                                     ${selectedStatus=='IN_PROGRESS'
                                                                                     ? 'selected' : '' }>Đang sửa chữa
@@ -818,7 +816,6 @@
                                                                                     ${selectedStatus=='COMPLETED'
                                                                                     ? 'selected' : '' }>Hoàn tất
                                                                                 </option>
-                                                                                <option value="REJECTED" ${selectedStatus=='REJECTED' ? 'selected' : ''}>Đã từ chối</option>
                                                                             </select>
                                                                             <button class="primary-button"
                                                                                 type="submit">Tìm kiếm</button>
@@ -836,7 +833,12 @@
                                                                                             <use href="#i-wrench" />
                                                                                         </svg></div>
                                                                                     <h3>Chưa có phiếu bảo trì nào</h3>
-                                                                                    <p>Chưa có yêu cầu bảo trì nào do Mentor gửi đến.</p>
+                                                                                    <p>Bấm vào nút bên dưới để tạo phiếu
+                                                                                        bảo trì và đưa thiết bị đi sửa
+                                                                                        chữa.</p>
+                                                                                    <a class="primary-button"
+                                                                                        href="${pageContext.request.contextPath}/lab-manager/maintenance/new">+
+                                                                                        Tạo phiếu bảo trì</a>
                                                                                 </div>
                                                                             </c:when>
                                                                             <c:otherwise>
@@ -925,9 +927,6 @@
                                                                                                                     sửa
                                                                                                                     chữa</span>
                                                                                                             </c:when>
-                                                                                                            <c:when test="${r.status == 'PENDING'}"><span class="status">Chờ duyệt</span></c:when>
-                                                                                                            <c:when test="${r.status == 'APPROVED'}"><span class="status">Đã duyệt, chờ bắt đầu</span></c:when>
-                                                                                                            <c:when test="${r.status == 'REJECTED'}"><span class="status overdue">Đã từ chối</span></c:when>
                                                                                                             <c:when
                                                                                                                 test="${r.status == 'COMPLETED'}">
                                                                                                                 <c:choose>
@@ -961,25 +960,45 @@
                                                                                                             style="height:24px;padding:0 8px;font-size:11px"
                                                                                                             href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}">Xem</a>
                                                                                                         <c:if
-                                                                                                            test="${r.status == 'APPROVED' || r.status == 'IN_PROGRESS'}">
+                                                                                                            test="${r.status == 'IN_PROGRESS'}">
                                                                                                             <a class="btn-secondary"
                                                                                                                 style="height:24px;padding:0 8px;font-size:11px;background:#e8f0fe;color:#1a73e8;border-color:#aecbfa;font-weight:600;"
                                                                                                                 href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
-                                                                                                                <c:choose><c:when test="${r.status == 'APPROVED'}">Bắt đầu</c:when><c:otherwise>Tiến độ</c:otherwise></c:choose>
+                                                                                                                Tiến độ
+                                                                                                            </a>
+                                                                                                            <form
+                                                                                                                method="post"
+                                                                                                                action="${pageContext.request.contextPath}/lab-manager/maintenance?csrfToken=${sessionScope.csrfToken}"
+                                                                                                                onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu bảo trì #MNT-${r.maintenanceId}? Thiết bị sẽ được trả về trạng thái Sẵn sàng.');"
+                                                                                                                style="display:inline;margin:0;">
+                                                                                                                <input
+                                                                                                                    type="hidden"
+                                                                                                                    name="csrfToken"
+                                                                                                                    value="${sessionScope.csrfToken}">
+                                                                                                                <input
+                                                                                                                    type="hidden"
+                                                                                                                    name="action"
+                                                                                                                    value="delete">
+                                                                                                                <input
+                                                                                                                    type="hidden"
+                                                                                                                    name="id"
+                                                                                                                    value="${r.maintenanceId}">
+                                                                                                                <button
+                                                                                                                    class="btn-secondary"
+                                                                                                                    type="submit"
+                                                                                                                    style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;font-weight:600;cursor:pointer;">
+                                                                                                                    Xóa
+                                                                                                                </button>
+                                                                                                            </form>
+                                                                                                        </c:if>
+                                                                                                        <c:if
+                                                                                                            test="${r.status == 'COMPLETED'}">
+                                                                                                            <a class="btn-secondary"
+                                                                                                                style="height:24px;padding:0 8px;font-size:11px;background:#f3f4f6;color:#374151;border-color:#d1d5db;font-weight:500;"
+                                                                                                                href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">
+                                                                                                                Sửa
                                                                                                             </a>
                                                                                                         </c:if>
-
-<c:if test="${r.status == 'PENDING' || r.status == 'IN_PROGRESS' || r.status == 'APPROVED'}">
-    <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance?csrfToken=${sessionScope.csrfToken}" onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu bảo trì #MNT-${r.maintenanceId}? Thiết bị sẽ được trả về trạng thái Sẵn sàng (AVAILABLE).');" style="display:inline;margin:0;">
-        <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
-        <input type="hidden" name="action" value="delete">
-        <input type="hidden" name="id" value="${r.maintenanceId}">
-        <button class="btn-secondary" type="submit" style="height:24px;padding:0 8px;font-size:11px;background:#fde8e8;color:#c62828;border-color:#f8b4b4;font-weight:600;cursor:pointer;" title="Xóa phiếu bảo trì này">Xóa</button>
-    </form>
-</c:if>
-<c:if test="${r.status == 'COMPLETED'}">
-    <a class="btn-secondary" style="height:24px;padding:0 8px;font-size:11px;background:#f3f4f6;color:#374151;border-color:#d1d5db;font-weight:500;" href="${pageContext.request.contextPath}/lab-manager/maintenance/${r.maintenanceId}/edit">Sửa</a>
-</c:if>
                                                                                                     </td>
                                                                                                 </tr>
                                                                                             </c:forEach>

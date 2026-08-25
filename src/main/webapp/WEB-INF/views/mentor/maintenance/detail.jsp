@@ -44,8 +44,11 @@
         </header>
 
         <section class="content-area">
-            <c:if test="${not empty message}">
-                <div class="error-message"><c:out value="${message}"/></div>
+            <c:if test="${param.success == 'created'}">
+                <div class="success-message">Đã tạo đề xuất bảo trì thành công. Chờ Lab Manager phê duyệt.</div>
+            </c:if>
+            <c:if test="${param.success == 'updated'}">
+                <div class="success-message">Đã cập nhật thông tin đề xuất bảo trì thành công.</div>
             </c:if>
 
             <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;">
@@ -59,9 +62,6 @@
                                 <c:when test="${record.status == 'IN_PROGRESS'}">
                                     <span class="status maintenance">Đang sửa chữa</span>
                                 </c:when>
-                                <c:when test="${record.status == 'PENDING'}"><span class="status">Chờ Lab Manager duyệt</span></c:when>
-                                <c:when test="${record.status == 'APPROVED'}"><span class="status">Đã duyệt, chờ bắt đầu</span></c:when>
-                                <c:when test="${record.status == 'REJECTED'}"><span class="status overdue">Đã từ chối</span></c:when>
                                 <c:when test="${record.status == 'COMPLETED'}">
                                     <c:choose>
                                         <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
