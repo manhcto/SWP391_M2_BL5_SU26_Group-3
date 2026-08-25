@@ -94,22 +94,18 @@
                                                             <label>Trạng thái tiến độ *</label>
                                                             <select class="form-control" name="status"
                                                                 id="progressStatusSelect" required>
-                                                                <option value="IN_PROGRESS"
-                                                                    ${record.status=='IN_PROGRESS' ? 'selected' : '' }>⏳
-                                                                    Đang sửa chữa (Đang tiến hành sửa
-                                                                    chữa, thay linh kiện)</option>
+                                                                <c:if test="${record.status == 'APPROVED'}">
+                                                                    <option value="IN_PROGRESS">Bắt đầu bảo trì</option>
+                                                                </c:if>
+                                                                <c:if test="${record.status == 'IN_PROGRESS'}">
                                                                 <option value="COMPLETED_SUCCESS"
-                                                                    ${record.status=='COMPLETED' && record.assetStatus
-                                                                    !='UNAVAILABLE' ? 'selected' : '' }>✅ Đã sửa xong –
+                                                                    >Đã sửa xong –
                                                                     Hoàn
                                                                     tất thành công (Thiết bị về Sẵn sàng AVAILABLE)
                                                                 </option>
                                                                 <option value="COMPLETED_FAILED"
-                                                                    ${record.status=='COMPLETED' &&
-                                                                    record.assetStatus=='UNAVAILABLE' ? 'selected' : ''
-                                                                    }>❌
-                                                                    Sửa thất bại – Không thể phục hồi (Thiết bị chuyển
-                                                                    UNAVAILABLE chờ thanh lý)</option>
+                                                                    >Sửa thất bại – Thiết bị về hàng chờ quyết định tiếp theo</option>
+                                                                </c:if>
                                                             </select>
                                                         </div>
 
@@ -399,7 +395,7 @@
                                                                                             Không thể chọn]</c:when>
                                                                                         <c:when
                                                                                             test="${a.status == 'UNAVAILABLE'}">
-                                                                                            — [❌ Đã hỏng chờ thanh lý -
+                                                                                            — [Không khả dụng, đang ở hàng chờ -
                                                                                             Không thể chọn]</c:when>
                                                                                         <c:when
                                                                                             test="${not empty a.storageLocation}">

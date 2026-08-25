@@ -231,6 +231,7 @@ public class IncidentDAO {
 					throw new IllegalStateException("Thiết bị này đã có sự cố đang được xử lý.");
 				long incidentId = insertIncident(connection, target, internUserId, incidentType, severity, occurredAt,
 						description, "REPORTED", "UNKNOWN", false);
+				quarantineAvailableItem(connection, target.assetItemId());
 				connection.commit();
 				return incidentId;
 			} catch (SQLException | RuntimeException exception) {
@@ -269,6 +270,7 @@ public class IncidentDAO {
 						throw new IllegalStateException("Vật dụng đã có sự cố đang được xử lý.");
 					incidentIds.add(insertIncident(connection, target, mentorId, incidentType, severity, occurredAt,
 							description, "FORWARDED", reportedCause, true));
+					quarantineAvailableItem(connection, target.assetItemId());
 				}
 				connection.commit();
 				return incidentIds;
@@ -354,6 +356,19 @@ public class IncidentDAO {
 			throw new IllegalArgumentException("Mô tả sự cố phải có từ 1 đến 2000 ký tự.");
 		if (occurredAt != null && occurredAt.isAfter(ViewFormat.now()))
 			throw new IllegalArgumentException("Thời điểm xảy ra không được ở tương lai.");
+	}
+
+	private void quarantineAvailableItem(Connection connection, Long assetItemId) throws SQLException {
+		if (assetItemId == null)
+			return;
+		try (PreparedStatement statement = connection.prepareStatement("""
+				UPDATE dbo.asset_items
+				SET status='UNAVAILABLE', updated_at=SYSUTCDATETIME()
+				WHERE asset_item_id=? AND status='AVAILABLE'
+				""")) {
+			statement.setLong(1, assetItemId);
+			statement.executeUpdate();
+		}
 	}
 
 	static void validateMentorReviewNote(String mentorReviewNote) {

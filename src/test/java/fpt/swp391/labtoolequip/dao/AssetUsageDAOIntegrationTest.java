@@ -38,6 +38,11 @@ class AssetUsageDAOIntegrationTest {
 			for (long internId : internIds)
 				execute(connection, "DELETE FROM dbo.lab_usage_request_students WHERE student_id = ?", internId);
 			for (long userId : userIds) {
+				execute(connection, """
+						DELETE entry FROM dbo.lab_usage_request_student_entries entry
+						JOIN dbo.users account ON LOWER(account.email) = LOWER(entry.email)
+						WHERE account.user_id = ?
+						""", userId);
 				execute(connection, "DELETE FROM dbo.student_profiles WHERE user_id = ?", userId);
 				execute(connection, "DELETE FROM dbo.users WHERE user_id = ?", userId);
 			}
@@ -70,12 +75,14 @@ class AssetUsageDAOIntegrationTest {
 	}
 
 	@Test
-	void internOutsideApprovedListCannotBorrow() throws Exception {
+	void activeAdminCreatedInternIsEnrolledAndCanBorrow() throws Exception {
 		long userId = createUnapprovedIntern();
 		long assetId = createAsset("AVAILABLE", true, "GOOD", 1);
 
-		assertThrows(IllegalStateException.class, () -> dao.borrow(userId, assetId, null, 1, null, validBorrowTime()));
-		assertEquals(0, usageCount(assetId));
+		dao.borrow(userId, assetId, null, 1, null, validBorrowTime());
+
+		assertEquals(1, usageCount(assetId));
+		assertEquals(1, membershipCount(userId));
 	}
 
 	@Test
@@ -134,6 +141,33 @@ class AssetUsageDAOIntegrationTest {
 		}
 	}
 
+	@Test
+	void firstReviewerWinsBetweenMentorAndLabManager() throws Exception {
+		long userId = userId("intern@gmail.com");
+		long assetId = createAsset("AVAILABLE", true, "GOOD", 1);
+		long usageId = dao.borrow(userId, assetId, null, 1, "Return race", validBorrowTime());
+		dao.requestReturn(usageId, userId, "GOOD", "Intern requested return");
+		long mentorId = createActiveReviewer("MENTOR");
+		long labManagerId = activeLabManagerId();
+		CountDownLatch start = new CountDownLatch(1);
+		assertTrue(dao.findForMentor(mentorId, "", "RETURN_PENDING").stream()
+				.anyMatch(usage -> usage.getAssetUsageId() == usageId));
+
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+		try {
+			Future<Boolean> mentor = executor.submit(() -> confirmAfter(start, usageId, mentorId, false));
+			Future<Boolean> labManager = executor.submit(() -> confirmAfter(start, usageId, labManagerId, true));
+			start.countDown();
+
+			assertEquals(1, (mentor.get() ? 1 : 0) + (labManager.get() ? 1 : 0));
+			var usage = dao.findById(usageId, null).orElseThrow();
+			assertEquals("RETURNED", usage.getStatus());
+			assertTrue(List.of(mentorId, labManagerId).contains(usage.getReturnVerifiedBy()));
+		} finally {
+			executor.shutdownNow();
+		}
+	}
+
 	private boolean borrowAfter(CountDownLatch start, long userId, long assetId, LocalDateTime borrowedAt)
 			throws Exception {
 		start.await();
@@ -142,6 +176,46 @@ class AssetUsageDAOIntegrationTest {
 			return true;
 		} catch (IllegalStateException exception) {
 			return false;
+		}
+	}
+
+	private boolean confirmAfter(CountDownLatch start, long usageId, long reviewerId, boolean labManager)
+			throws Exception {
+		start.await();
+		try {
+			if (labManager)
+				dao.confirmReturnAsLabManager(usageId, reviewerId, "GOOD", "Lab Manager confirmed");
+			else
+				dao.confirmReturn(usageId, reviewerId, "GOOD", "Mentor confirmed");
+			return true;
+		} catch (IllegalStateException exception) {
+			return false;
+		}
+	}
+
+	private long activeLabManagerId() throws SQLException {
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT TOP 1 user_id FROM dbo.users WHERE role='LAB_MANAGER' AND status='ACTIVE' ORDER BY user_id");
+				ResultSet result = statement.executeQuery()) {
+			assertTrue(result.next(), "Database needs one active Lab Manager");
+			return result.getLong(1);
+		}
+	}
+
+	private long createActiveReviewer(String role) throws SQLException {
+		String suffix = UUID.randomUUID().toString().substring(0, 8);
+		try (Connection connection = db.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"INSERT dbo.users(full_name,email,role,status) OUTPUT INSERTED.user_id VALUES('JUnit Reviewer',?,?,'ACTIVE')")) {
+			statement.setString(1, "junit-reviewer-" + suffix + "@example.com");
+			statement.setString(2, role);
+			try (ResultSet result = statement.executeQuery()) {
+				result.next();
+				long userId = result.getLong(1);
+				userIds.add(userId);
+				return userId;
+			}
 		}
 	}
 
@@ -197,6 +271,14 @@ class AssetUsageDAOIntegrationTest {
 				statement.setLong(1, userId);
 				statement.setString(2, "JUNIT-" + suffix);
 				statement.executeUpdate();
+			}
+			try (PreparedStatement statement = connection
+					.prepareStatement("SELECT intern_id FROM dbo.intern_profiles WHERE user_id = ?")) {
+				statement.setLong(1, userId);
+				try (ResultSet result = statement.executeQuery()) {
+					result.next();
+					internIds.add(result.getLong(1));
+				}
 			}
 			return userId;
 		}
@@ -261,6 +343,20 @@ class AssetUsageDAOIntegrationTest {
 				PreparedStatement statement = connection
 						.prepareStatement("SELECT COUNT(*) FROM dbo.asset_usages WHERE asset_id=?")) {
 			statement.setLong(1, assetId);
+			try (ResultSet result = statement.executeQuery()) {
+				result.next();
+				return result.getInt(1);
+			}
+		}
+	}
+
+	private int membershipCount(long userId) throws SQLException {
+		try (Connection connection = db.getConnection(); PreparedStatement statement = connection.prepareStatement("""
+				SELECT COUNT(*) FROM dbo.lab_usage_request_students membership
+				JOIN dbo.student_profiles profile ON profile.student_id = membership.student_id
+				WHERE profile.user_id = ?
+				""")) {
+			statement.setLong(1, userId);
 			try (ResultSet result = statement.executeQuery()) {
 				result.next();
 				return result.getInt(1);

@@ -62,6 +62,9 @@
                                 <c:when test="${record.status == 'IN_PROGRESS'}">
                                     <span class="status maintenance">Đang sửa chữa</span>
                                 </c:when>
+                                <c:when test="${record.status == 'PENDING'}"><span class="status">Chờ Lab Manager duyệt</span></c:when>
+                                <c:when test="${record.status == 'APPROVED'}"><span class="status">Đã duyệt, chờ bắt đầu</span></c:when>
+                                <c:when test="${record.status == 'REJECTED'}"><span class="status overdue">Đã từ chối</span></c:when>
                                 <c:when test="${record.status == 'COMPLETED'}">
                                     <c:choose>
                                         <c:when test="${record.assetStatus == 'UNAVAILABLE'}">

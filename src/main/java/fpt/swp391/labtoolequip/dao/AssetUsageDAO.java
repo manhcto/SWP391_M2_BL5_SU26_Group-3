@@ -32,12 +32,13 @@ public class AssetUsageDAO {
 			            ELSE COALESCE(NULLIF(ai.item_code, ''), NULLIF(ai.serial_number, ''),
 			                         CONCAT(a.asset_code, ' / item #', ai.asset_item_id))
 			       END AS asset_item_tag,
-			       u.full_name AS intern_name
+			       u.full_name AS intern_name, return_verifier.full_name AS return_verifier_name
 			FROM dbo.asset_usages au
 			JOIN dbo.assets a ON a.asset_id = au.asset_id
 			LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = au.asset_item_id AND ai.asset_id = au.asset_id
 			JOIN dbo.intern_profiles ip ON ip.intern_id = au.student_id
 			JOIN dbo.users u ON u.user_id = ip.user_id
+			LEFT JOIN dbo.users return_verifier ON return_verifier.user_id = au.return_verified_by
 			""";
 	private final DBConnection db = new DBConnection();
 	private final ZoneId labZone = ZoneId.of(AppConfig.get("LAB_TIMEZONE", "Asia/Ho_Chi_Minh"));
@@ -56,7 +57,8 @@ public class AssetUsageDAO {
 				  AND (? = '' OR au.status = ?)
 				  AND (? IS NULL OR au.borrowed_at >= ?)
 				  AND (? IS NULL OR au.borrowed_at < ?)
-				ORDER BY au.borrowed_at DESC
+				ORDER BY CASE WHEN au.status='RETURN_PENDING' THEN 0 ELSE 1 END,
+				         COALESCE(au.return_requested_at, au.borrowed_at) DESC
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -80,29 +82,34 @@ public class AssetUsageDAO {
 		String search = keyword == null ? "" : keyword.trim();
 		String state = status == null ? "" : status.trim();
 		String sql = SELECT_USAGE + """
-				WHERE EXISTS (
+				WHERE (EXISTS (
 					SELECT 1 FROM dbo.lab_usage_requests lur
 					WHERE lur.request_id = au.request_id
 					  AND lur.semester_id = au.semester_id
 					  AND lur.mentor_id = ?
 					  AND lur.status = 'APPROVED'
-				)
+				) OR (au.status='RETURN_PENDING' AND EXISTS (
+					SELECT 1 FROM dbo.users reviewer
+					WHERE reviewer.user_id=? AND reviewer.role='MENTOR' AND reviewer.status='ACTIVE'
+				)))
 				AND (? = '' OR a.asset_code LIKE ? OR a.asset_name LIKE ? OR u.full_name LIKE ?)
 				AND (? = '' OR au.status = ?)
 				AND (? IS NULL OR au.borrowed_at >= ?)
 				AND (? IS NULL OR au.borrowed_at < ?)
-				ORDER BY au.borrowed_at DESC
+				ORDER BY CASE WHEN au.status='RETURN_PENDING' THEN 0 ELSE 1 END,
+				         COALESCE(au.return_requested_at, au.borrowed_at) DESC
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, mentorId);
-			statement.setString(2, search);
-			statement.setString(3, "%" + search + "%");
+			statement.setLong(2, mentorId);
+			statement.setString(3, search);
 			statement.setString(4, "%" + search + "%");
 			statement.setString(5, "%" + search + "%");
-			statement.setString(6, state);
+			statement.setString(6, "%" + search + "%");
 			statement.setString(7, state);
-			bindBorrowedAtRange(statement, 8, fromDate, toDate);
+			statement.setString(8, state);
+			bindBorrowedAtRange(statement, 9, fromDate, toDate);
 			return readUsages(statement);
 		}
 	}
@@ -110,18 +117,22 @@ public class AssetUsageDAO {
 	public Optional<AssetUsage> findByIdForMentor(long usageId, long mentorId) throws SQLException {
 		String sql = SELECT_USAGE + """
 				WHERE au.asset_usage_id = ?
-				  AND EXISTS (
+				  AND (EXISTS (
 					SELECT 1 FROM dbo.lab_usage_requests lur
 					WHERE lur.request_id = au.request_id
 					  AND lur.semester_id = au.semester_id
 					  AND lur.mentor_id = ?
 					  AND lur.status = 'APPROVED'
-				)
+				  ) OR (au.status='RETURN_PENDING' AND EXISTS (
+					SELECT 1 FROM dbo.users reviewer
+					WHERE reviewer.user_id=? AND reviewer.role='MENTOR' AND reviewer.status='ACTIVE'
+				  )))
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, usageId);
 			statement.setLong(2, mentorId);
+			statement.setLong(3, mentorId);
 			return readUsages(statement).stream().findFirst();
 		}
 	}
@@ -138,7 +149,8 @@ public class AssetUsageDAO {
 				  AND (? = '' OR au.status = ?)
 				  AND (? IS NULL OR au.borrowed_at >= ?)
 				  AND (? IS NULL OR au.borrowed_at < ?)
-				ORDER BY au.borrowed_at DESC
+				ORDER BY CASE WHEN au.status='RETURN_PENDING' THEN 0 ELSE 1 END,
+				         COALESCE(au.return_requested_at, au.borrowed_at) DESC
 				""";
 		try (Connection connection = db.getConnection();
 				PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -179,6 +191,10 @@ public class AssetUsageDAO {
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
 					WHERE d.asset_id = a.asset_id AND d.asset_item_id IS NULL AND d.status IN ('PENDING', 'APPROVED')
+				  )
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.maintenance_records m
+					WHERE m.asset_id=a.asset_id AND m.status IN ('PENDING','APPROVED','IN_PROGRESS')
 				  )
 				ORDER BY a.asset_name
 				""";
@@ -225,6 +241,10 @@ public class AssetUsageDAO {
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.disposal_records d
 					WHERE d.asset_item_id = ai.asset_item_id AND d.status IN ('PENDING', 'APPROVED')
+				  )
+				  AND NOT EXISTS (
+					SELECT 1 FROM dbo.maintenance_records m
+					WHERE m.asset_item_id=ai.asset_item_id AND m.status IN ('PENDING','APPROVED','IN_PROGRESS')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.equipment_allocations allocation
@@ -314,6 +334,8 @@ public class AssetUsageDAO {
 				if (hasPendingDisposal(connection, assetId, null)) {
 					throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
 				}
+				if (hasActiveMaintenance(connection, assetId, null))
+					throw new IllegalStateException("Thiết bị đang có yêu cầu bảo trì trong hàng chờ hoặc đang xử lý.");
 				Membership membership = currentMembership(connection, userId, borrowedAt);
 				validateAvailableQuantity(activeQuantity(connection, assetId), quantity, asset.getTotalQuantity());
 				long id = insertUsage(connection, userId, asset.getAssetId(), null, quantity, asset.getCondition(),
@@ -340,6 +362,8 @@ public class AssetUsageDAO {
 				if (hasPendingDisposal(connection, asset.getAssetId(), assetItemId)) {
 					throw new IllegalStateException("Thiết bị đang có yêu cầu thanh lý chờ xử lý.");
 				}
+				if (hasActiveMaintenance(connection, asset.getAssetId(), assetItemId))
+					throw new IllegalStateException("Thiết bị đang có yêu cầu bảo trì trong hàng chờ hoặc đang xử lý.");
 				Membership membership = currentMembership(connection, userId, borrowedAt);
 				if (hasActiveUsageForItem(connection, assetItemId)) {
 					throw new IllegalStateException("Thiết bị theo mã riêng đang được sử dụng.");
@@ -459,12 +483,22 @@ public class AssetUsageDAO {
 	}
 
 	public void confirmReturn(long usageId, long mentorId, String verifiedCondition, String note) throws SQLException {
+		confirmReturn(usageId, mentorId, verifiedCondition, note, false);
+	}
+
+	public void confirmReturnAsLabManager(long usageId, long labManagerId, String verifiedCondition, String note)
+			throws SQLException {
+		confirmReturn(usageId, labManagerId, verifiedCondition, note, true);
+	}
+
+	private void confirmReturn(long usageId, long reviewerId, String verifiedCondition, String note, boolean labManager)
+			throws SQLException {
 		validateReturnConfirmations(List.of(new ReturnConfirmation(usageId, verifiedCondition, note)));
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
 			try {
-				ReturnTarget target = lockPendingReturnForMentor(connection, usageId, mentorId);
-				confirmLockedReturn(connection, usageId, mentorId, verifiedCondition, note, target);
+				ReturnTarget target = lockPendingReturnForReviewer(connection, usageId, reviewerId, labManager);
+				confirmLockedReturn(connection, usageId, reviewerId, verifiedCondition, note, target);
 				connection.commit();
 			} catch (SQLException | RuntimeException exception) {
 				connection.rollback();
@@ -481,7 +515,8 @@ public class AssetUsageDAO {
 			connection.setAutoCommit(false);
 			try {
 				for (ReturnConfirmation confirmation : ordered) {
-					ReturnTarget target = lockPendingReturnForMentor(connection, confirmation.usageId(), mentorId);
+					ReturnTarget target = lockPendingReturnForReviewer(connection, confirmation.usageId(), mentorId,
+							false);
 					if (target.assetItemId() == null)
 						throw new IllegalStateException("Xác nhận hàng loạt chỉ áp dụng cho sản phẩm có mã riêng.");
 					confirmLockedReturn(connection, confirmation.usageId(), mentorId, confirmation.verifiedCondition(),
@@ -531,20 +566,32 @@ public class AssetUsageDAO {
 			updateReturnedQuantityAsset(connection, target.assetId(), verifiedCondition);
 	}
 
-	private ReturnTarget lockPendingReturnForMentor(Connection connection, long usageId, long mentorId)
-			throws SQLException {
+	private ReturnTarget lockPendingReturnForReviewer(Connection connection, long usageId, long reviewerId,
+			boolean labManager) throws SQLException {
+		String reviewerScope = labManager
+				? "EXISTS (SELECT 1 FROM dbo.users reviewer WHERE reviewer.user_id=? AND reviewer.role='LAB_MANAGER' AND reviewer.status='ACTIVE')"
+				: """
+				  EXISTS (
+				    SELECT 1 FROM dbo.users reviewer
+				    JOIN dbo.lab_usage_requests request_scope
+				      ON request_scope.mentor_id=reviewer.user_id
+				     AND request_scope.request_id=au.request_id
+				     AND request_scope.semester_id=au.semester_id
+				     AND request_scope.status='APPROVED'
+				    WHERE reviewer.user_id=? AND reviewer.role='MENTOR' AND reviewer.status='ACTIVE'
+				  )
+				""";
 		String sql = """
 				SELECT au.asset_id, au.asset_item_id FROM dbo.asset_usages au WITH (UPDLOCK, HOLDLOCK)
-				WHERE au.asset_usage_id=? AND au.status='RETURN_PENDING' AND EXISTS (
-				 SELECT 1 FROM dbo.lab_usage_requests lur WHERE lur.request_id=au.request_id
-				 AND lur.semester_id=au.semester_id AND lur.mentor_id=? AND lur.status='APPROVED')
-				""";
+				WHERE au.asset_usage_id=? AND au.status='RETURN_PENDING' AND
+				""" + reviewerScope;
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setLong(1, usageId);
-			statement.setLong(2, mentorId);
+			statement.setLong(2, reviewerId);
 			try (ResultSet result = statement.executeQuery()) {
 				if (!result.next())
-					throw new IllegalStateException("Yêu cầu trả không thuộc phạm vi xác nhận của bạn.");
+					throw new IllegalStateException(
+							"Yêu cầu trả đã được xử lý hoặc không thuộc phạm vi xác nhận của bạn.");
 				return new ReturnTarget(result.getLong(1), nullableLong(result, "asset_item_id"));
 			}
 		}
@@ -652,11 +699,25 @@ public class AssetUsageDAO {
 
 	private void updateReturnedAssetItem(Connection connection, long assetItemId, String conditionAfter)
 			throws SQLException {
-		String sql = "UPDATE dbo.asset_items SET condition = ?, status = ?, updated_at = SYSUTCDATETIME() "
-				+ "WHERE asset_item_id = ? AND status = 'IN_USE'";
+		String sql = """
+				UPDATE item
+				SET condition = ?,
+				    status = CASE
+				      WHEN ? IN ('DAMAGED','BROKEN') OR EXISTS (
+				        SELECT 1 FROM dbo.incidents incident
+				        LEFT JOIN dbo.asset_usages usage ON usage.asset_usage_id=incident.asset_usage_id
+				        WHERE (incident.asset_item_id=item.asset_item_id OR usage.asset_item_id=item.asset_item_id)
+				          AND incident.status IN ('OPEN','REPORTED','FORWARDED','INVESTIGATING')
+				      ) THEN 'UNAVAILABLE'
+				      ELSE 'AVAILABLE'
+				    END,
+				    updated_at = SYSUTCDATETIME()
+				FROM dbo.asset_items item
+				WHERE item.asset_item_id = ? AND item.status = 'IN_USE'
+				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, conditionAfter);
-			statement.setString(2, returnedAssetItemStatus(conditionAfter));
+			statement.setString(2, conditionAfter);
 			statement.setLong(3, assetItemId);
 			if (statement.executeUpdate() != 1) {
 				throw new IllegalStateException("Không thể cập nhật thiết bị theo mã riêng khi trả.");
@@ -709,13 +770,79 @@ public class AssetUsageDAO {
 			statement.setLong(1, userId);
 			statement.setDate(2, java.sql.Date.valueOf(now.toLocalDate()));
 			try (ResultSet result = statement.executeQuery()) {
-				if (!result.next()) {
-					throw new IllegalStateException(
-							"Bạn chưa thuộc danh sách thực tập sinh được duyệt của học kỳ hiện tại.");
-				}
-				return new Membership(result.getLong(1), result.getLong(2), result.getLong(3),
-						result.getDate(4).toLocalDate());
+				if (result.next())
+					return new Membership(result.getLong(1), result.getLong(2), result.getLong(3),
+							result.getDate(4).toLocalDate());
 			}
+		}
+		return enrollActiveIntern(connection, userId, now.toLocalDate());
+	}
+
+	private Membership enrollActiveIntern(Connection connection, long userId, LocalDate date) throws SQLException {
+		String targetSql = """
+				SELECT TOP 1 request.request_id, request.semester_id, profile.student_id, semester.end_date,
+				       profile.student_code, account.full_name, account.email, COALESCE(profile.cohort, '') AS cohort
+				FROM dbo.users account
+				JOIN dbo.student_profiles profile WITH (UPDLOCK, HOLDLOCK) ON profile.user_id = account.user_id
+				JOIN dbo.semesters semester ON semester.status = 'ACTIVE' AND ? BETWEEN semester.start_date AND semester.end_date
+				JOIN dbo.lab_usage_requests request ON request.semester_id = semester.semester_id
+				JOIN dbo.users mentor ON mentor.user_id = request.mentor_id
+				WHERE account.user_id = ? AND account.role = 'INTERN' AND account.status = 'ACTIVE'
+				  AND profile.status = 'ACTIVE' AND request.status = 'APPROVED'
+				  AND mentor.role = 'MENTOR' AND mentor.status = 'ACTIVE'
+				ORDER BY request.approved_at DESC, request.request_id DESC
+				""";
+		try (PreparedStatement statement = connection.prepareStatement(targetSql)) {
+			statement.setDate(1, java.sql.Date.valueOf(date));
+			statement.setLong(2, userId);
+			try (ResultSet result = statement.executeQuery()) {
+				if (!result.next())
+					throw new IllegalStateException(
+							"Chưa có danh sách thực tập sinh đã duyệt trong học kỳ hiện tại để cấp quyền mượn.");
+				Membership membership = new Membership(result.getLong("request_id"), result.getLong("semester_id"),
+						result.getLong("student_id"), result.getDate("end_date").toLocalDate());
+				insertApprovedInternEntry(connection, membership, result.getString("student_code"),
+						result.getString("full_name"), result.getString("email"), result.getString("cohort"));
+				return membership;
+			}
+		}
+	}
+
+	private void insertApprovedInternEntry(Connection connection, Membership membership, String studentCode,
+			String fullName, String email, String cohort) throws SQLException {
+		try (PreparedStatement statement = connection.prepareStatement("""
+				INSERT dbo.lab_usage_request_student_entries
+				       (request_id, semester_id, student_code, full_name, email, cohort)
+				SELECT ?, ?, ?, ?, ?, ?
+				WHERE NOT EXISTS (
+				 SELECT 1 FROM dbo.lab_usage_request_student_entries
+				 WHERE semester_id = ? AND (student_code = ? OR LOWER(email) = LOWER(?))
+				)
+				""")) {
+			statement.setLong(1, membership.requestId());
+			statement.setLong(2, membership.semesterId());
+			statement.setString(3, studentCode);
+			statement.setString(4, fullName);
+			statement.setString(5, email);
+			statement.setString(6, cohort == null || cohort.isBlank() ? "Chưa cập nhật" : cohort);
+			statement.setLong(7, membership.semesterId());
+			statement.setString(8, studentCode);
+			statement.setString(9, email);
+			statement.executeUpdate();
+		}
+		try (PreparedStatement statement = connection.prepareStatement("""
+				INSERT dbo.lab_usage_request_students (request_id, semester_id, student_id)
+				SELECT ?, ?, ? WHERE NOT EXISTS (
+				 SELECT 1 FROM dbo.lab_usage_request_students WHERE semester_id = ? AND student_id = ?
+				)
+				""")) {
+			statement.setLong(1, membership.requestId());
+			statement.setLong(2, membership.semesterId());
+			statement.setLong(3, membership.internId());
+			statement.setLong(4, membership.semesterId());
+			statement.setLong(5, membership.internId());
+			if (statement.executeUpdate() != 1)
+				throw new IllegalStateException("Thực tập sinh đã được phân vào một danh sách khác trong học kỳ này.");
 		}
 	}
 
@@ -732,6 +859,21 @@ public class AssetUsageDAO {
 			} else {
 				statement.setLong(2, assetItemId);
 			}
+			try (ResultSet result = statement.executeQuery()) {
+				return result.next();
+			}
+		}
+	}
+
+	private boolean hasActiveMaintenance(Connection connection, long assetId, Long assetItemId) throws SQLException {
+		String sql = """
+				SELECT 1 FROM dbo.maintenance_records WITH (UPDLOCK, HOLDLOCK)
+				WHERE asset_id=? AND status IN ('PENDING','APPROVED','IN_PROGRESS')
+				  AND (asset_item_id IS NULL OR asset_item_id=?)
+				""";
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setLong(1, assetId);
+			if (assetItemId == null) statement.setNull(2, Types.BIGINT); else statement.setLong(2, assetItemId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
 			}
@@ -811,6 +953,7 @@ public class AssetUsageDAO {
 				usage.setAssetName(result.getString("asset_name"));
 				usage.setAssetItemTag(result.getString("asset_item_tag"));
 				usage.setInternName(result.getString("intern_name"));
+				usage.setReturnVerifierName(result.getString("return_verifier_name"));
 				usages.add(usage);
 			}
 			return usages;

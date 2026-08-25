@@ -17,8 +17,9 @@
         <header class="topbar">
             <div class="heading-wrap">
                 <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng"><svg><use href="#i-menu"/></svg></button>
-                <div><h1>Theo dõi bảo trì thiết bị</h1><p>Xem danh sách và tiến độ xử lý các phiếu bảo trì thiết bị phòng lab.</p></div>
+                <div><h1>Theo dõi bảo trì thiết bị</h1><p>Xem yêu cầu do bạn gửi và tiến độ Lab Manager xử lý.</p></div>
             </div>
+            <div class="topbar-actions"><a class="primary-button" href="${pageContext.request.contextPath}/mentor/maintenance/new">+ Tạo yêu cầu bảo trì</a></div>
         </header>
 
         <section class="content-area">
@@ -28,6 +29,9 @@
                     <input class="form-control" type="search" name="keyword" value="<c:out value='${keyword}'/>" placeholder="Mã phiếu (#MNT-), tên/mã thiết bị, cá thể, thợ sửa..." style="width:360px;">
                     <select class="form-control" name="status">
                         <option value="">Tất cả trạng thái</option>
+                        <option value="PENDING" ${selectedStatus == 'PENDING' ? 'selected' : ''}>Chờ duyệt</option>
+                        <option value="APPROVED" ${selectedStatus == 'APPROVED' ? 'selected' : ''}>Đã duyệt, chờ bắt đầu</option>
+                        <option value="REJECTED" ${selectedStatus == 'REJECTED' ? 'selected' : ''}>Đã từ chối</option>
                         <option value="IN_PROGRESS" ${selectedStatus == 'IN_PROGRESS' ? 'selected' : ''}>Đang sửa chữa</option>
                         <option value="COMPLETED" ${selectedStatus == 'COMPLETED' ? 'selected' : ''}>Đã sửa xong</option>
                     </select>
@@ -64,6 +68,9 @@
                                     <c:when test="${record.status == 'IN_PROGRESS'}">
                                         <span class="status maintenance">Đang sửa chữa</span>
                                     </c:when>
+                                    <c:when test="${record.status == 'PENDING'}"><span class="status">Chờ duyệt</span></c:when>
+                                    <c:when test="${record.status == 'APPROVED'}"><span class="status">Đã duyệt, chờ bắt đầu</span></c:when>
+                                    <c:when test="${record.status == 'REJECTED'}"><span class="status overdue">Đã từ chối</span></c:when>
                                     <c:otherwise>
                                         <span class="status"><c:out value="${record.status}"/></span>
                                     </c:otherwise>

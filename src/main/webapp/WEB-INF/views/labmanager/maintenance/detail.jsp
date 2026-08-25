@@ -35,10 +35,10 @@
                 </div>
             </div>
             <div class="topbar-actions">
-                <c:if test="${record.status == 'APPROVED' || record.status == 'IN_PROGRESS' || record.status == 'COMPLETED'}">
+                <c:if test="${record.status == 'APPROVED' || record.status == 'IN_PROGRESS'}">
                     <a class="primary-button"
                        href="${pageContext.request.contextPath}/lab-manager/maintenance/${record.maintenanceId}/edit">
-                        <svg><use href="#i-wrench"/></svg><c:choose><c:when test="${record.status == 'COMPLETED'}">Chỉnh sửa chi phí / kết quả</c:when><c:otherwise>Cập nhật tiến độ</c:otherwise></c:choose>
+                        <svg><use href="#i-wrench"/></svg><c:choose><c:when test="${record.status == 'APPROVED'}">Bắt đầu bảo trì</c:when><c:otherwise>Cập nhật tiến độ</c:otherwise></c:choose>
                     </a>
                 </c:if>
                 <a class="btn-secondary" href="${pageContext.request.contextPath}/lab-manager/maintenance">‹ Quay lại</a>
@@ -48,6 +48,26 @@
         <section class="content-area">
             <c:if test="${not empty message}">
                 <div class="error-message"><c:out value="${message}"/></div>
+            </c:if>
+            <c:if test="${param.success == 'reviewed'}"><div class="success-message">Đã lưu quyết định duyệt yêu cầu.</div></c:if>
+
+            <c:if test="${record.status == 'PENDING'}">
+                <article class="panel" style="padding:18px;margin-bottom:20px;">
+                    <h3 style="margin:0 0 8px;">Yêu cầu đang chờ duyệt</h3>
+                    <p style="margin:0 0 14px;color:#5a6662;">Duyệt chỉ đưa yêu cầu sang hàng chờ bắt đầu. Thiết bị chỉ chuyển sang Bảo trì khi bạn bấm “Bắt đầu bảo trì”.</p>
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                        <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="display:flex;gap:8px;align-items:flex-end;">
+                            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}"><input type="hidden" name="action" value="approve"><input type="hidden" name="id" value="${record.maintenanceId}">
+                            <div><label for="approvalNote">Ghi chú duyệt</label><input class="form-control" id="approvalNote" name="approvalNote" maxlength="500" placeholder="Ghi chú (không bắt buộc)"></div>
+                            <button class="primary-button" type="submit">Duyệt yêu cầu</button>
+                        </form>
+                        <form method="post" action="${pageContext.request.contextPath}/lab-manager/maintenance" style="display:flex;gap:8px;align-items:flex-end;">
+                            <input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}"><input type="hidden" name="action" value="reject"><input type="hidden" name="id" value="${record.maintenanceId}">
+                            <div><label for="rejectNote">Lý do từ chối *</label><input class="form-control" id="rejectNote" name="approvalNote" maxlength="500" required></div>
+                            <button class="btn-secondary" type="submit">Từ chối</button>
+                        </form>
+                    </div>
+                </article>
             </c:if>
 
             <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
@@ -61,6 +81,9 @@
                                 <c:when test="${record.status == 'IN_PROGRESS'}">
                                     <span class="status maintenance">Đang sửa chữa</span>
                                 </c:when>
+                                <c:when test="${record.status == 'PENDING'}"><span class="status">Chờ duyệt</span></c:when>
+                                <c:when test="${record.status == 'APPROVED'}"><span class="status">Đã duyệt, chờ bắt đầu</span></c:when>
+                                <c:when test="${record.status == 'REJECTED'}"><span class="status overdue">Đã từ chối</span></c:when>
                                 <c:when test="${record.status == 'COMPLETED'}">
                                     <c:choose>
                                         <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
@@ -307,7 +330,7 @@
                                     <div>
                                         <c:choose>
                                             <c:when test="${record.assetStatus == 'UNAVAILABLE'}">
-                                                <b style="color:#c62828;">Hoàn tất – Sửa thất bại (Thiết bị chuyển UNAVAILABLE chờ thanh lý)</b>
+                                                <b style="color:#c62828;">Hoàn tất – Sửa thất bại (Thiết bị về hàng chờ quyết định tiếp theo)</b>
                                             </c:when>
                                             <c:otherwise>
                                                 <b>Hoàn tất – Sửa thành công (Thiết bị về AVAILABLE)</b>

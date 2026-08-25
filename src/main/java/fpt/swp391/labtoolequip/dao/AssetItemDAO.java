@@ -41,6 +41,11 @@ public class AssetItemDAO {
 				SELECT 1 FROM dbo.disposal_records disposal
 				WHERE disposal.asset_id = a.asset_id AND disposal.status IN ('PENDING', 'APPROVED')
 			  )
+			  AND NOT EXISTS (
+				SELECT 1 FROM dbo.maintenance_records maintenance
+				WHERE maintenance.asset_item_id = i.asset_item_id
+				  AND maintenance.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
+			  )
 			""";
 	private final DBConnection db = new DBConnection();
 
@@ -298,12 +303,16 @@ public class AssetItemDAO {
 	public void updateItem(AssetItem item) throws SQLException {
 		if (item == null || item.getAssetItemId() == null)
 			throw new IllegalArgumentException("Không tìm thấy sản phẩm cần cập nhật.");
-		validateItem(item);
+		validateEditableItem(item);
 		String sql = """
 				UPDATE dbo.asset_items
-				SET serial_number = ?, image_path = ?, condition = ?, status = ?,
+				SET serial_number = ?, image_path = ?, condition = ?,
+				    status = CASE
+				        WHEN status = 'AVAILABLE' AND ? IN ('DAMAGED', 'BROKEN') THEN 'UNAVAILABLE'
+				        ELSE status
+				    END,
 				    purchase_date = ?, warranty_until = ?, note = ?, updated_at = SYSUTCDATETIME()
-				WHERE asset_item_id = ? AND status <> 'DISPOSED'
+				WHERE asset_item_id = ? AND status IN ('AVAILABLE', 'UNAVAILABLE')
 				""";
 		try (Connection connection = db.getConnection()) {
 			connection.setAutoCommit(false);
@@ -313,13 +322,14 @@ public class AssetItemDAO {
 					setNullableString(statement, 1, item.getSerialNumber());
 					setNullableString(statement, 2, item.getImagePath());
 					statement.setString(3, item.getCondition());
-					statement.setString(4, item.getStatus());
+					statement.setString(4, item.getCondition());
 					setNullableDate(statement, 5, item.getPurchaseDate());
 					setNullableDate(statement, 6, item.getWarrantyUntil());
 					setNullableString(statement, 7, item.getNote());
 					statement.setLong(8, item.getAssetItemId());
 					if (statement.executeUpdate() == 0)
-						throw new IllegalArgumentException("Sản phẩm không tồn tại hoặc đã thanh lý.");
+						throw new IllegalArgumentException(
+								"Chỉ có thể sửa thông tin sản phẩm đang sẵn sàng hoặc đang ở hàng chờ xử lý.");
 				}
 				refreshAssetCondition(connection, assetIdOf(connection, item.getAssetItemId()));
 				connection.commit();
@@ -489,7 +499,7 @@ public class AssetItemDAO {
 				INSERT dbo.assets (asset_code, asset_name, category_id, tracking_mode, total_quantity, condition, status,
 				                  is_borrowable, description)
 				OUTPUT INSERTED.asset_id
-				VALUES (?, ?, ?, 'QUANTITY', ?, 'GOOD', 'AVAILABLE', ?, ?)
+				VALUES (?, ?, ?, 'SERIALIZED', ?, 'GOOD', 'AVAILABLE', ?, ?)
 				""";
 		try (PreparedStatement statement = connection.prepareStatement(sql)) {
 			statement.setString(1, code);
@@ -566,6 +576,17 @@ public class AssetItemDAO {
 		if (("DAMAGED".equals(item.getCondition()) || "BROKEN".equals(item.getCondition()))
 				&& !List.of("MAINTENANCE", "UNAVAILABLE", "DISPOSED").contains(item.getStatus()))
 			throw new IllegalArgumentException("Sản phẩm hư hỏng nặng phải được đưa ra khỏi trạng thái sẵn sàng.");
+		if (item.getSerialNumber() != null && item.getSerialNumber().length() > 100)
+			throw new IllegalArgumentException("Serial không được dài quá 100 ký tự.");
+		String imagePath = item.getImagePath();
+		if (imagePath != null && !imagePath.isBlank()
+				&& (!imagePath.matches("/(uploads|assets)/[A-Za-z0-9_./-]+") || imagePath.contains("..")))
+			throw new IllegalArgumentException("Đường dẫn ảnh phải là đường dẫn nội bộ hợp lệ.");
+	}
+
+	private static void validateEditableItem(AssetItem item) {
+		if (item == null || !List.of("GOOD", "FAIR", "DAMAGED", "BROKEN").contains(item.getCondition()))
+			throw new IllegalArgumentException("Tình trạng sản phẩm không hợp lệ.");
 		if (item.getSerialNumber() != null && item.getSerialNumber().length() > 100)
 			throw new IllegalArgumentException("Serial không được dài quá 100 ký tự.");
 		String imagePath = item.getImagePath();

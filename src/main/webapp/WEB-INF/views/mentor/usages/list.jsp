@@ -17,7 +17,7 @@
         <header class="topbar">
             <div class="heading-wrap">
                 <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
-                <div><h1>Sử dụng thiết bị</h1><p>Theo dõi mượn và trả của thực tập sinh trong danh sách được phân công</p></div>
+                <div><h1>Sử dụng thiết bị</h1><p>Theo dõi danh sách phụ trách và cùng Quản lý phòng LAB xác nhận yêu cầu trả đang chờ</p></div>
             </div>
             <div class="topbar-actions"><div class="top-profile"><div class="avatar">ME</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
         </header>

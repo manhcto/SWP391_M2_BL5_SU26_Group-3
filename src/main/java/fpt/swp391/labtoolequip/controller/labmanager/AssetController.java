@@ -216,19 +216,24 @@ public class AssetController extends HttpServlet {
 			throws IOException, ServletException {
 		String[] serials = request.getParameterValues("itemSerialNumber");
 		String[] conditions = request.getParameterValues("itemCondition");
-		String[] statuses = request.getParameterValues("itemStatus");
 		String[] purchases = request.getParameterValues("itemPurchaseDate");
 		String[] warranties = request.getParameterValues("itemWarrantyUntil");
 		String[] notes = request.getParameterValues("itemNote");
+		String sharedImagePath = AssetImageStorage.save(request.getPart("sharedImageFile"));
+		if (sharedImagePath != null)
+			uploadedImages.add(sharedImagePath);
 		List<AssetItem> items = new ArrayList<>();
 		for (int index = 0; index < quantity; index++) {
 			String imagePath = AssetImageStorage.save(request.getPart("itemImageFile" + index));
-			uploadedImages.add(imagePath);
+			if (imagePath != null)
+				uploadedImages.add(imagePath);
+			else
+				imagePath = sharedImagePath;
 			AssetItem item = new AssetItem();
 			item.setSerialNumber(value(serials, index));
 			item.setImagePath(imagePath);
 			item.setCondition(defaultValue(value(conditions, index), "GOOD"));
-			item.setStatus(defaultValue(value(statuses, index), "AVAILABLE"));
+			item.setStatus("AVAILABLE");
 			item.setPurchaseDate(parseDate(value(purchases, index), "Ngày mua"));
 			item.setWarrantyUntil(parseDate(value(warranties, index), "Ngày hết hạn bảo hành"));
 			item.setNote(value(notes, index));
@@ -243,7 +248,9 @@ public class AssetController extends HttpServlet {
 		item.setSerialNumber(request.getParameter("serialNumber"));
 		item.setImagePath(uploadedImage == null ? request.getParameter("imagePath") : uploadedImage);
 		item.setCondition(defaultValue(request.getParameter("condition"), "GOOD"));
-		item.setStatus(defaultValue(request.getParameter("status"), "AVAILABLE"));
+		// Trạng thái vòng đời chỉ được đổi tại màn mượn/trả, sự cố, bảo trì
+		// hoặc thanh lý. Màn thiết bị chỉ cập nhật thông tin và tình trạng.
+		item.setStatus(null);
 		item.setPurchaseDate(parseDate(request.getParameter("purchaseDate"), "Ngày mua"));
 		item.setWarrantyUntil(parseDate(request.getParameter("warrantyUntil"), "Ngày hết hạn bảo hành"));
 		item.setNote(request.getParameter("note"));

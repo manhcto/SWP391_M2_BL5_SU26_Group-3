@@ -30,6 +30,7 @@ public class AssetUsage {
 	private String assetName;
 	private String assetItemTag;
 	private String internName;
+	private String returnVerifierName;
 
 	public AssetUsage() {
 	}
@@ -259,5 +260,13 @@ public class AssetUsage {
 
 	public void setInternName(String internName) {
 		this.internName = internName;
+	}
+
+	public String getReturnVerifierName() {
+		return returnVerifierName;
+	}
+
+	public void setReturnVerifierName(String returnVerifierName) {
+		this.returnVerifierName = returnVerifierName;
 	}
 }

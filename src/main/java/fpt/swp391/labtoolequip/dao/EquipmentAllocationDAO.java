@@ -360,7 +360,9 @@ public class EquipmentAllocationDAO {
 					update.setLong(4, allocationId);
 					update.executeUpdate();
 				}
-				String itemStatus = Set.of("DAMAGED", "BROKEN").contains(returnCondition) ? "MAINTENANCE" : "AVAILABLE";
+				// Thiết bị hỏng chỉ vào hàng chờ xử lý. Màn bảo trì mới được quyền
+				// chuyển nó sang MAINTENANCE khi bắt đầu sửa chữa.
+				String itemStatus = Set.of("DAMAGED", "BROKEN").contains(returnCondition) ? "UNAVAILABLE" : "AVAILABLE";
 				try (PreparedStatement update = connection.prepareStatement(
 						"UPDATE dbo.asset_items SET condition=?, status=?, updated_at=SYSUTCDATETIME() WHERE asset_item_id=?")) {
 					update.setString(1, returnCondition);
@@ -417,10 +419,26 @@ public class EquipmentAllocationDAO {
 				statement.setLong(2, userId);
 				if (statement.executeUpdate() != 1)
 					throw new IllegalArgumentException("Không thể xác nhận bàn giao thiết bị này.");
-				try (PreparedStatement update = connection.prepareStatement(
-						"UPDATE dbo.asset_items SET status='IN_USE', updated_at=SYSUTCDATETIME() WHERE asset_item_id=(SELECT asset_item_id FROM dbo.equipment_allocations WHERE allocation_id=?)")) {
+				try (PreparedStatement update = connection.prepareStatement("""
+						UPDATE dbo.asset_items
+						SET status='IN_USE', updated_at=SYSUTCDATETIME()
+						WHERE status='UNAVAILABLE'
+						  AND asset_item_id=(SELECT asset_item_id FROM dbo.equipment_allocations WHERE allocation_id=?)
+						  AND NOT EXISTS (
+						    SELECT 1 FROM dbo.maintenance_records m
+						    WHERE m.asset_item_id=asset_items.asset_item_id
+						      AND m.status IN ('PENDING','APPROVED','IN_PROGRESS')
+						  )
+						  AND NOT EXISTS (
+						    SELECT 1 FROM dbo.disposal_records d
+						    WHERE d.asset_item_id=asset_items.asset_item_id
+						      AND d.status IN ('PENDING','APPROVED','COMPLETED')
+						  )
+						""")) {
 					update.setLong(1, allocationId);
-					update.executeUpdate();
+					if (update.executeUpdate() != 1)
+						throw new IllegalStateException(
+								"Thiết bị đang ở một hàng chờ nghiệp vụ khác nên chưa thể xác nhận bàn giao.");
 				}
 				connection.commit();
 			} catch (SQLException | RuntimeException exception) {
@@ -498,9 +516,8 @@ public class EquipmentAllocationDAO {
 						s.executeUpdate();
 					}
 					try (PreparedStatement s = c.prepareStatement(
-							"UPDATE dbo.asset_items SET status=?, updated_at=SYSUTCDATETIME() WHERE asset_item_id=?")) {
-						s.setString(1, "LOSS".equals(type) ? "UNAVAILABLE" : "MAINTENANCE");
-						s.setLong(2, itemId);
+							"UPDATE dbo.asset_items SET status='UNAVAILABLE', updated_at=SYSUTCDATETIME() WHERE asset_item_id=? AND status <> 'DISPOSED'")) {
+						s.setLong(1, itemId);
 						s.executeUpdate();
 					}
 				}
