@@ -511,7 +511,6 @@ BEGIN TRY
         updated_at datetime2(0) NOT NULL CONSTRAINT DF_maintenance_records_updated_at DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT PK_maintenance_records PRIMARY KEY (maintenance_id),
         CONSTRAINT FK_maintenance_records_asset FOREIGN KEY (asset_id) REFERENCES dbo.assets(asset_id),
-        CONSTRAINT FK_maintenance_records_asset_item FOREIGN KEY (asset_item_id) REFERENCES dbo.asset_items(asset_item_id),
         CONSTRAINT FK_maintenance_records_incident FOREIGN KEY (incident_id) REFERENCES dbo.incidents(incident_id),
         CONSTRAINT FK_maintenance_records_schedule FOREIGN KEY (schedule_id) REFERENCES dbo.maintenance_schedules(schedule_id),
         CONSTRAINT FK_maintenance_records_requester FOREIGN KEY (requested_by) REFERENCES dbo.users(user_id),
