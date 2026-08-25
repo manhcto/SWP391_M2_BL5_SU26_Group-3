@@ -126,7 +126,7 @@ public class MaintenanceDAO {
 				  AND ai.status <> 'DISPOSED'
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.incidents i
-					WHERE i.asset_item_id = ai.asset_item_id AND i.status IN ('OPEN', 'INVESTIGATING')
+					WHERE i.asset_item_id = ai.asset_item_id AND i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
@@ -146,7 +146,7 @@ public class MaintenanceDAO {
 				  AND NOT EXISTS (SELECT 1 FROM dbo.asset_items ai WHERE ai.asset_id = a.asset_id)
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.incidents i
-					WHERE i.asset_id = a.asset_id AND i.status IN ('OPEN', 'INVESTIGATING')
+					WHERE i.asset_id = a.asset_id AND i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
 				  )
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
@@ -181,7 +181,7 @@ public class MaintenanceDAO {
 				FROM dbo.incidents i
 				JOIN dbo.assets a ON a.asset_id = i.asset_id
 				LEFT JOIN dbo.asset_items ai ON ai.asset_item_id = i.asset_item_id
-				WHERE i.status IN ('OPEN', 'INVESTIGATING')
+				WHERE i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
 					WHERE m.incident_id = i.incident_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
@@ -238,8 +238,7 @@ public class MaintenanceDAO {
 						throw new IllegalArgumentException("Sự cố đã chọn không thuộc về thiết bị này.");
 					}
 				}
-				// Kiểm tra thiết bị có đang UNAVAILABLE (đã sửa thất bại / hỏng chờ thanh lý)
-				// không
+				// Kiểm tra thiết bị có đang DISPOSED hoặc UNAVAILABLE không
 				if (assetItemId != null) {
 					try (PreparedStatement itemCheckStmt = connection
 							.prepareStatement("SELECT status FROM dbo.asset_items WHERE asset_item_id = ?")) {
@@ -247,11 +246,13 @@ public class MaintenanceDAO {
 						try (ResultSet rs = itemCheckStmt.executeQuery()) {
 							if (rs.next()) {
 								String st = rs.getString("status");
-								if ("UNAVAILABLE".equals(st) || "DISPOSED".equals(st)) {
+								if ("DISPOSED".equals(st)) {
 									throw new IllegalArgumentException(
-											"Thiết bị này đã ở trạng thái " + ("UNAVAILABLE".equals(st)
-													? "Không khả dụng (Đã hỏng chờ thanh lý)"
-													: "Đã thanh lý") + ", không thể lập phiếu bảo trì.");
+											"Thiết bị này đã thanh lý, không thể lập phiếu bảo trì.");
+								}
+								if ("UNAVAILABLE".equals(st) && incidentId == null) {
+									throw new IllegalArgumentException(
+											"Thiết bị này đang ở trạng thái Không khả dụng, không thể lập phiếu bảo trì định kỳ.");
 								}
 							}
 						}
@@ -541,7 +542,7 @@ public class MaintenanceDAO {
 									UPDATE dbo.asset_items
 									SET status = 'AVAILABLE', updated_at = SYSUTCDATETIME()
 									WHERE asset_item_id = ? AND status = 'MAINTENANCE'
-									  AND NOT EXISTS (SELECT 1 FROM dbo.incidents WHERE asset_item_id = ? AND status IN ('OPEN', 'INVESTIGATING'))
+									  AND NOT EXISTS (SELECT 1 FROM dbo.incidents WHERE asset_item_id = ? AND status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING'))
 									""")) {
 						itemStmt.setLong(1, assetItemId);
 						itemStmt.setLong(2, assetItemId);
@@ -561,7 +562,7 @@ public class MaintenanceDAO {
 										SET ai.status = 'AVAILABLE', ai.updated_at = SYSUTCDATETIME()
 										FROM dbo.asset_items ai
 										WHERE ai.asset_id = ? AND ai.status = 'MAINTENANCE'
-										  AND NOT EXISTS (SELECT 1 FROM dbo.incidents i WHERE i.asset_item_id = ai.asset_item_id AND i.status IN ('OPEN', 'INVESTIGATING'))
+										  AND NOT EXISTS (SELECT 1 FROM dbo.incidents i WHERE i.asset_item_id = ai.asset_item_id AND i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING'))
 										""")) {
 							itemStmt.setLong(1, assetId);
 							itemStmt.executeUpdate();
@@ -630,7 +631,7 @@ public class MaintenanceDAO {
 
 	private boolean hasOpenIncidentForAsset(Connection connection, long assetId) throws SQLException {
 		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT 1 FROM dbo.incidents WHERE asset_id = ? AND status IN ('OPEN', 'INVESTIGATING')")) {
+				"SELECT 1 FROM dbo.incidents WHERE asset_id = ? AND status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')")) {
 			statement.setLong(1, assetId);
 			try (ResultSet result = statement.executeQuery()) {
 				return result.next();
