@@ -173,7 +173,7 @@ public class MaintenanceDAO {
 		}
 	}
 
-	/** Danh sách sự cố đang xử lý nhưng chưa có phiếu bảo trì đang chạy. */
+	/** Danh sách sự cố đang xử lý nhưng chưa có phiếu bảo trì nào. */
 	public List<Incident> findOpenIncidents() throws SQLException {
 		String sql = """
 				SELECT i.incident_id, i.asset_id, i.asset_item_id, i.description, a.asset_name, a.asset_code,
@@ -184,7 +184,7 @@ public class MaintenanceDAO {
 				WHERE i.status IN ('OPEN', 'REPORTED', 'FORWARDED', 'INVESTIGATING')
 				  AND NOT EXISTS (
 					SELECT 1 FROM dbo.maintenance_records m
-					WHERE m.incident_id = i.incident_id AND m.status IN ('PENDING', 'APPROVED', 'IN_PROGRESS')
+					WHERE m.incident_id = i.incident_id
 				  )
 				ORDER BY i.reported_at DESC
 				""";
@@ -254,6 +254,19 @@ public class MaintenanceDAO {
 									throw new IllegalArgumentException(
 											"Thiết bị này đang ở trạng thái Không khả dụng, không thể lập phiếu bảo trì định kỳ.");
 								}
+							}
+						}
+					}
+				}
+
+				if (incidentId != null) {
+					try (PreparedStatement checkIncStmt = connection
+							.prepareStatement("SELECT 1 FROM dbo.maintenance_records WHERE incident_id = ?")) {
+						checkIncStmt.setLong(1, incidentId);
+						try (ResultSet rs = checkIncStmt.executeQuery()) {
+							if (rs.next()) {
+								throw new IllegalArgumentException(
+										"Sự cố này đã được lập phiếu bảo trì trước đó. Mỗi sự cố chỉ được xử lý qua 1 phiếu bảo trì.");
 							}
 						}
 					}
