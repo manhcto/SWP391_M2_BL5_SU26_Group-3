@@ -32,7 +32,6 @@
                         .alert-badge {
                             background: #fef2f2;
                             color: #dc2626;
-                            border: 1px solid #fecaca;
                             font-size: 11.5px;
                             padding: 2px 8px;
                             border-radius: 10px;
@@ -82,7 +81,6 @@
                         .schedule-badge-overdue {
                             background: #fee2e2;
                             color: #b91c1c;
-                            border: 1px solid #fecaca;
                             font-weight: 700;
                             padding: 3px 8px;
                             border-radius: 4px;
@@ -93,7 +91,6 @@
                         .schedule-badge-duesoon {
                             background: #fef3c7;
                             color: #b45309;
-                            border: 1px solid #fde68a;
                             font-weight: 700;
                             padding: 3px 8px;
                             border-radius: 4px;
@@ -104,7 +101,6 @@
                         .schedule-badge-pending {
                             background: #e0f2fe;
                             color: #0369a1;
-                            border: 1px solid #bae6fd;
                             font-weight: 600;
                             padding: 3px 8px;
                             border-radius: 4px;
@@ -115,7 +111,6 @@
                         .schedule-badge-completed {
                             background: #dcfce7;
                             color: #15803d;
-                            border: 1px solid #bbf7d0;
                             font-weight: 600;
                             padding: 3px 8px;
                             border-radius: 4px;
@@ -126,7 +121,6 @@
                         .schedule-badge-cancelled {
                             background: #f3f4f6;
                             color: #6b7280;
-                            border: 1px solid #e5e7eb;
                             font-weight: 500;
                             padding: 3px 8px;
                             border-radius: 4px;
