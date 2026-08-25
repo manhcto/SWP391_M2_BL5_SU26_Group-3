@@ -44,11 +44,8 @@
         </header>
 
         <section class="content-area">
-            <c:if test="${param.success == 'created'}">
-                <div class="success-message">Đã tạo đề xuất bảo trì thành công. Chờ Lab Manager phê duyệt.</div>
-            </c:if>
-            <c:if test="${param.success == 'updated'}">
-                <div class="success-message">Đã cập nhật thông tin đề xuất bảo trì thành công.</div>
+            <c:if test="${not empty message}">
+                <div class="error-message"><c:out value="${message}"/></div>
             </c:if>
 
             <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;">
