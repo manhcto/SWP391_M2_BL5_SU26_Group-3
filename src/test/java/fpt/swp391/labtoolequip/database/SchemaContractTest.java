@@ -1,0 +1,93 @@
+package fpt.swp391.labtoolequip.database;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+
+class SchemaContractTest {
+
+	@Test
+	void assetUsageBootstrapUsesCanonicalLifecycleColumns() throws IOException {
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		String assetUsages = schema.substring(schema.indexOf("CREATE TABLE dbo.asset_usages"),
+				schema.indexOf("CREATE TABLE dbo.inspection_records"));
+
+		assertTrue(assetUsages.contains("student_id bigint NOT NULL"));
+		assertFalse(assetUsages.contains("intern_id"));
+		assertTrue(assetUsages.contains("'RETURN_PENDING'"));
+		assertFalse(assetUsages.contains("'MAINTENANCE'"));
+	}
+
+	@Test
+	void lifecycleBootstrapContainsIncidentResponsibilityAndMaintenanceContracts() throws IOException {
+
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("reviewed_by bigint NULL"));
+		assertTrue(schema.contains("technical_cause varchar(30) NULL"));
+		assertTrue(schema.contains("responsibility_level varchar(15) NULL"));
+		assertTrue(schema.contains("repair_outcome varchar(10) NOT NULL"));
+		assertTrue(schema.contains("UX_maintenance_records_active_asset_item"));
+	}
+
+	@Test
+	void consolidatedBootstrapContainsAllocationDisposalAndSeedContracts() throws IOException {
+
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_activities"));
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_allocation_requests"));
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_allocations"));
+		assertTrue(schema.contains("CREATE TABLE dbo.equipment_allocation_issue_reports"));
+
+		assertTrue(schema.contains("UX_equipment_activities_active_request"));
+		assertTrue(schema.contains("UX_equipment_allocation_requests_activity_asset"));
+		assertTrue(schema.contains("UX_equipment_allocations_active_item"));
+
+		assertTrue(schema.contains("reason_code varchar(30) NULL"));
+
+		assertTrue(schema.contains("'ARDUINO-UNO-KIT'"));
+		assertTrue(schema.contains("'PRESENTATION-REMOTE'"));
+	}
+
+	@Test
+	void inspectionBootstrapSupportsQuantityAndSerializedTargets() throws IOException {
+
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("asset_item_id bigint NULL"));
+
+		assertTrue(schema.contains("UX_inspection_items_asset_quantity"));
+
+		assertTrue(schema.contains("UX_inspection_items_asset_item"));
+
+		assertTrue(schema.contains("CK_inspection_items_asset_item_quantity"));
+
+		assertTrue(schema.contains("FOREIGN KEY (asset_item_id, asset_id)"));
+
+		assertTrue(schema.contains("REFERENCES dbo.asset_items(asset_item_id, asset_id)"));
+
+		assertFalse(schema.contains("CONSTRAINT UQ_inspection_items_asset UNIQUE (inspection_id, asset_id)"));
+	}
+
+	@Test
+	void serializedAssetsAllowMultiplePhysicalItems() throws IOException {
+
+		String schema = Files.readString(Path.of("database", "lab_asset_management_full.sql"));
+
+		assertTrue(schema.contains("CHECK (total_quantity > 0)"));
+
+		assertFalse(schema.contains("tracking_mode = 'QUANTITY' OR total_quantity = 1"));
+
+		assertTrue(schema.contains("tracking_mode = 'SERIALIZED'"));
+
+		assertTrue(schema.contains("'ARDUINO-UNO-KIT'"));
+
+		assertTrue(schema.contains("'PRESENTATION-REMOTE'"));
+	}
+}

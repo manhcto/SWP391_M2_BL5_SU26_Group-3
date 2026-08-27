@@ -10,7 +10,10 @@ public class User {
 	private String googleSubject;
 	private String role;
 	private String status;
+	private boolean mustChangePassword;
+	private LocalDateTime passwordExpiresAt;
 	private String studentCode;
+	private Long majorId;
 	private String major;
 	private String cohort;
 	private LocalDateTime createdAt;
@@ -92,6 +95,26 @@ public class User {
 		this.status = status;
 	}
 
+	public boolean isMustChangePassword() {
+		return mustChangePassword;
+	}
+
+	public void setMustChangePassword(boolean mustChangePassword) {
+		this.mustChangePassword = mustChangePassword;
+	}
+
+	public LocalDateTime getPasswordExpiresAt() {
+		return passwordExpiresAt;
+	}
+
+	public void setPasswordExpiresAt(LocalDateTime passwordExpiresAt) {
+		this.passwordExpiresAt = passwordExpiresAt;
+	}
+
+	public boolean isTemporaryPasswordExpired(LocalDateTime now) {
+		return mustChangePassword && (passwordExpiresAt == null || !passwordExpiresAt.isAfter(now));
+	}
+
 	public String getStudentCode() {
 		return studentCode;
 	}
@@ -102,6 +125,14 @@ public class User {
 
 	public String getMajor() {
 		return major;
+	}
+
+	public Long getMajorId() {
+		return majorId;
+	}
+
+	public void setMajorId(Long majorId) {
+		this.majorId = majorId;
 	}
 
 	public void setMajor(String major) {

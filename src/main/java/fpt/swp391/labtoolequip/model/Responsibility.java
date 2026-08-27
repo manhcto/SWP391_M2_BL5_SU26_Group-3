@@ -6,6 +6,12 @@ public class Responsibility {
 	private Long responsibilityId;
 	private Long incidentId;
 	private Long internId;
+	private String responsibilityLevel;
+	private String evidenceSummary;
+	private String responsibilityNote;
+	private String handlingRecommendation;
+	private Long responsibilityAssessedBy;
+	private LocalDateTime responsibilityAssessedAt;
 	private Long determinedBy;
 	private String conclusion;
 	private String decision;
@@ -22,6 +28,7 @@ public class Responsibility {
 	private String internName;
 	private String internEmail;
 	private String mentorName;
+	private String responsibilityAssessorName;
 	private String reviewerName;
 	private String incidentType;
 	private String incidentDescription;
@@ -29,6 +36,15 @@ public class Responsibility {
 	private String incidentStatus;
 	private String investigationNote;
 	private String handlingResult;
+	private String determinedCause;
+	private String technicalCause;
+	private String technicalSeverity;
+	private String repairability;
+	private String recommendedAction;
+	private String technicalNote;
+	private Long technicalAssessedBy;
+	private LocalDateTime technicalAssessedAt;
+	private String technicalAssessorName;
 	private LocalDateTime occurredAt;
 	private LocalDateTime reportedAt;
 	private Long assetId;
@@ -74,6 +90,42 @@ public class Responsibility {
 	}
 	public void setInternId(Long value) {
 		internId = value;
+	}
+	public String getResponsibilityLevel() {
+		return responsibilityLevel;
+	}
+	public void setResponsibilityLevel(String value) {
+		responsibilityLevel = value;
+	}
+	public String getEvidenceSummary() {
+		return evidenceSummary;
+	}
+	public void setEvidenceSummary(String value) {
+		evidenceSummary = value;
+	}
+	public String getResponsibilityNote() {
+		return responsibilityNote;
+	}
+	public void setResponsibilityNote(String value) {
+		responsibilityNote = value;
+	}
+	public String getHandlingRecommendation() {
+		return handlingRecommendation;
+	}
+	public void setHandlingRecommendation(String value) {
+		handlingRecommendation = value;
+	}
+	public Long getResponsibilityAssessedBy() {
+		return responsibilityAssessedBy;
+	}
+	public void setResponsibilityAssessedBy(Long value) {
+		responsibilityAssessedBy = value;
+	}
+	public LocalDateTime getResponsibilityAssessedAt() {
+		return responsibilityAssessedAt;
+	}
+	public void setResponsibilityAssessedAt(LocalDateTime value) {
+		responsibilityAssessedAt = value;
 	}
 	public Long getDeterminedBy() {
 		return determinedBy;
@@ -171,6 +223,12 @@ public class Responsibility {
 	public void setMentorName(String value) {
 		mentorName = value;
 	}
+	public String getResponsibilityAssessorName() {
+		return responsibilityAssessorName;
+	}
+	public void setResponsibilityAssessorName(String value) {
+		responsibilityAssessorName = value;
+	}
 	public String getReviewerName() {
 		return reviewerName;
 	}
@@ -212,6 +270,60 @@ public class Responsibility {
 	}
 	public void setHandlingResult(String value) {
 		handlingResult = value;
+	}
+	public String getDeterminedCause() {
+		return determinedCause;
+	}
+	public void setDeterminedCause(String value) {
+		determinedCause = value;
+	}
+	public String getTechnicalCause() {
+		return technicalCause;
+	}
+	public void setTechnicalCause(String value) {
+		technicalCause = value;
+	}
+	public String getTechnicalSeverity() {
+		return technicalSeverity;
+	}
+	public void setTechnicalSeverity(String value) {
+		technicalSeverity = value;
+	}
+	public String getRepairability() {
+		return repairability;
+	}
+	public void setRepairability(String value) {
+		repairability = value;
+	}
+	public String getRecommendedAction() {
+		return recommendedAction;
+	}
+	public void setRecommendedAction(String value) {
+		recommendedAction = value;
+	}
+	public String getTechnicalNote() {
+		return technicalNote;
+	}
+	public void setTechnicalNote(String value) {
+		technicalNote = value;
+	}
+	public Long getTechnicalAssessedBy() {
+		return technicalAssessedBy;
+	}
+	public void setTechnicalAssessedBy(Long value) {
+		technicalAssessedBy = value;
+	}
+	public LocalDateTime getTechnicalAssessedAt() {
+		return technicalAssessedAt;
+	}
+	public void setTechnicalAssessedAt(LocalDateTime value) {
+		technicalAssessedAt = value;
+	}
+	public String getTechnicalAssessorName() {
+		return technicalAssessorName;
+	}
+	public void setTechnicalAssessorName(String value) {
+		technicalAssessorName = value;
 	}
 	public LocalDateTime getOccurredAt() {
 		return occurredAt;

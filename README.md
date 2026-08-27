@@ -30,49 +30,58 @@ Intern được di chuyển tự do trong LAB; hệ thống không quản lý ho
 | FE-08 | Manage Asset Maintenance |
 | FE-09 | Manage Asset Disposal |
 | FE-10 | Manage Dashboard |
+| FE-11 | Manage Equipment Allocation |
 | AU-01 | Authentication |
 
-`Manage Intern List` là quy trình Mentor gửi một danh sách intern duy nhất cho mỗi học kỳ để Admin phê duyệt hoặc từ chối. Phòng LAB chỉ có một Mentor phụ trách. Chức năng này không phải quy trình đặt phòng, đăng ký khung giờ hoặc quản lý lịch làm việc.
+`Manage Intern List` là quy trình mỗi Mentor gửi tối đa một danh sách intern trong mỗi học kỳ để Admin phê duyệt hoặc từ chối. Phòng LAB có thể có nhiều Mentor và mỗi danh sách thuộc đúng một Mentor. Chức năng này không phải quy trình đặt phòng, đăng ký khung giờ hoặc quản lý lịch làm việc.
 
 ## Vai trò
 
 | Vai trò | Trách nhiệm chính |
 | --- | --- |
 | Admin | Quản lý tài khoản; phê duyệt hoặc từ chối danh sách intern; tạo hoặc kích hoạt người dùng; gán, thay đổi và thu hồi vai trò `LAB_MANAGER`, `MENTOR`, `INTERN` |
-| Lab Manager | Giám sát tài sản, kiểm kê và sự cố; duyệt các trường hợp trách nhiệm nghiêm trọng, bảo trì và thanh lý khi cần |
-| Mentor | Phụ trách duy nhất phòng LAB; gửi một danh sách intern cho mỗi học kỳ; trực tiếp quản lý intern, tài sản, mượn trả, kiểm kê, sự cố, điều tra trách nhiệm, bảo trì và đề xuất thanh lý |
-| Intern | Xem tài sản có thể mượn; tự tạo lượt mượn/trả; xem lịch sử sử dụng; báo cáo sự cố; xem thông tin trách nhiệm của chính mình |
+| Lab Manager | CRUD `Asset`/`AssetItem`; điều tra kỹ thuật Incident; xử lý bảo trì và thanh lý; xem kết luận Responsibility |
+| Mentor | Phụ trách danh sách intern; xác nhận trả; báo cáo hoặc duyệt/chuyển Incident; kết luận Responsibility; tạo yêu cầu bảo trì/thanh lý |
+| Intern | Xem tài sản có thể mượn; tự tạo lượt mượn/trả; xem lịch sử sử dụng; báo hỏng trực tiếp cho Mentor; xem thông tin trách nhiệm của chính mình |
 
 ## Xác thực và cấp quyền
 
-Phạm vi `AU-01 Authentication` hiện dùng Google OAuth/OIDC và đăng xuất. Đăng nhập development bằng email chỉ xuất hiện khi `DEV_AUTH_ENABLED=true`.
+Hệ thống dùng xác thực hybrid: Intern đăng nhập bằng tài khoản Google đã được provision; Admin, Mentor và Lab Manager đăng nhập bằng tài khoản nội bộ cùng mật khẩu BCrypt.
 
 - Admin tạo hoặc kích hoạt tài khoản và gán một trong các vai trò `ADMIN`, `LAB_MANAGER`, `MENTOR`, `INTERN`.
 - Google Authentication là dịch vụ xác minh danh tính bên ngoài, không phải vai trò nghiệp vụ. Đăng nhập Google không tự tạo tài khoản và không quyết định quyền hạn.
-- Email Google đã xác minh phải thuộc miền FPT, trùng tài khoản được tạo trước và đang ở trạng thái `ACTIVE`.
+- Email Google phải được xác minh, trùng chính xác tài khoản Intern được tạo trước, là duy nhất trong hệ thống và đang ở trạng thái `ACTIVE`; hệ thống không giới hạn tên miền email.
 - Lần đăng nhập đầu tiên bind `google_subject`; các lần sau subject phải khớp binding đã lưu.
 - Mỗi người dùng có tài khoản riêng. Vai trò lưu trong hệ thống quyết định dashboard và các chức năng được phép truy cập.
 - Filter phía server bảo vệ route `/intern/*`, `/mentor/*`, `/lab-manager/*` và `/admin/*` theo đúng vai trò.
 
 ## Luồng nghiệp vụ chính
 
-1. Mentor chuẩn bị và gửi một danh sách intern cho mỗi học kỳ. Danh sách có mã intern, họ tên, Gmail và khóa, ví dụ `K17`.
+1. Mỗi Mentor chuẩn bị và gửi tối đa một danh sách intern trong mỗi học kỳ. Danh sách có mã intern, họ tên, email và khóa, ví dụ `K17`.
 2. Admin phê duyệt hoặc từ chối toàn bộ danh sách một lần. Mentor chỉ được sửa hoặc xóa khi danh sách còn `PENDING`; Admin là quyền cao nhất nên được xem, sửa hoặc xóa danh sách ở mọi trạng thái. Khi Admin sửa danh sách `APPROVED`, membership intern được đồng bộ theo dữ liệu mới. Khi xóa danh sách, các tài khoản intern không còn liên kết với danh sách/kỳ nào khác sẽ bị xóa cùng; tài khoản còn lịch sử hoặc liên kết khác được giữ lại, và hệ thống không cho xóa danh sách đã phát sinh lịch sử sử dụng tài sản.
-3. Mỗi học kỳ chỉ có một danh sách cho phòng LAB. Mã intern và Gmail không được trùng trong cùng học kỳ.
+3. Mỗi Mentor chỉ có một danh sách trong một học kỳ. Mã intern và email không được trùng trong cùng danh sách; mỗi email chỉ thuộc một tài khoản Intern.
 4. Với danh sách đã duyệt, hệ thống tạo hoặc kích hoạt tài khoản, gán vai trò `INTERN` và cấp quyền truy cập.
 5. Intern được duyệt có thể tự tạo lượt mượn tài sản nhỏ mà không cần Mentor duyệt từng lượt; hệ thống kiểm tra học kỳ, khả năng cho mượn và số lượng còn lại.
 6. Mỗi lượt mượn liên kết trực tiếp một intern với một tài sản, có số lượng, thời điểm mượn và hạn trả; Intern, Mentor hoặc Lab Manager có thể ghi nhận thao tác theo quyền.
-6. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
-7. Khi phát hiện mất, hỏng, sai số lượng, quá hạn hoặc bất thường, Mentor hoặc Intern có thể tạo sự cố và nhập thời điểm thực tế xảy ra nếu biết.
-8. Mentor điều tra dựa trên lịch sử mượn trả và bằng chứng trước khi kết luận trách nhiệm.
-9. Lab Manager tạo quy trình thanh lý cho toàn bộ asset record; có thể hủy khi đang chờ hoặc hoàn tất khi không còn lượt mượn active.
+7. Mentor hoặc Lab Manager kiểm tra toàn bộ LAB hoặc một nhóm tài sản được chọn, đối chiếu số lượng và tình trạng thực tế.
+8. Intern báo Incident từ lượt sử dụng của mình; Mentor duyệt/chuyển. Mentor cũng có thể báo trực tiếp thiết bị hoặc lượt sử dụng thuộc phạm vi phụ trách.
+9. Lab Manager điều tra kỹ thuật Incident. Sau kết luận kỹ thuật, Mentor có thể ghi Responsibility `UNDETERMINED/NONE/PARTIAL/FULL`; hệ thống không mặc định Intern có lỗi.
+10. Mentor tạo yêu cầu bảo trì hoặc thanh lý cho đúng `AssetItem`; Lab Manager duyệt/xử lý. Hoàn tất chỉ cập nhật Item mục tiêu, không thay đổi sibling hoặc hard-delete lịch sử.
+
+### Luồng cấp phát thiết bị cho lớp Intern (FE-11)
+
+1. Mentor chọn một danh sách Intern đã được Admin duyệt và tạo một yêu cầu cấp phát dùng xuyên suốt thời gian hoạt động của lớp.
+2. Trong một yêu cầu, Mentor thêm nhiều loại tài sản cố định hoặc bộ kit; mỗi dòng có loại tài sản, số lượng và ghi chú riêng. Dữ liệu lấy trực tiếp từ danh mục `Asset` đã có trong kho.
+3. Lab Manager kiểm tra tồn kho, điều chỉnh số lượng được duyệt cho từng dòng và gán các `AssetItem` cụ thể. Thiết bị được cấp chuyển sang trạng thái đang sử dụng để không xuất hiện trong luồng mượn thông thường.
+4. Tất cả Intern thuộc danh sách có thể xem thiết bị dùng chung của lớp. Intern báo hỏng, mất hoặc thiếu phụ kiện kèm ảnh; Mentor xác minh trước khi chuyển thành Incident cho Lab Manager xử lý.
+5. Cuối thời gian hoạt động, Lab Manager thu hồi thiết bị và đóng yêu cầu sau khi các tài sản đã được trả hoặc xử lý sự cố.
 
 ## Mô hình tài sản
 
 - **Tiện ích cố định:** bàn, ghế, tủ, bảng, TV hoặc máy chiếu dùng chung trong LAB. Các tài sản này vẫn được kiểm kê, ghi nhận sự cố, bảo trì và thanh lý nhưng không được mượn.
 - **Tài sản có thể mượn:** thiết bị IoT, đồ điện tử, remote, Arduino kit, cảm biến hoặc dụng cụ nhỏ. Intern phải tạo lượt mượn trước khi sử dụng.
 - Tài sản có thể được theo dõi riêng theo mã định danh hoặc quản lý theo số lượng đối với các linh kiện giống nhau.
-- Vị trí của tiện ích cố định hoặc nơi lưu tài sản được ghi bằng thông tin vị trí, không gắn với intern.
+- Trường vị trí cũ được giữ trong database để tương thích dữ liệu, nhưng không còn được nhập hoặc hiển thị trong giao diện hiện tại.
 
 Trạng thái vòng đời điển hình:
 
@@ -95,7 +104,7 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 - Kiểm tra và kiểm kê được thực hiện cho toàn bộ LAB hoặc một nhóm tài sản được chọn, không theo chỗ ngồi.
 - Kết quả kiểm tra bình thường không tạo sự cố; kết quả bất thường có thể dẫn đến một sự cố.
 - Hệ thống chỉ cung cấp dữ liệu truy vết và **không tự động kết luận intern có trách nhiệm** khi tài sản mất hoặc hỏng.
-- Mentor chỉ tạo kết luận trách nhiệm sau khi điều tra; mức `LOW`/`MEDIUM` được kết luận trực tiếp, còn `HIGH`/`CRITICAL` phải được Lab Manager duyệt.
+- Lab Manager điều tra và cập nhật kết luận kỹ thuật của Incident. Dựa trên kết luận và bằng chứng đó, Mentor phụ trách cập nhật `Responsibility` của Intern; hệ thống không tự động kết luận hoặc xử phạt.
 - Intern chỉ được truy cập dữ liệu riêng của mình về sử dụng tài sản, sự cố và trách nhiệm.
 - Tài sản đã thanh lý không được sử dụng hoặc cho mượn lại.
 
@@ -104,19 +113,24 @@ Tài sản đang bảo trì hoặc đã thanh lý không được sử dụng ha
 Đã triển khai:
 
 - Schema SQL Server gồm các bảng nghiệp vụ cho một phòng LAB, danh sách intern theo học kỳ và các model Java tương ứng.
+- Danh mục `majors` được lưu riêng trong database; hồ sơ intern tham chiếu `major_id` và form Admin hiển thị các major đang `ACTIVE` bằng dropdown.
 - Cấu hình `.env` qua `AppConfig`; kết nối SQL Server qua `DBConnection`.
 - Google OAuth/OIDC, bind Google subject, session, logout và Filter phân quyền theo role.
 - FE-01 Manage User ở mức MVC/JDBC cơ bản: `UserController`, `UserDAO` và các JSP danh sách, chi tiết, thêm, sửa.
-- FE-04 Manage Asset Usage: Intern mượn/trả/xem lịch sử; Lab Manager xem và lọc toàn bộ lịch sử; transaction khóa asset chống over-borrow.
-- FE-07 Manage Responsibilities: Mentor tạo, xem, sửa, xóa kết luận trách nhiệm; Lab Manager xem toàn bộ danh sách/chi tiết; Intern chỉ xem trách nhiệm gắn với tài khoản của mình.
-- FE-09 Manage Asset Disposal: Lab Manager tạo, sửa, hủy và hoàn tất quy trình `PENDING/CANCELLED/COMPLETED`.
+- FE-02 Manage Asset: Lab Manager tạo nhiều sản phẩm từ một loại thiết bị hoặc Excel, sinh mã `AssetItem` riêng, xem/sửa/xóa từng sản phẩm, lưu ảnh và tình trạng; dữ liệu tổng hợp được cập nhật về `Asset`. Mentor chỉ xem các sản phẩm ở trạng thái `AVAILABLE` trong LAB.
+- FE-03 Manage Intern List: Mentor tạo/sửa/xóa danh sách theo học kỳ, nhập thủ công hoặc từ Excel; Admin lọc, xem, sửa, xóa và phê duyệt/từ chối.
+- FE-04 Manage Asset Usage: Intern mượn và gửi yêu cầu trả; Mentor xác nhận trả. Lifecycle `IN_USE -> RETURN_PENDING -> RETURNED`; transaction khóa asset chống over-borrow.
+- FE-05 Manage Asset Inspections and Inventories: Mentor hoặc Lab Manager tạo bản nháp, kiểm tra từng `AssetItem` có mã riêng, ghi nhận có mặt/tình trạng thực tế và chuyển sản phẩm bất thường sang biểu mẫu Incident.
+- FE-06 Manage Incidents: Intern/Mentor báo cáo; Mentor duyệt/chuyển báo cáo Intern; Lab Manager điều tra kỹ thuật và xử lý lifecycle Incident.
+- FE-07 Manage Responsibilities: Mentor tạo/sửa kết luận trách nhiệm sau technical finding; `NONE/UNDETERMINED` không bắt buộc Intern; Lab Manager xem; Intern chỉ xem hồ sơ liên quan mình; không hard-delete.
+- FE-08 Manage Asset Maintenance: Mentor tạo yêu cầu exact Item; Lab Manager duyệt/từ chối/bắt đầu/hoàn tất; lưu `SUCCESS/FAILED`; parent và sibling không đổi.
+- FE-09 Manage Asset Disposal: Mentor tạo yêu cầu; Lab Manager duyệt/từ chối/hoàn tất exact Item; chặn Usage hoặc Maintenance active; `DISPOSED` là terminal.
 - Controller và JSP khung cho dashboard của Admin, Lab Manager, Mentor và Intern.
 - Mentor Dashboard responsive; dữ liệu trên dashboard hiện là dữ liệu trình diễn.
 
-Chưa triển khai đầy đủ:
+Quy tắc tình trạng sản phẩm: `GOOD`/`FAIR` có thể dùng. Return bất thường chuyển exact Item sang `UNAVAILABLE`; chỉ khi Lab Manager bắt đầu phiếu bảo trì thì Item mới sang `MAINTENANCE`. AssetUsage không dùng trạng thái `MAINTENANCE`.
 
-- DAO, Controller và JSP nghiệp vụ cho FE-02, FE-03, FE-05, FE-06 và FE-08.
-- Dữ liệu động cho các dashboard và kiểm thử tự động; `src/test` hiện chỉ có file giữ package.
+Chưa triển khai đầy đủ: Playwright E2E cho Intern bị phụ thuộc Google OAuth production. Automated suite hiện có unit/integration tests; browser smoke dùng WAR hiện tại trên dedicated port.
 
 ## Công nghệ
 
@@ -129,7 +143,7 @@ Chưa triển khai đầy đủ:
 - java-dotenv
 - Maven Wrapper
 - Apache Tomcat 10.1 qua Cargo Maven plugin
-- JUnit 5 (đã cấu hình, chưa có test case)
+- JUnit 5 và Playwright
 
 ## Yêu cầu môi trường
 
@@ -148,28 +162,36 @@ DB_PASSWORD=change-me
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:8080/labtoolequip/oauth2/callback
-FPT_EMAIL_DOMAIN=fpt.edu.vn
 LAB_TIMEZONE=Asia/Ho_Chi_Minh
-DEV_AUTH_ENABLED=false
 ```
 
 `AppConfig` tìm `.env` từ vị trí chạy ứng dụng lên project root. `.env` đã được Git bỏ qua; không commit database password hoặc Google Client Secret.
 
 ### Khởi tạo database local
 
-Để tạo toàn bộ bảng và dữ liệu đăng nhập demo, chạy trực tiếp `database/lab_asset_management_full.sql` trong SQL Server Management Studio hoặc bằng `sqlcmd`. Đây là file standalone, không cần thêm file SQL nào khác.
+`database/lab_asset_management_full.sql` là script database duy nhất của dự án. Chạy file này trên database mới để tạo toàn bộ schema, lifecycle tài sản, FE-11 cấp phát thiết bị và dữ liệu demo.
 
-Các tài khoản demo đều dùng mật khẩu `123` khi `DEV_AUTH_ENABLED=true`:
+Các tài khoản Intern demo không có mật khẩu nội bộ; đăng nhập bằng đúng tài khoản Google đã được provision tương ứng.
+
+Các tài khoản nội bộ demo dùng mật khẩu `123` cho môi trường local:
 
 | Email | Role |
 | --- | --- |
 | `admin@gmail.com` | `ADMIN` |
 | `manager@gmail.com` | `LAB_MANAGER` |
 | `mentor@gmail.com` | `MENTOR` |
-| `intern@gmail.com` | `INTERN` |
-| `intern2@gmail.com` | `INTERN` |
 
-File SQL cũng tạo sẵn học kỳ `FA26`, một danh sách intern đã `APPROVED` do Mentor gửi, hai intern thuộc khóa `K17` và hai hồ sơ trách nhiệm FE-07 để kiểm tra phân quyền theo actor.
+Intern demo đăng nhập bằng Google:
+
+| Email | Mã sinh viên |
+| --- | --- |
+| `anhnmhe171286@fpt.edu.vn` | `HE171286` |
+| `trungndhe180362@fpt.edu.vn` | `HE180362` |
+| `ductmhe180875@fpt.edu.vn` | `HE180875` |
+| `minhtbhe186275@fpt.edu.vn` | `HE186275` |
+| `minhlahe180101@fpt.edu.vn` | `HE180101` |
+
+Mock data tạo kỳ `DEMO-2026`, một danh sách Intern `APPROVED`, năm membership và thiết bị mẫu cho luồng mượn/trả, thanh lý.
 
 Khởi tạo database và dữ liệu demo:
 
@@ -212,7 +234,7 @@ Chạy build và kiểm tra định dạng:
 
 ```text
 database/
-└── lab_asset_management_full.sql # Toàn bộ bảng, ràng buộc và dữ liệu demo
+└── lab_asset_management_full.sql       # Toàn bộ schema và dữ liệu demo
 src/
 ├── main/
 │   ├── java/fpt/swp391/labtoolequip/

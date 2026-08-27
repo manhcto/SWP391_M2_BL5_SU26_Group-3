@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class Incident {
 	private Long incidentId;
 	private Long assetId;
+	private Long assetItemId;
 	private Long assetUsageId;
 	private Long inspectionItemId;
 	private Long reportedBy;
@@ -17,8 +18,30 @@ public class Incident {
 	private LocalDateTime reportedAt;
 	private String investigationNote;
 	private String handlingResult;
+	private String reportedCause;
+	private String determinedCause;
+	private Long reviewedBy;
+	private LocalDateTime reviewedAt;
+	private String mentorReviewNote;
+	private LocalDateTime forwardedAt;
+	private String technicalCause;
+	private String technicalSeverity;
+	private String repairability;
+	private String recommendedAction;
+	private String technicalNote;
+	private Long technicalAssessedBy;
+	private LocalDateTime technicalAssessedAt;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	private String assetCode;
+	private String assetName;
+	private String assetItemCode;
+	private String reporterName;
+	private String reporterRole;
+	private String internCode;
+	private String internName;
+	private String reviewerName;
+	private String technicalAssessorName;
 
 	public Incident() {
 	}
@@ -59,6 +82,14 @@ public class Incident {
 
 	public void setAssetId(Long assetId) {
 		this.assetId = assetId;
+	}
+
+	public Long getAssetItemId() {
+		return assetItemId;
+	}
+
+	public void setAssetItemId(Long assetItemId) {
+		this.assetItemId = assetItemId;
 	}
 
 	public Long getAssetUsageId() {
@@ -157,6 +188,107 @@ public class Incident {
 		this.handlingResult = handlingResult;
 	}
 
+	public String getReportedCause() {
+		return reportedCause;
+	}
+	public void setReportedCause(String reportedCause) {
+		this.reportedCause = reportedCause;
+	}
+	public String getDeterminedCause() {
+		return determinedCause;
+	}
+	public void setDeterminedCause(String determinedCause) {
+		this.determinedCause = determinedCause;
+	}
+
+	public Long getReviewedBy() {
+		return reviewedBy;
+	}
+
+	public void setReviewedBy(Long reviewedBy) {
+		this.reviewedBy = reviewedBy;
+	}
+
+	public LocalDateTime getReviewedAt() {
+		return reviewedAt;
+	}
+
+	public void setReviewedAt(LocalDateTime reviewedAt) {
+		this.reviewedAt = reviewedAt;
+	}
+
+	public String getMentorReviewNote() {
+		return mentorReviewNote;
+	}
+
+	public void setMentorReviewNote(String mentorReviewNote) {
+		this.mentorReviewNote = mentorReviewNote;
+	}
+
+	public LocalDateTime getForwardedAt() {
+		return forwardedAt;
+	}
+
+	public void setForwardedAt(LocalDateTime forwardedAt) {
+		this.forwardedAt = forwardedAt;
+	}
+
+	public String getTechnicalCause() {
+		return technicalCause;
+	}
+
+	public void setTechnicalCause(String technicalCause) {
+		this.technicalCause = technicalCause;
+	}
+
+	public String getTechnicalSeverity() {
+		return technicalSeverity;
+	}
+
+	public void setTechnicalSeverity(String technicalSeverity) {
+		this.technicalSeverity = technicalSeverity;
+	}
+
+	public String getRepairability() {
+		return repairability;
+	}
+
+	public void setRepairability(String repairability) {
+		this.repairability = repairability;
+	}
+
+	public String getRecommendedAction() {
+		return recommendedAction;
+	}
+
+	public void setRecommendedAction(String recommendedAction) {
+		this.recommendedAction = recommendedAction;
+	}
+
+	public String getTechnicalNote() {
+		return technicalNote;
+	}
+
+	public void setTechnicalNote(String technicalNote) {
+		this.technicalNote = technicalNote;
+	}
+
+	public Long getTechnicalAssessedBy() {
+		return technicalAssessedBy;
+	}
+
+	public void setTechnicalAssessedBy(Long technicalAssessedBy) {
+		this.technicalAssessedBy = technicalAssessedBy;
+	}
+
+	public LocalDateTime getTechnicalAssessedAt() {
+		return technicalAssessedAt;
+	}
+
+	public void setTechnicalAssessedAt(LocalDateTime technicalAssessedAt) {
+		this.technicalAssessedAt = technicalAssessedAt;
+	}
+
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
@@ -171,5 +303,77 @@ public class Incident {
 
 	public void setUpdatedAt(LocalDateTime updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getAssetCode() {
+		return assetCode;
+	}
+
+	public void setAssetCode(String assetCode) {
+		this.assetCode = assetCode;
+	}
+
+	public String getAssetName() {
+		return assetName;
+	}
+
+	public void setAssetName(String assetName) {
+		this.assetName = assetName;
+	}
+
+	public String getAssetItemCode() {
+		return assetItemCode;
+	}
+
+	public void setAssetItemCode(String assetItemCode) {
+		this.assetItemCode = assetItemCode;
+	}
+
+	public String getReporterName() {
+		return reporterName;
+	}
+
+	public void setReporterName(String reporterName) {
+		this.reporterName = reporterName;
+	}
+
+	public String getReporterRole() {
+		return reporterRole;
+	}
+
+	public void setReporterRole(String reporterRole) {
+		this.reporterRole = reporterRole;
+	}
+
+	public String getInternCode() {
+		return internCode;
+	}
+
+	public void setInternCode(String internCode) {
+		this.internCode = internCode;
+	}
+
+	public String getInternName() {
+		return internName;
+	}
+
+	public void setInternName(String internName) {
+		this.internName = internName;
+	}
+
+	public String getReviewerName() {
+		return reviewerName;
+	}
+
+	public void setReviewerName(String reviewerName) {
+		this.reviewerName = reviewerName;
+	}
+
+	public String getTechnicalAssessorName() {
+		return technicalAssessorName;
+	}
+
+	public void setTechnicalAssessorName(String technicalAssessorName) {
+		this.technicalAssessorName = technicalAssessorName;
 	}
 }

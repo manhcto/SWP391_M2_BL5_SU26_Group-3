@@ -3,7 +3,7 @@
 **Dự án:** LAB Asset Management System  
 **Phiên bản tài liệu:** 1.0  
 **Ngày lập:** 17/08/2026  
-**Căn cứ:** mã nguồn hiện tại, `README.md`, `database/schema.sql` và `database/mock_data.sql`
+**Căn cứ:** mã nguồn hiện tại, `README.md` và `database/lab_asset_management_full.sql`
 
 ## 1. Mục tiêu và phạm vi
 
@@ -11,7 +11,7 @@ Tài liệu này kiểm thử các chức năng đã có mã thực thi:
 
 - AU-01: đăng nhập bằng mật khẩu/Google, đăng xuất, session và phân quyền.
 - FE-01: quản lý người dùng.
-- FE-03: Mentor tạo yêu cầu sử dụng LAB và Admin duyệt/từ chối.
+- FE-03: Mentor tạo danh sách thực tập sinh theo học kỳ; Admin duyệt/từ chối.
 - FE-04: Student mượn/trả tài sản; Lab Manager xem lịch sử.
 - FE-08: Mentor đề xuất và Lab Manager xử lý bảo trì.
 - FE-09: Lab Manager tạo, cập nhật, hủy và hoàn tất thanh lý.
@@ -37,7 +37,7 @@ Không viết Unit Test cho getter/setter thuần của model. Các câu SQL, tr
 
 1. JDK 17, SQL Server và Tomcat 10.1 (qua Cargo Maven plugin).
 2. Tạo database riêng `lab_asset_management_test`; tuyệt đối không dùng database production.
-3. Chạy lần lượt `database/schema.sql` và `database/mock_data.sql` trên database test.
+3. Chạy `database/lab_asset_management_full.sql` trên database test.
 4. Cấu hình `LAB_TIMEZONE=Asia/Ho_Chi_Minh` và URL ứng dụng `http://localhost:8080/labtoolequip`.
 5. Bổ sung tài khoản test có mật khẩu đã biết cho đủ bốn vai trò; tạo thêm một tài khoản `INACTIVE`.
 6. Mỗi đợt test phải reset database về cùng một snapshot để ca sau không phụ thuộc ca trước.
@@ -89,7 +89,7 @@ Không viết Unit Test cho getter/setter thuần của model. Các câu SQL, tr
 
 | ID | Thành phần | Dữ liệu/thao tác | Kết quả mong đợi | Ưu tiên | Tự động hóa |
 | --- | --- | --- | --- | --- | --- |
-| UT-XLSX-01 | `LabUsageRequestExcelReader.read` | File `.xlsx` có sheet Students và Slots hợp lệ | Đọc đúng student, day 2..7 và slot 1..4 | P1 | AUTO (đã có) |
+| UT-XLSX-01 | `InternListExcelReader.read` | File `.xlsx` có sheet Students và Slots hợp lệ | Đọc đúng student, day 2..7 và slot 1..4 | P1 | AUTO (đã có) |
 | UT-XLSX-02 | `read(Part)` | Part null hoặc size=0 | Trả hai danh sách rỗng | P1 | AUTO |
 | UT-XLSX-03 | `read(InputStream, fileName)` | Tên file `.xls`, `.csv`, null | Ném `IOException` báo chỉ nhận `.xlsx` | P1 | AUTO |
 | UT-XLSX-04 | `read` | Thiếu một trong hai sheet bắt buộc | Ném `IOException` nêu đúng cấu trúc cần có | P1 | AUTO |
@@ -125,7 +125,7 @@ Lệnh `mvnw.cmd test` đã chạy thành công: **2 tests, 0 failures, 0 errors
 
 | ID | Tiền điều kiện | Các bước chính | Kết quả mong đợi | Ưu tiên | Kiểu |
 | --- | --- | --- | --- | --- | --- |
-| ST-AUTH-01 | Chưa đăng nhập | Mở `/admin/users`, `/mentor/lab-requests`, `/student/usages`, `/lab-manager/disposals` | Mỗi URL chuyển tới `/login`; không lộ dữ liệu | P0 | AUTO |
+| ST-AUTH-01 | Chưa đăng nhập | Mở `/admin/users`, `/mentor/interns`, `/student/usages`, `/lab-manager/disposals` | Mỗi URL chuyển tới `/login`; không lộ dữ liệu | P0 | AUTO |
 | ST-AUTH-02 | Đăng nhập từng role | Truy cập URL của role khác | HTTP 403; không thực thi DAO/mutation | P0 | AUTO |
 | ST-AUTH-03 | Chưa đăng nhập và Student | Mở `/labmanager/maintenance` | Chưa đăng nhập bị chuyển login; Student nhận 403 | P0 | AUTO |
 | ST-AUTH-04 | U-ADMIN ACTIVE | POST `/login` với mật khẩu đúng | Tạo session mới và chuyển `/admin/dashboard` | P0 | AUTO |
@@ -154,22 +154,22 @@ Lệnh `mvnw.cmd test` đã chạy thành công: **2 tests, 0 failures, 0 errors
 | ST-USER-09 | U-ADMIN | Đổi role hợp lệ MENTOR/LAB_MANAGER và thử role khác | Role hợp lệ được lưu; role ngoài danh sách bị từ chối | P0 | AUTO |
 | ST-USER-10 | U-ADMIN | Gọi mutation toggle/change-role bằng GET từ trang ngoài, không có CSRF token | Server phải từ chối; trạng thái user không đổi | P0 | AUTO |
 
-### 5.3 FE-03 – Yêu cầu sử dụng LAB
+### 5.3 FE-03 – Quản lý danh sách thực tập sinh
 
 | ID | Tiền điều kiện | Các bước chính | Kết quả mong đợi | Ưu tiên | Kiểu |
 | --- | --- | --- | --- | --- | --- |
-| ST-REQ-01 | U-MENTOR-1, học kỳ mở | Tạo request bằng dòng student và slot nhập tay hợp lệ | Tạo PENDING, gắn đúng mentor, semester, students và slots | P1 | AUTO |
-| ST-REQ-02 | U-MENTOR-1 | Tải template Excel | HTTP 200; file `.xlsx` mở được, có đúng sheet Students và Slots | P1 | AUTO |
-| ST-REQ-03 | U-MENTOR-1 | Tạo request từ file Excel hợp lệ | Dữ liệu import đúng và request PENDING được tạo | P1 | AUTO |
-| ST-REQ-04 | U-MENTOR-1 | Kết hợp nhập tay và Excel có student/slot trùng | Dữ liệu được merge, không tạo duplicate | P1 | AUTO |
-| ST-REQ-05 | U-MENTOR-1 | Bỏ group/semester/student/slot hoặc email sai định dạng | Không ghi DB; form giữ dữ liệu; hiển thị đầy đủ lỗi | P1 | AUTO |
-| ST-REQ-06 | U-MENTOR-1 | POST add/edit/delete thiếu hoặc sai CSRF token | HTTP 403; dữ liệu không đổi | P0 | AUTO |
-| ST-REQ-07 | Request thuộc U-MENTOR-1 | U-MENTOR-2 mở chi tiết/sửa/xóa bằng ID đoán được | 404/403; không lộ và không sửa dữ liệu | P0 | AUTO |
-| ST-REQ-08 | Request PENDING thuộc U-MENTOR-1 | Sửa students/slots rồi lưu | Update atomic; dữ liệu cũ được thay đúng | P1 | AUTO |
-| ST-REQ-09 | Request APPROVED/REJECTED | Mentor thử sửa hoặc xóa | Bị từ chối; dữ liệu không đổi | P0 | AUTO |
-| ST-REQ-10 | U-ADMIN, request PENDING | Quyết định APPROVED | Cập nhật approver/time; student được liên kết/kích hoạt theo transaction | P0 | AUTO |
-| ST-REQ-11 | U-ADMIN, request PENDING | Quyết định REJECTED kèm note | Status/note đúng; student không được cấp membership | P1 | AUTO |
-| ST-REQ-12 | Request đã quyết định | Gửi quyết định lần hai hoặc hai Admin gửi đồng thời | Chỉ một quyết định thành công; không ghi đè quyết định đầu | P0 | AUTO |
+| ST-INTERN-01 | U-MENTOR-1, học kỳ mở | Tạo danh sách bằng các dòng thực tập sinh nhập tay hợp lệ | Tạo PENDING, gắn đúng mentor, semester và students | P1 | AUTO |
+| ST-INTERN-02 | U-MENTOR-1 | Tải template Excel | HTTP 200; file `.xlsx` mở được, có sheet Interns và các cột mã, họ tên, Gmail, khóa | P1 | AUTO |
+| ST-INTERN-03 | U-MENTOR-1 | Tạo danh sách từ file Excel hợp lệ | Dữ liệu import đúng và danh sách PENDING được tạo | P1 | AUTO |
+| ST-INTERN-04 | U-MENTOR-1 | Kết hợp nhập tay và Excel có thực tập sinh trùng | Dữ liệu được gộp, không tạo bản ghi trùng email | P1 | AUTO |
+| ST-INTERN-05 | U-MENTOR-1 | Bỏ tên danh sách/học kỳ/thực tập sinh hoặc email sai định dạng | Không ghi DB; form giữ dữ liệu; hiển thị đầy đủ lỗi | P1 | AUTO |
+| ST-INTERN-06 | U-MENTOR-1 | POST thêm/sửa/xóa thiếu hoặc sai CSRF token | HTTP 403; dữ liệu không đổi | P0 | AUTO |
+| ST-INTERN-07 | Danh sách thuộc U-MENTOR-1 | U-MENTOR-2 mở chi tiết/sửa/xóa bằng ID đoán được | 404/403; không lộ và không sửa dữ liệu | P0 | AUTO |
+| ST-INTERN-08 | Danh sách PENDING thuộc U-MENTOR-1 | Sửa danh sách thực tập sinh rồi lưu | Update atomic; dữ liệu cũ được thay đúng | P1 | AUTO |
+| ST-INTERN-09 | Danh sách APPROVED/REJECTED | Mentor thử sửa hoặc xóa | Bị từ chối; dữ liệu không đổi | P0 | AUTO |
+| ST-INTERN-10 | U-ADMIN, danh sách PENDING | Quyết định APPROVED | Cập nhật approver/time; thực tập sinh được liên kết/kích hoạt theo transaction | P0 | AUTO |
+| ST-INTERN-11 | U-ADMIN, danh sách PENDING | Quyết định REJECTED kèm note | Status/note đúng; thực tập sinh không được cấp membership | P1 | AUTO |
+| ST-INTERN-12 | Danh sách đã quyết định | Gửi quyết định lần hai hoặc hai Admin gửi đồng thời | Chỉ một quyết định thành công; không ghi đè quyết định đầu | P0 | AUTO |
 
 ### 5.4 FE-04 – Mượn và trả tài sản
 
@@ -236,8 +236,8 @@ Lệnh `mvnw.cmd test` đã chạy thành công: **2 tests, 0 failures, 0 errors
 | --- | --- | --- |
 | AU-01 | UT-AUTH-*, ST-AUTH-* | Có thể chạy; OAuth cần Google test account/config |
 | FE-01 | UT-EMAIL-*, ST-USER-* | Có thể chạy |
-| FE-02 | ST-USAGE-04, ST-MAINT-*, ST-DISP-* chỉ kiểm tra trạng thái asset liên quan | BACKLOG cho CRUD asset độc lập |
-| FE-03 | UT-XLSX-*, ST-REQ-* | Có thể chạy; route duyệt hiện thuộc Admin |
+| FE-02 | ST-USAGE-04, ST-MAINT-*, ST-DISP-* chỉ kiểm tra trạng thái asset liên quan | Đã có CRUD AssetItem; cần bổ sung kiểm thử DB cho liên kết từng item |
+| FE-03 | UT-XLSX-*, ST-INTERN-* | Có thể chạy; route duyệt thuộc Admin |
 | FE-04 | UT-USAGE-*, ST-USAGE-* | Có thể chạy khi đúng slot hiện tại |
 | FE-05 | Chưa có controller/DAO/JSP nghiệp vụ | BACKLOG |
 | FE-06 | Chưa có controller/DAO/JSP nghiệp vụ | BACKLOG |
@@ -249,17 +249,16 @@ Lệnh `mvnw.cmd test` đã chạy thành công: **2 tests, 0 failures, 0 errors
 ## 7. Rủi ro/khuyết điểm mã nguồn mà bộ test phải bắt được
 
 1. `AuthorizationFilter` chỉ bảo vệ prefix `/lab-manager/`, trong khi maintenance dùng `/labmanager/maintenance`; ST-AUTH-03 và ST-MAINT-09 dự kiến FAIL cho đến khi route được đồng bộ.
-2. `DisposalRecordDAO.cancel` ghi status `CANCELLED`, nhưng constraint `CK_disposal_records_status` trong `schema.sql` không cho phép `CANCELLED`; ST-DISP-06 dự kiến FAIL.
+2. `DisposalRecordDAO.cancel` ghi status `CANCELLED`, nhưng constraint `CK_disposal_records_status` trong `lab_asset_management_full.sql` không cho phép `CANCELLED`; ST-DISP-06 dự kiến FAIL.
 3. Toggle status và change role của user được gọi bằng GET, không có CSRF token; ST-USER-10 dự kiến FAIL và đây là lỗi bảo mật P0.
 4. Luồng maintenance cập nhật record và asset bằng hai transaction tách rời, đồng thời bắt rồi bỏ qua lỗi cập nhật asset; ST-MAINT-08 có thể phát hiện trạng thái lệch.
 5. `MaintenanceDAO` chưa ràng buộc transition trạng thái trong câu UPDATE; ST-MAINT-07 có thể phát hiện việc nhảy trạng thái hoặc decision không hợp lệ.
-6. Tài liệu nghiệp vụ mô tả Lab Manager duyệt yêu cầu LAB, nhưng mã hiện tại dùng route `/admin/lab-requests` và yêu cầu role ADMIN; cần chốt lại yêu cầu trước khi nghiệm thu ST-REQ-10..12.
 
 ## 8. Thứ tự chạy đề xuất
 
 1. Build và Unit Test: `mvnw.cmd clean test`.
 2. Khởi tạo lại database test.
-3. Chạy smoke: ST-AUTH-01..07, ST-USER-02, ST-REQ-01/10, ST-USAGE-02/08, ST-MAINT-01/03/06, ST-DISP-03/08.
+3. Chạy smoke: ST-AUTH-01..07, ST-USER-02, ST-INTERN-01/10, ST-USAGE-02/08, ST-MAINT-01/03/06, ST-DISP-03/08.
 4. Chạy toàn bộ ca P0, sau đó P1 và P2.
 5. Chạy concurrency và non-functional cuối cùng trên database vừa reset.
 6. Lưu evidence gồm timestamp, input, HTTP status, ảnh màn hình và truy vấn xác nhận DB cho mọi ca FAIL.

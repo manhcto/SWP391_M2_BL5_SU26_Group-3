@@ -1,0 +1,282 @@
+package fpt.swp391.labtoolequip.controller.labmanager;
+
+import fpt.swp391.labtoolequip.common.AssetImageStorage;
+import fpt.swp391.labtoolequip.dao.AssetItemDAO;
+import fpt.swp391.labtoolequip.model.AssetItem;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+
+@WebServlet("/lab-manager/assets/*")
+@MultipartConfig(maxFileSize = 5 * 1024 * 1024, maxRequestSize = 25 * 1024 * 1024)
+public class AssetController extends HttpServlet {
+	private final AssetItemDAO dao = new AssetItemDAO();
+
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		try {
+			setRoleContext(request);
+			String path = request.getPathInfo();
+			if ("/new".equals(path)) {
+				prepareForm(request);
+				forward(request, response, "form.jsp");
+				return;
+			}
+			if (path != null && path.matches("/\\d+/edit")) {
+				showItem(request, response, Long.parseLong(path.substring(1, path.indexOf("/edit"))), true);
+				return;
+			}
+			if (path != null && path.matches("/\\d+/lifecycle")) {
+				showLifecycle(request, response, Long.parseLong(path.substring(1, path.indexOf("/lifecycle"))));
+				return;
+			}
+			if (path != null && path.matches("/\\d+")) {
+				showItem(request, response, Long.parseLong(path.substring(1)),
+						Boolean.TRUE.equals(request.getAttribute("editMode")));
+				return;
+			}
+			if (path != null && !path.equals("/") && !path.isBlank()) {
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+				return;
+			}
+			showList(request, response);
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		}
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		String path = request.getPathInfo();
+		try {
+			setRoleContext(request);
+			if (path != null && path.matches("/\\d+/delete")) {
+				if (!validCsrf(request)) {
+					response.sendError(HttpServletResponse.SC_FORBIDDEN, "Mã bảo vệ CSRF không hợp lệ.");
+					return;
+				}
+				dao.deleteItem(Long.parseLong(path.substring(1, path.indexOf("/delete"))));
+				response.sendRedirect(request.getAttribute("assetBasePath") + "?deleted=1");
+				return;
+			}
+			if ("/new".equals(path)) {
+				createBundle(request);
+				response.sendRedirect(request.getAttribute("assetBasePath") + "?created=1");
+				return;
+			}
+			if (path != null && path.matches("/\\d+")) {
+				long id = Long.parseLong(path.substring(1));
+				updateItem(request, id);
+				response.sendRedirect(request.getAttribute("assetBasePath") + "/" + id + "?updated=1");
+				return;
+			}
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+		} catch (SQLException exception) {
+			throw new ServletException(exception);
+		} catch (IllegalArgumentException exception) {
+			request.setAttribute("message", exception.getMessage());
+			if ("/new".equals(path)) {
+				try {
+					prepareForm(request);
+				} catch (SQLException sqlException) {
+					throw new ServletException(sqlException);
+				}
+				request.getRequestDispatcher("/WEB-INF/views/labmanager/assets/form.jsp").forward(request, response);
+			} else if (path != null && path.matches("/\\d+")) {
+				request.setAttribute("editMode", true);
+				doGet(request, response);
+			} else if (path != null && path.matches("/\\d+/delete")) {
+				try {
+					showList(request, response);
+				} catch (SQLException sqlException) {
+					throw new ServletException(sqlException);
+				}
+			} else {
+				response.sendError(HttpServletResponse.SC_BAD_REQUEST);
+			}
+		}
+	}
+
+	private void showList(HttpServletRequest request, HttpServletResponse response)
+			throws SQLException, ServletException, IOException {
+		request.setAttribute("assetItems", dao.findAll(request.getParameter("keyword"), request.getParameter("status"),
+				request.getParameter("condition")));
+		request.setAttribute("csrfToken", csrfToken(request));
+		forward(request, response, "list.jsp");
+	}
+
+	private void showItem(HttpServletRequest request, HttpServletResponse response, long id, boolean editMode)
+			throws SQLException, ServletException, IOException {
+		AssetItem item = dao.findById(id).orElse(null);
+		if (item == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		request.setAttribute("item", item);
+		request.setAttribute("editMode", editMode);
+		request.setAttribute("csrfToken", csrfToken(request));
+		forward(request, response, "detail.jsp");
+	}
+
+	private void prepareForm(HttpServletRequest request) throws SQLException {
+		request.setAttribute("categories", dao.findCategories());
+		if (request.getAttribute("quantity") == null)
+			request.setAttribute("quantity", 1);
+	}
+
+	private void setRoleContext(HttpServletRequest request) {
+		request.setAttribute("assetRole", "lab-manager");
+		request.setAttribute("assetBasePath", request.getContextPath() + "/lab-manager/assets");
+	}
+
+	private String csrfToken(HttpServletRequest request) {
+		String token = (String) request.getSession().getAttribute("csrfToken");
+		if (token == null) {
+			token = java.util.UUID.randomUUID().toString();
+			request.getSession().setAttribute("csrfToken", token);
+		}
+		return token;
+	}
+
+	private boolean validCsrf(HttpServletRequest request) {
+		String expected = (String) request.getSession().getAttribute("csrfToken");
+		return expected != null && expected.equals(request.getParameter("csrfToken"));
+	}
+
+	private int parseQuantity(String raw) {
+		try {
+			int quantity = Integer.parseInt(raw == null ? "1" : raw);
+			if (quantity < 1 || quantity > 100)
+				throw new IllegalArgumentException("Số lượng phải từ 1 đến 100 sản phẩm.");
+			return quantity;
+		} catch (NumberFormatException exception) {
+			throw new IllegalArgumentException("Số lượng không hợp lệ.");
+		}
+	}
+
+	private boolean parseBorrowable(String value) {
+		if ("BORROWABLE".equals(value))
+			return true;
+		if ("FIXED".equals(value))
+			return false;
+		throw new IllegalArgumentException("Vui lòng chọn dạng tài sản.");
+	}
+
+	private void createBundle(HttpServletRequest request) throws IOException, SQLException, ServletException {
+		List<String> uploadedImages = new ArrayList<>();
+		try {
+			int quantity = parseQuantity(request.getParameter("quantity"));
+			dao.createBundle(request.getParameter("assetCode"), request.getParameter("assetName"),
+					Long.parseLong(request.getParameter("categoryId")),
+					parseBorrowable(request.getParameter("assetType")), request.getParameter("description"),
+					readItems(request, quantity, uploadedImages));
+		} catch (IOException | SQLException | RuntimeException exception) {
+			uploadedImages.forEach(AssetImageStorage::delete);
+			throw exception;
+		}
+	}
+
+	private void showLifecycle(HttpServletRequest request, HttpServletResponse response, long id)
+			throws SQLException, ServletException, IOException {
+		AssetItem item = dao.findById(id).orElse(null);
+		if (item == null) {
+			response.sendError(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		request.setAttribute("item", item);
+		request.setAttribute("events", dao.findLifecycle(id));
+		request.setAttribute("roleBase", "/lab-manager");
+		request.getRequestDispatcher("/WEB-INF/views/shared/assets/lifecycle.jsp").forward(request, response);
+	}
+
+	private void updateItem(HttpServletRequest request, long id) throws IOException, SQLException, ServletException {
+		String uploadedImage = null;
+		try {
+			uploadedImage = AssetImageStorage.save(request.getPart("itemImageFile"));
+			AssetItem item = readItem(request, id, uploadedImage);
+			dao.updateItem(item);
+		} catch (IOException | SQLException | RuntimeException exception) {
+			AssetImageStorage.delete(uploadedImage);
+			throw exception;
+		}
+	}
+
+	private List<AssetItem> readItems(HttpServletRequest request, int quantity, List<String> uploadedImages)
+			throws IOException, ServletException {
+		String[] serials = request.getParameterValues("itemSerialNumber");
+		String[] conditions = request.getParameterValues("itemCondition");
+		String[] purchases = request.getParameterValues("itemPurchaseDate");
+		String[] warranties = request.getParameterValues("itemWarrantyUntil");
+		String[] notes = request.getParameterValues("itemNote");
+		String sharedImagePath = AssetImageStorage.save(request.getPart("sharedImageFile"));
+		if (sharedImagePath != null)
+			uploadedImages.add(sharedImagePath);
+		List<AssetItem> items = new ArrayList<>();
+		for (int index = 0; index < quantity; index++) {
+			String imagePath = AssetImageStorage.save(request.getPart("itemImageFile" + index));
+			if (imagePath != null)
+				uploadedImages.add(imagePath);
+			else
+				imagePath = sharedImagePath;
+			AssetItem item = new AssetItem();
+			item.setSerialNumber(value(serials, index));
+			item.setImagePath(imagePath);
+			item.setCondition(defaultValue(value(conditions, index), "GOOD"));
+			item.setStatus("AVAILABLE");
+			item.setPurchaseDate(parseDate(value(purchases, index), "Ngày mua"));
+			item.setWarrantyUntil(parseDate(value(warranties, index), "Ngày hết hạn bảo hành"));
+			item.setNote(value(notes, index));
+			items.add(item);
+		}
+		return items;
+	}
+
+	private AssetItem readItem(HttpServletRequest request, long id, String uploadedImage) {
+		AssetItem item = new AssetItem();
+		item.setAssetItemId(id);
+		item.setSerialNumber(request.getParameter("serialNumber"));
+		item.setImagePath(uploadedImage == null ? request.getParameter("imagePath") : uploadedImage);
+		item.setCondition(defaultValue(request.getParameter("condition"), "GOOD"));
+		// Trạng thái vòng đời chỉ được đổi tại màn mượn/trả, sự cố, bảo trì
+		// hoặc thanh lý. Màn thiết bị chỉ cập nhật thông tin và tình trạng.
+		item.setStatus(null);
+		item.setPurchaseDate(parseDate(request.getParameter("purchaseDate"), "Ngày mua"));
+		item.setWarrantyUntil(parseDate(request.getParameter("warrantyUntil"), "Ngày hết hạn bảo hành"));
+		item.setNote(request.getParameter("note"));
+		return item;
+	}
+
+	private String value(String[] values, int index) {
+		return values != null && index < values.length ? values[index] : null;
+	}
+
+	private String defaultValue(String value, String fallback) {
+		return value == null || value.isBlank() ? fallback : value.trim();
+	}
+
+	private LocalDate parseDate(String value, String label) {
+		if (value == null || value.isBlank())
+			return null;
+		try {
+			return LocalDate.parse(value);
+		} catch (DateTimeParseException exception) {
+			throw new IllegalArgumentException(label + " không hợp lệ.");
+		}
+	}
+
+	private void forward(HttpServletRequest request, HttpServletResponse response, String view)
+			throws ServletException, IOException {
+		request.getRequestDispatcher("/WEB-INF/views/labmanager/assets/" + view).forward(request, response);
+	}
+}

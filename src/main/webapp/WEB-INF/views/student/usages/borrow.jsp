@@ -1,3 +1,45 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core"%>
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Borrow Asset | LAB Asset</title><link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/asset-operations.css"></head><body><div class="app-shell"><main class="content"><div class="page-heading"><div><p class="eyebrow">INTERN PORTAL</p><h1>Borrow an Asset</h1><p>Borrowing is available for approved interns during the active semester.</p></div><div class="actions"><a class="button" href="${pageContext.request.contextPath}/intern/usages">Back</a></div></div><p class="alert" role="alert"><c:out value="${message}"/></p><section class="card form-card"><form method="post"><input type="hidden" name="action" value="borrow"><div class="field"><label for="assetId">Asset</label><select class="select" id="assetId" name="assetId" required><c:forEach items="${assets}" var="a"><option value="${a.assetId}"><c:out value="${a.assetCode}"/> · <c:out value="${a.assetName}"/> · ${a.totalQuantity} total</option></c:forEach></select></div><div class="field"><label for="quantity">Quantity</label><input class="input" id="quantity" type="number" name="quantity" min="1" value="1" required></div><div class="field"><label for="note">Usage note</label><textarea class="textarea" id="note" name="note" placeholder="Purpose or handling note"></textarea></div><p class="hint">Due time follows the end of the approved semester.</p><div class="actions"><button class="button primary" type="submit" <c:if test="${empty assets}">disabled</c:if>>Confirm borrow</button></div></form><c:if test="${empty assets}"><div class="empty-state">No eligible assets are available.</div></c:if></section></main></div></body></html>
+<%@ taglib prefix="app" uri="/WEB-INF/app.tld"%>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mượn thiết bị | LAB Asset</title>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/mentor-dashboard.css">
+</head>
+<body class="intern-dashboard-page">
+<c:set var="activeMenu" value="borrow" scope="request"/>
+<div class="app-shell">
+    <%@ include file="../includes/sidebar.jspf" %>
+    <main class="main-content">
+        <header class="topbar">
+            <div class="heading-wrap">
+                <button class="menu-button" id="menuButton" type="button" aria-label="Mở thanh điều hướng" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
+                <div><h1>Mượn thiết bị</h1><p>Yêu cầu thiết bị trong học kỳ thực tập đã được phê duyệt</p></div>
+            </div>
+            <div class="topbar-actions"><div class="top-profile"><div class="avatar">IN</div><span><c:out value="${currentUser.fullName}"/></span></div></div>
+        </header>
+        <section class="content-area">
+            <div class="content-heading"><div><p class="eyebrow">CỔNG THỰC TẬP SINH</p><h2>Yêu cầu mượn mới</h2></div><a class="btn-secondary" href="${pageContext.request.contextPath}/intern/usages">Quay lại lịch sử</a></div>
+            <c:if test="${not empty message}"><p class="error-message"><c:out value="${message}"/></p></c:if>
+            <article class="panel">
+                <header class="panel-header"><div class="panel-title"><span class="title-icon"><svg><use href="#i-box"/></svg></span><h3>Thông tin thiết bị</h3></div></header>
+				<form method="post">
+					<input type="hidden" name="csrfToken" value="${sessionScope.csrfToken}">
+                    <input type="hidden" name="action" value="borrow">
+                    <div class="form-grid">
+                        <div class="form-group full-width"><label for="assetItemId">Sản phẩm cụ thể</label><select class="form-control" id="assetItemId" name="assetItemId" required><c:forEach items="${assetItems}" var="item"><option value="${item.assetItemId}"><c:out value="${item.itemCode}"/> · <c:out value="${item.assetName}"/><c:if test="${not empty item.serialNumber}"> · Serial <c:out value="${item.serialNumber}"/></c:if> · <c:out value="${app:label(item.condition)}"/></option></c:forEach></select><small>Mỗi lượt mượn gắn với một mã sản phẩm riêng để theo dõi khi trả và báo hỏng.</small></div>
+                        <div class="form-group"><label>Hạn trả</label><input class="form-control readonly-field" value="Kết thúc học kỳ đã được phê duyệt" readonly></div>
+                        <div class="form-group full-width"><label for="note">Ghi chú sử dụng</label><textarea class="form-control" id="note" name="note" placeholder="Mục đích hoặc lưu ý sử dụng"></textarea></div>
+                        <div class="form-group full-width form-actions"><button class="primary-button" type="submit" <c:if test="${empty assetItems}">disabled</c:if>><svg><use href="#i-box"/></svg>Xác nhận mượn</button></div>
+                    </div>
+                </form>
+                <c:if test="${empty assetItems}"><div class="empty-box"><p>Không có sản phẩm đủ điều kiện để mượn.</p></div></c:if>
+            </article>
+        </section>
+    </main>
+</div>
+</body>
+</html>

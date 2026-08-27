@@ -15,10 +15,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.SQLException;
@@ -39,7 +39,7 @@ public class GoogleCallbackController extends HttpServlet {
 		HttpSession session = request.getSession(false);
 		String state = request.getParameter("state");
 		if (session == null || state == null || !state.equals(session.getAttribute("oauthState"))) {
-			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid OAuth state.");
+			response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Trạng thái xác thực OAuth không hợp lệ.");
 			return;
 		}
 		session.removeAttribute("oauthState");
@@ -56,11 +56,9 @@ public class GoogleCallbackController extends HttpServlet {
 				return;
 			}
 			User user = found.get();
-			String domain = required("FPT_EMAIL_DOMAIN");
-			if ("INTERN".equals(user.getRole())
-					&& !payload.getEmail().toLowerCase().endsWith("@" + domain.toLowerCase())) {
+			if (!"INTERN".equals(user.getRole())) {
 				deny(request, response,
-						"Access denied: an FPT Google account (@" + domain + ") is required for students.");
+						"Đăng nhập Google chỉ dành riêng cho Thực tập sinh (Sinh viên). Cán bộ/Quản lý vui lòng đăng nhập bằng Email và Mật khẩu.");
 				return;
 			}
 			if (user.getGoogleSubject() == null) {
@@ -83,7 +81,7 @@ public class GoogleCallbackController extends HttpServlet {
 
 	private String exchangeCode(String code) throws IOException, InterruptedException {
 		if (code == null)
-			throw new IllegalArgumentException("Missing authorization code.");
+			throw new IllegalArgumentException("Thiếu mã xác thực Google.");
 		String body = "code=" + encode(code) + "&client_id=" + encode(required("GOOGLE_CLIENT_ID")) + "&client_secret="
 				+ encode(required("GOOGLE_CLIENT_SECRET")) + "&redirect_uri=" + encode(required("GOOGLE_REDIRECT_URI"))
 				+ "&grant_type=authorization_code";
@@ -92,37 +90,37 @@ public class GoogleCallbackController extends HttpServlet {
 				.POST(HttpRequest.BodyPublishers.ofString(body)).build();
 		HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 		if (response.statusCode() != 200)
-			throw new IllegalStateException("Google token exchange failed.");
+			throw new IllegalStateException("Không thể trao đổi mã xác thực với Google.");
 		Matcher matcher = ID_TOKEN.matcher(response.body());
 		if (!matcher.find())
-			throw new IllegalStateException("Google response did not contain an ID token.");
+			throw new IllegalStateException("Phản hồi từ Google không có ID token.");
 		return matcher.group(1);
 	}
 
-	private GoogleIdToken verify(String token) throws IOException, GeneralSecurityException {
+	private GoogleIdToken verify(String idToken) throws GeneralSecurityException, IOException {
 		GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
 				GsonFactory.getDefaultInstance()).setAudience(Collections.singletonList(required("GOOGLE_CLIENT_ID")))
-				.setIssuers(java.util.List.of("accounts.google.com", "https://accounts.google.com")).build();
-		GoogleIdToken verified = verifier.verify(token);
-		if (verified == null)
-			throw new IllegalArgumentException("Invalid Google ID token.");
-		return verified;
+				.build();
+		GoogleIdToken token = verifier.verify(idToken);
+		if (token == null)
+			throw new IllegalStateException("ID token từ Google không hợp lệ.");
+		return token;
+	}
+
+	private String required(String key) {
+		String value = AppConfig.get(key);
+		if (value == null || value.isBlank())
+			throw new IllegalStateException("Thiếu cấu hình bắt buộc: " + key);
+		return value.trim();
+	}
+
+	private String encode(String value) {
+		return URLEncoder.encode(value, StandardCharsets.UTF_8);
 	}
 
 	private void deny(HttpServletRequest request, HttpServletResponse response, String message)
 			throws ServletException, IOException {
 		request.setAttribute("message", message);
 		request.getRequestDispatcher("/WEB-INF/views/auth/login.jsp").forward(request, response);
-	}
-
-	private String required(String key) {
-		String value = AppConfig.get(key);
-		if (value == null || value.isBlank())
-			throw new IllegalStateException("Missing " + key);
-		return value;
-	}
-
-	private String encode(String value) {
-		return URLEncoder.encode(value, StandardCharsets.UTF_8);
 	}
 }
